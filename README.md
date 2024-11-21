@@ -4,4 +4,4 @@
 # webserv
 
 ## Introduction
-This was a 42 cursus project focusing on creating a HTTP server using C++11.
+This was a 42 cursus project focusing on creating an HTTP server using C++11.
