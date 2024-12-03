@@ -52,9 +52,8 @@ void    parse_config_file(const std::string conf, struct addrinfo serv_addr)
 			addr = &(ipv6->sin6_addr);
 			IP_version = "IPv6";
 		}
-		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
+		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr); // changes the IP binary to printable
 		std::cout << IP_version << " " << ipstr << "\n";
 	}
-	 
 	// servinfo now points to a linked list of 1 or more struct addrinfos
 }
