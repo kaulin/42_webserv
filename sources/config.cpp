@@ -26,6 +26,7 @@ void    parse_config_file(const std::string conf, struct addrinfo serv_addr)
 	char ipstr[INET6_ADDRSTRLEN];
 	struct addrinfo	data, *p;
 	struct addrinfo *server_info = &serv_addr;
+	char *hostname;
 
 	// Some temp data to test out server
 	data.ai_family = AF_UNSPEC; // IPv4 or IPv6
@@ -37,8 +38,15 @@ void    parse_config_file(const std::string conf, struct addrinfo serv_addr)
 		exit(1);
 	}
 
-	std::cout << "IP addresses for local\n";
-	// JUST FOR TESTING Loop through all IP addresses in pointer
+	std::cout << "Hostname and IP addresses:\n";
+	// JUST FOR TESTING: get hostname and Loop through all IP addresses in pointer
+	if (gethostname(hostname, 255) == -1) {
+		perror("Get host name");
+		exit(errno);
+	}
+	for (char *temp = hostname; temp != NULL; temp++) {
+		std::cout << temp << "\n";
+	}
 	for (p = server_info; p != NULL; p = p->ai_next)
 	{
 		void	*addr;

@@ -30,6 +30,7 @@ void    run_server(struct addrinfo *serv)
 		perror("Accept");
 		exit(errno);
 	}
+	
 	if (recv(new_sockfd, buff, 100, 0) == -1) {
 		perror("Receive");
 		exit(errno);
