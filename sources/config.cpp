@@ -38,7 +38,7 @@ void    parse_config_file(const std::string conf, struct addrinfo serv_addr)
 	}
 
 	std::cout << "IP addresses for local\n";
-	// Loop through all IP addresses in pointer
+	// JUST FOR TESTING Loop through all IP addresses in pointer
 	for (p = server_info; p != NULL; p = p->ai_next)
 	{
 		void	*addr;
