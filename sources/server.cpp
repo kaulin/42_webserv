@@ -31,16 +31,37 @@ void	handle_request(int new_sockfd)
 	}
 }
 
+void	accept_loop(int sockfd, struct sockaddr_storage addr_in)
+{
+	socklen_t	addr_size;
+	int			new_sockfd;
+	char 		ipstr_in[INET6_ADDRSTRLEN];
+
+	while (1) {
+		addr_size = sizeof(struct sockaddr_storage);
+		if ((new_sockfd = accept(sockfd, (struct sockaddr *)&addr_in, &addr_size)) == -1) {
+			error_and_exit("Accept");
+		}
+		inet_ntop(addr_in.ss_family, get_in_addr((struct sockaddr *)&addr_in), ipstr_in, sizeof ipstr_in);
+		std::cout << "Connected to: " << ipstr_in << "\n";
+		if (fork() == 0) { // child process
+			close(sockfd);
+			handle_request(new_sockfd); // handle the request - implement this function
+			close(new_sockfd);
+			exit(0);
+		}
+		close(new_sockfd);
+	}
+}
+
 void    run_server(struct addrinfo *serv)
 {
-	int			sockfd, new_sockfd; // socket file descriptors
+	int			sockfd; // socket file descriptors
 	void		*buff;
 	int			yes = 1;
-	char 		ipstr_in[INET6_ADDRSTRLEN];
 	struct addrinfo 		*p;
 	struct sockaddr_storage addr_in; // information about incoming connection goes here (who is calling from where)
 	struct sigaction		sa;
-	socklen_t 				addr_size;
 
 	for (p = serv; p != NULL; p = p->ai_next)
 	{
@@ -73,19 +94,5 @@ void    run_server(struct addrinfo *serv)
 		error_and_exit("Sigaction");
 	}
 	std::cout << "Server waiting for connections...: \n";
-	while (1) { // main accept loop
-		addr_size = sizeof(struct sockaddr_storage);
-		if ((new_sockfd = accept(sockfd, (struct sockaddr *)&addr_in, &addr_size)) == -1) {
-			error_and_exit("Accept");
-		}
-		inet_ntop(addr_in.ss_family, get_in_addr((struct sockaddr *)&addr_in), ipstr, sizeof ipstr);
-		std::cout << "Connected to: " << ipstr_in << "\n";
-		if (!fork()) {
-			close(sockfd);
-			handle_request(new_sockfd); // handle the request - implement this function
-			close(new_sockfd);
-			exit(0);
-		}
-		close(new_sockfd);
-	}
+	accept_loop(sockfd, addr_in);
 }
