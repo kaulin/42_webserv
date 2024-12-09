@@ -1,6 +1,7 @@
 #include "webserv.hpp"
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv) 
+{
 	if (argc < 2) {
 		std::cerr << "Error: Please provide configuration file\n";
 		return 2;
@@ -13,7 +14,6 @@ int main(int argc, char **argv) {
 	const std::string conf = argv[1];
 	parse_config_file(conf, serv_addr);
 	run_server(&serv_addr);
-	std::cerr << "Server started from configuration file: " << conf << "\n";
-	freeaddrinfo(&serv_addr); // free the pointers alloc'd by getaddrinfo
+	std::cout << "Server started from configuration file: " << conf << "\n";
 	return 0;
 }
