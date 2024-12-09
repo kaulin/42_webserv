@@ -33,4 +33,4 @@
 webserv
 
 # Local config files
-.vscode/c_cpp_properties.json
+.vscode/*
