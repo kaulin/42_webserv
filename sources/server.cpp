@@ -32,25 +32,27 @@ void	handle_request(int new_sockfd)
 		error_and_exit("Send");
 	}
 }
-void	setup_epoll(int listen_sockfd, int conn_sockfd)
+int	setup_epoll(int listen_sockfd, int conn_sockfd)
 {
 	struct epoll_event ev, events[10];
 	int nfds, epollfd;
 
-	if ((epollfd = epoll_create1(0)) == -1) {
-		error_and_exit("Epoll create");
+	if ((epollfd = epoll_create1(listen_sockfd)) == -1) {
+		error_and_exit("Epoll create: listen_sockfd");
 	}
 	ev.events = EPOLLIN; // read events
 	ev.data.fd = listen_sockfd;
 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sockfd, &ev) == -1) {
 		error_and_exit("Epoll control: listen_sockfd");
 	}
+	return (epollfd);
 }
 
-void	accept_loop(int sockfd, struct sockaddr_storage addr_in)
+void	accept_loop(int sockfd, int epoll_fd, struct sockaddr_storage addr_in)
 {
 	socklen_t	addr_size;
 	int			new_sockfd; // socket for new incoming connections
+	int 		n_pollfds;
 	char 		ipstr_in[INET6_ADDRSTRLEN];
 
 	// handle signals for child processes
@@ -60,8 +62,11 @@ void	accept_loop(int sockfd, struct sockaddr_storage addr_in)
 	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
 		error_and_exit("Sigaction");
 	}
-	// accept loop
+	// accept loop, loop until running = 0
 	while (1) {
+		if ((n_pollfds = epoll_wait(epollfd, events, 10, 0)) == -1) {
+			error_and_exit("Epoll wait");
+		}
 		addr_size = sizeof(struct sockaddr_storage);
 		if ((new_sockfd = accept(sockfd, (struct sockaddr *)&addr_in, &addr_size)) == -1) {
 			error_and_exit("Accept");
@@ -80,7 +85,7 @@ void	accept_loop(int sockfd, struct sockaddr_storage addr_in)
 
 void    run_server(struct addrinfo *serv)
 {
-	int			sockfd; // socket file descriptors
+	int			sockfd, epoll_fd; // socket file descriptors
 	void		*buff;
 	int			yes = 1;
 	struct addrinfo 		*p;
@@ -112,6 +117,6 @@ void    run_server(struct addrinfo *serv)
 		error_and_exit("Listen");
 	}
 	std::cout << "Server waiting for connections...: \n";
-	setup_epoll(sockfd);
-	accept_loop(sockfd, addr_in);
+	epoll_fd = setup_epoll(sockfd);
+	accept_loop(sockfd, epoll_fd, addr_in);
 }
