@@ -7,6 +7,7 @@
 # include <netdb.h>
 # include <netinet/in.h>
 # include <arpa/inet.h>
+# include <sys/epoll.h>
 # include <errno.h>
 # include <string.h>
 # include <unistd.h>
