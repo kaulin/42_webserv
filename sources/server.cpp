@@ -15,28 +15,52 @@ void	sigchild_handler(int s)
 	errno = saved_status;
 }
 
-// small test handle request function
+
+// small test handle request function, it simply reads the request and sends a "Hello, world!" response
 void	handle_request(int new_sockfd)
 {
 	int		numbytes;
 	char	buf[1024];
 
-	std::memset(buf, 0, 1024);
+	std::memset(buf, 0, 1024); // make sure buffer is empty and null terminated
 	if ((numbytes = recv(new_sockfd, buf, 1023, 0)) == -1) {
 		error_and_exit("Receive");
 	}
-	std::cout << "Received: " << buf << "\n";
+	std::cout << "Received request: " << buf << "\n";
+	std::cout << "Sending back simple message.\n";
 	if (send(new_sockfd, "Hello, world!", 13, 0) == -1) {
 		error_and_exit("Send");
+	}
+}
+void	setup_epoll(int listen_sockfd, int conn_sockfd)
+{
+	struct epoll_event ev, events[10];
+	int nfds, epollfd;
+
+	if ((epollfd = epoll_create1(0)) == -1) {
+		error_and_exit("Epoll create");
+	}
+	ev.events = EPOLLIN; // read events
+	ev.data.fd = listen_sockfd;
+	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sockfd, &ev) == -1) {
+		error_and_exit("Epoll control: listen_sockfd");
 	}
 }
 
 void	accept_loop(int sockfd, struct sockaddr_storage addr_in)
 {
 	socklen_t	addr_size;
-	int			new_sockfd;
+	int			new_sockfd; // socket for new incoming connections
 	char 		ipstr_in[INET6_ADDRSTRLEN];
 
+	// handle signals for child processes
+	sa.sa_handler = sigchild_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+		error_and_exit("Sigaction");
+	}
+	// accept loop
 	while (1) {
 		addr_size = sizeof(struct sockaddr_storage);
 		if ((new_sockfd = accept(sockfd, (struct sockaddr *)&addr_in, &addr_size)) == -1) {
@@ -45,12 +69,12 @@ void	accept_loop(int sockfd, struct sockaddr_storage addr_in)
 		inet_ntop(addr_in.ss_family, get_in_addr((struct sockaddr *)&addr_in), ipstr_in, sizeof ipstr_in);
 		std::cout << "Connected to: " << ipstr_in << "\n";
 		if (fork() == 0) { // child process
-			close(sockfd);
-			handle_request(new_sockfd); // handle the request - implement this function
+			close(sockfd); // child doesn't need the listener
+			handle_request(new_sockfd); // handle the request
 			close(new_sockfd);
-			exit(0);
+			exit(0); // exit child process with success
 		}
-		close(new_sockfd);
+		close(new_sockfd); // parent doesn't need client socket
 	}
 }
 
@@ -87,12 +111,7 @@ void    run_server(struct addrinfo *serv)
 	if (listen(sockfd, BACKLOG) == -1) {
 		error_and_exit("Listen");
 	}
-	sa.sa_handler = sigchild_handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-		error_and_exit("Sigaction");
-	}
 	std::cout << "Server waiting for connections...: \n";
+	setup_epoll(sockfd);
 	accept_loop(sockfd, addr_in);
 }
