@@ -92,7 +92,7 @@ bool HttpRequestParser::parseHeaders(const std::string& headers_part, HttpReques
 // Function to parse the body (if any)
 void HttpRequestParser::parseBody(const std::string& body_part, HttpRequest& request)
 {
-	// In this example, we simply store the body as is
+	// Currently just storing the body as is
 	request.body = body_part;
 }
 
