@@ -1,7 +1,13 @@
 #include "webserv.hpp"
+#include "HttpServer.hpp"
+#include "ServerConfig.hpp"
 
 int main(int argc, char **argv) 
 {
+	HttpServer 		server;
+	ServerConfig	config;
+	struct addrinfo serv_addr;
+
 	if (argc < 2) {
 		std::cerr << "Error: Please provide configuration file\n";
 		return 2;
@@ -10,10 +16,8 @@ int main(int argc, char **argv)
 		std::cerr << "Error: Too many arguments\n";
 		return 2;
 	}
-	struct addrinfo serv_addr;
-	const std::string conf = argv[1];
-	parse_config_file(conf, serv_addr);
-	run_server(&serv_addr);
-	std::cout << "Server started from configuration file: " << conf << "\n";
+	config.setConfigFilePath(argv[1]);
+	config.parseConfigFile(serv_addr);
+	server.runServer(&serv_addr);
 	return 0;
 }
