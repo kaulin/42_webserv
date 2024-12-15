@@ -21,19 +21,6 @@ HttpRequestParser::HttpRequestParser() {}
 // Default destructor
 HttpRequestParser::~HttpRequestParser() {}
 
-// Copy constructor
-HttpRequestParser::HttpRequestParser(const HttpRequestParser& other)
-{
-    // is this necessary?
-}
-
-// Copy assignment operator
-HttpRequestParser& HttpRequestParser::operator=(const HttpRequestParser& other)
-{
-	// is this necessary?
-	return (*this);
-}
-
 // Function to parse the request line (e.g., "GET /index.html HTTP/1.1")
 bool HttpRequestParser::parseRequestLine(const std::string& request_line, HttpRequest& request)
 {
