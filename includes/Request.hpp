@@ -24,8 +24,6 @@ private:
 public:
 	HttpRequestParser();											// Default constructor
 	~HttpRequestParser();											// Default destructor
-	HttpRequestParser(const HttpRequestParser& other);				// Copy constructor
-	HttpRequestParser& operator=(const HttpRequestParser& other);	// Copy assignment operator
 
 	// Parses raw HTTP request string into an HttpRequest object
 	bool parseRequest(const std::string& raw_request, HttpRequest& request);
