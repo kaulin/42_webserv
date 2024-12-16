@@ -9,13 +9,14 @@
 # include <netinet/in.h>
 # include <arpa/inet.h>
 # include <poll.h>
-# include <sys/epoll.h>
 # include <sys/wait.h>
+# include <poll.h>
 # include <errno.h>
 # include <string.h>
 # include <unistd.h>
 # include <fcntl.h>
+# include <vector>
 
-void    parse_config_file(const std::string conf, struct addrinfo serv_addr);
+# define DEFAULT_CONFIG_FILE "config/default.conf"
 
 #endif

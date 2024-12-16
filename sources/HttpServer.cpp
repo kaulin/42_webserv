@@ -1,19 +1,29 @@
 #include "webserv.hpp"
 #include "HttpServer.hpp"
+#include "ServerConfigData.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
-HttpServer::HttpServer() {} // any initial values assigned here?
+HttpServer::HttpServer(std::vector<ServerConfigData> servers)
+{
+	_host = "localhost";
+	_port = 80;
+	sockfd = 0;
+	_running = true;
+	_pollfds = NULL;
+	_num_of_ports = servers.size();
+	_servinfo = NULL;
+}
 
 HttpServer::~HttpServer() {}
 
-void	error_and_exit(const char *msg)
+void	HttpServer::error_and_exit(const char *msg)
 {
 	perror(msg);
 	exit(errno);
 }
 
-void	sigchild_handler(int s)
+void	HttpServer::sigchild_handler(int s)
 {
 	int saved_status = errno;
 
@@ -21,9 +31,16 @@ void	sigchild_handler(int s)
 	errno = saved_status;
 }
 
+void	HttpServer::send_response(int sockfd_out, std::string response)
+{
+	std::cout << "Sending back response: " << response << "\n";
+	if (send(sockfd_out, response.c_str(), response.length(), 0) == -1) {
+		error_and_exit("Send");
+	}
+}
 
 // small test handle request function, it simply reads the request and sends a "Hello, world!" response
-void	handle_request(int new_sockfd)
+void	HttpServer::handle_request(int new_sockfd)
 {
 	int		numbytes;
 	char	buf[1024];
@@ -33,28 +50,52 @@ void	handle_request(int new_sockfd)
 		error_and_exit("Receive");
 	}
 	std::cout << "Received request: " << buf << "\n";
-	std::cout << "Sending back simple message.\n";
-	if (send(new_sockfd, "Hello, world!", 13, 0) == -1) {
-		error_and_exit("Send");
-	}
+	this.send_response(new_sockfd, "Hello, world!");
 }
-int	setup_epoll(int listen_sockfd, int conn_sockfd)
+/*
+int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+struct pollfd {
+               int   fd;         file descriptor
+               short events;     requested events
+               short revents;    returned events
+           };
+*/
+void    HttpServer::poll_loop(int listen_sockfd)
 {
-	struct epoll_event ev, events[10];
-	int nfds, epollfd;
+	struct epoll_event	ev, events[10];
+	int conn_sockfd;
+	int poll_count;
 
-	if ((epollfd = epoll_create1(listen_sockfd)) == -1) {
-		error_and_exit("Epoll create: listen_sockfd");
+	_pollfds = std::memset(listen_pollfds, 0, sizeof(struct pollfd) * _num_of_ports);
+	if (_pollfds == NULL) {
+		error_and_exit("Memset");
 	}
-	ev.events = EPOLLIN; // read events
-	ev.data.fd = listen_sockfd;
-	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sockfd, &ev) == -1) {
-		error_and_exit("Epoll control: listen_sockfd");
+	// loop to poll for each port that is listened to
+	for (int i = 0; i < _num_of_ports; i++) {
+		_pollfds[i].fd = listen_sockfd;
+		_pollfds[i].events = POLLIN; // what type of events we are looking for (incoming data)
 	}
-	return (epollfd);
+	while (true) {
+		if ((poll_count = poll(_pollfds, _num_of_ports, -1)) == -1) {
+			error_and_exit("Poll");
+		}
+		for(int i = 0; i < _num_of_ports; i++) 
+		{
+			if (_pollfds[i].revents & POLLIN) 
+			{
+				conn_sockfd = accept(listen_sockfd, NULL, NULL);
+				if (conn_sockfd == -1) {
+					error_and_exit("Accept");
+				}
+				/* this.handle_request(conn_sockfd);
+				close(conn_sockfd);
+				break; */
+			}
+		}
+	}
 }
 
-void	accept_loop(int sockfd, int epoll_fd, struct sockaddr_storage addr_in)
+void    HttpServer::accept_loop(int sockfd, int epoll_fd, struct sockaddr_storage addr_in)
 {
 	socklen_t	addr_size;
 	int			new_sockfd; // socket for new incoming connections
@@ -63,12 +104,12 @@ void	accept_loop(int sockfd, int epoll_fd, struct sockaddr_storage addr_in)
 	struct sigaction		sa;
 
 	// handle signals for child processes
-	sa.sa_handler = sigchild_handler;
+/* 	sa.sa_handler = sigchild_handler;
 	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+	sa.sa_flags = SA_RESTART; */
+/* 	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
 		error_and_exit("Sigaction");
-	}
+	} */
 	// accept loop, loop until running = false
 	while (1) {
 		if ((n_pollfds = epoll_wait(epoll_fd, events, 10, 0)) == -1) {
@@ -79,7 +120,7 @@ void	accept_loop(int sockfd, int epoll_fd, struct sockaddr_storage addr_in)
 			error_and_exit("Accept");
 		}
 		inet_ntop(addr_in.ss_family, get_in_addr((struct sockaddr *)&addr_in), ipstr_in, sizeof ipstr_in);
-		std::cout << "Connected to: " << ipstr_in << "\n";
+		std::cout << "Server: got connection from " << ipstr_in << "\n";
 		if (fork() == 0) { // child process
 			close(sockfd); // child doesn't need the listener
 			handle_request(new_sockfd); // handle the request
@@ -90,16 +131,15 @@ void	accept_loop(int sockfd, int epoll_fd, struct sockaddr_storage addr_in)
 	}
 }
 
-void    HttpServer::runServer(struct addrinfo *serv)
+void    HttpServer::runServer()
 {
-	int			sockfd, epoll_fd; // socket file descriptors
-	void		*buff;
-	int			yes = 1;
-	struct addrinfo 		*p;
+	int						sockfd; // socket file descriptors
+	void					*buff;
+	int						yes = 1;
+	struct addrinfo 		*p = _servinfo;
 	struct sockaddr_storage addr_in; // information about incoming connection goes here (who is calling from where)
 
-	for (p = serv; p != NULL; p = p->ai_next)
-	{
+	for (p = serv; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(serv->ai_family, serv->ai_socktype, serv->ai_protocol)) == -1) {
 			perror("Socket");
 			continue;
@@ -123,6 +163,6 @@ void    HttpServer::runServer(struct addrinfo *serv)
 		error_and_exit("Listen");
 	}
 	std::cout << "Server waiting for connections...: \n";
-	epoll_fd = setup_epoll(sockfd);
-	accept_loop(sockfd, epoll_fd, addr_in);
+	// this.poll_loop(sockfd);
+	// this.accept_loop(sockfd, epoll_fd, addr_in);
 }
