@@ -1,6 +1,7 @@
 #include "webserv.hpp"
 #include "HttpServer.hpp"
 #include "ServerConfigParser.hpp"
+#include "ServerConfigData.hpp"\
 
 int main(int argc, char **argv) 
 {
@@ -28,8 +29,8 @@ int main(int argc, char **argv)
 	{
 		std::cerr << e.what() << '\n';
 	}
-	HttpServer	server(configParser._servers); // New server with the parsed config data
-	server.setupAddrinfo();
-	server.runServer();
+	HttpServer	httpServer(configParser.servers[0]); // New server with the parsed config data, loop vector to set up all
+	httpServer.setupAddrinfo();
+	httpServer.runServer();
 	return 0;
 }

@@ -14,7 +14,7 @@ public:
         ServerConfigParser();
         ~ServerConfigParser();
 
-        std::vector<ServerConfigData> _servers;      
+        std::vector<ServerConfigData> servers;      
 
         // class member functions
         void    parseConfigFile();
