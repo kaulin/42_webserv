@@ -163,6 +163,26 @@ void    HttpServer::runServer()
 		error_and_exit("Listen");
 	}
 	std::cout << "Server waiting for connections...: \n";
-	// this.poll_loop(sockfd);
+	this.poll_loop(sockfd);
 	// this.accept_loop(sockfd, epoll_fd, addr_in);
+}
+
+void	HttpServer::setupAddrinfo()
+{
+	int	status;
+	struct addrinfo	data; // we set to data some preliminary data that gets applied in gettaddrinfo
+
+	// Some temp data to test out server info where we allow incoming connections
+	// should loop through each server config and create a new Server Data object
+	std::memset(&data, 0, sizeof data); // set data to be empty
+	data.ai_family = AF_UNSPEC; // IPv4 or IPv6
+	data.ai_socktype = SOCK_STREAM; // TCP stream socket
+	data.ai_flags = AI_PASSIVE; // auto fills IP address - sets to localhost's IP
+	if ((status = getaddrinfo(NULL, "80", &data, &_server_info)) != 0) {
+		std::cerr << gai_strerror(EXIT_FAILURE);
+		exit(1);
+	}
+
+		// servinfo now points to a linked list of 1 or more struct addrinfos
+
 }

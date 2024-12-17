@@ -8,7 +8,8 @@ class HttpServer;
 
 class ServerConfigParser { 
 private:
-        std::string _path;
+        std::string     _path;
+        static size_t   _num_of_servers;
 public:
         ServerConfigParser();
         ~ServerConfigParser();

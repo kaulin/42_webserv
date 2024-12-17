@@ -22,14 +22,14 @@ int main(int argc, char **argv)
 	}
 	try
 	{
-		configParser.parseConfigFile();
+		configParser.parseConfigFile(); // after parsing there is a vector of serverData objects that hold all the server info
 	}
 	catch(const std::exception& e)
 	{
 		std::cerr << e.what() << '\n';
 	}
-	// New server with the parsed config data
-	HttpServer	server(configParser._servers);
+	HttpServer	server(configParser._servers); // New server with the parsed config data
+	server.setupAddrinfo();
 	server.runServer();
 	return 0;
 }

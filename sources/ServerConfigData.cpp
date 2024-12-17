@@ -1,10 +1,13 @@
 #include "ServerConfigData.hpp"
 
-ServerConfigData::serverConfigData() {
-    _path = nullptr;
-    _p = nullptr;
-    _server_info = nullptr;
-
+ServerConfigData::ServerConfigData() 
+{
+    host = nullptr;
+    port = -1;
+    name = nullptr;
+    error_page = nullptr;
+    cli_max_bodysize = 0;
+    routes.empty();
 }
 
-ServerConfigData::~serverConfigData() {}
+ServerConfigData::~ServerConfigData() {}

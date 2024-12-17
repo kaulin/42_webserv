@@ -6,7 +6,7 @@ CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++11
 SOURCES				:= main.cpp \
 						HttpServer.cpp \
 						ServerConfigParser.cpp \
-						ServerConfigData.cpp \
+						ServerConfigData.cpp
 VPATH				+= sources/
 
 # Objects

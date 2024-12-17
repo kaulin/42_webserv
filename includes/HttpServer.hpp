@@ -7,19 +7,18 @@ class ServerConfigData;
 class HttpServer
 {
 private:
-        std::string     _host;
-        uint16_t        _port;
+        struct addrinfo *_server_info;
+        struct pollfd   *_pollfds;
         int             _sockfd;
         bool            _running;
-        struct pollfd   *_pollfds;
         int             _num_of_ports;
-        struct addrinfo *_servinfo;
 public:
         HttpServer(std::vector<ServerConfigData> _servers);
         ~HttpServer();
 
         // class member functions
         void    runServer();
+        void    setupAddrinfo();
         void    accept_loop(int sockfd, int epoll_fd, struct sockaddr_storage addr_in);
         void    poll_loop(int listen_sockfd);
         void    error_and_exit(const char *msg);
