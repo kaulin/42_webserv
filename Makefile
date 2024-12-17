@@ -1,6 +1,6 @@
 NAME				:= webserv
 CXX					:= c++
-CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++11
+CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++11 -g
 
 # Sources
 SOURCES				:= main.cpp \

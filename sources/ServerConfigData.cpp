@@ -2,12 +2,13 @@
 
 ServerConfigData::ServerConfigData() 
 {
-    host = nullptr;
+    host.clear();
+    name.clear();
+    error_page.clear();
+    routes.clear();
     port = -1;
-    name = nullptr;
-    error_page = nullptr;
     cli_max_bodysize = 0;
-    routes.empty();
+	std::cout << "New server config data created...: \n";
 }
 
 ServerConfigData::~ServerConfigData() {}
