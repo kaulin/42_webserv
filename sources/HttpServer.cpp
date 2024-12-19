@@ -6,7 +6,6 @@
 
 HttpServer::HttpServer(ServerConfigData server)
 {
-	// data should come from server info file
 	_server_info = nullptr;
 	_listen_sockfd = -1;
 	_running = true;
@@ -44,7 +43,7 @@ void	HttpServer::handle_request(int new_sockfd)
 	int		numbytes;
 	char	buf[1024];
 
-	std::memset(buf, 0, 1024); // make sure buffer is empty and null terminated
+	std::memset(buf, 0, 1024);
 	if ((numbytes = recv(new_sockfd, buf, 1023, 0)) == -1) {
 		error_and_exit("Receive");
 	}
@@ -58,31 +57,30 @@ void    HttpServer::poll_loop()
 	socklen_t		addrlen;
 	int 			conn_sockfd;
 	int 			poll_count;
-	char			remoteIP[INET6_ADDRSTRLEN];
-	struct sockaddr_storage remoteaddr_in; // address of incoming connection
+	char			remoteIP[INET_ADDRSTRLEN];
+	struct sockaddr_storage remoteaddr_in;
 
 	std::cout << "Server waiting for connections...: \n";
 	std::memset(poll_fds, 0, sizeof(struct pollfd) * _num_of_ports);
-	std::cout << "1...: \n";
 	if (poll_fds == NULL) {
 		error_and_exit("Memset");
 	}
-	// loop to poll for each port that is listened to
 	for (int i = 0; i < _num_of_ports; i++) {
 		poll_fds[i].fd = _listen_sockfd;
-		poll_fds[i].events = POLLIN; // what type of events we are looking for (incoming data)
+		poll_fds[i].events = POLLIN;
 	}
-	std::cout << "2...: \n";
-	while (_running) {
+	while (1) // while running
+	{
+		std::cout << "Starting poll\n";
 		if ((poll_count = poll(poll_fds, _num_of_ports, -1)) == -1) {
 			error_and_exit("Poll");
 		}
+		std::cout << "Listening to " << poll_count << " fd:s\n";
 		for(int i = 0; i < _num_of_ports; i++) 
 		{
-			std::cout << "3...: " << i << " \n";
 			if (poll_fds[i].revents & POLLIN) 
 			{
-				addrlen = sizeof(remoteaddr_in); // save the size of the address
+				addrlen = sizeof(remoteaddr_in);
 				conn_sockfd = accept(_listen_sockfd, (struct sockaddr *)&remoteaddr_in, &addrlen);
 				if (conn_sockfd == -1) {
 					error_and_exit("Accept");
@@ -91,7 +89,7 @@ void    HttpServer::poll_loop()
                             "socket %d\n",
                             inet_ntop(remoteaddr_in.ss_family,
                                 get_in_addr((struct sockaddr*)&remoteaddr_in),
-                                remoteIP, INET6_ADDRSTRLEN), conn_sockfd);
+                                remoteIP, INET_ADDRSTRLEN), conn_sockfd);
 				handle_request(conn_sockfd);
 				close(conn_sockfd);
 			}
@@ -101,49 +99,60 @@ void    HttpServer::poll_loop()
 
 void    HttpServer::runServer()
 {
-	int						sockfd; // socket file descriptors
 	int						yes = 1;
 	struct addrinfo 		*p = _server_info;
 
 	for (p = _server_info; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(_server_info->ai_family, _server_info->ai_socktype, _server_info->ai_protocol)) == -1) {
+		if ((_listen_sockfd = socket(_server_info->ai_family, _server_info->ai_socktype, _server_info->ai_protocol)) == -1) {
 			perror("Socket");
 			continue;
 		}
-		fcntl(sockfd, F_SETFL, O_NONBLOCK); // sets the socket to non-blocking
-		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+		std::cout << "Listening to " << _listen_sockfd << " \n";
+		fcntl(_listen_sockfd, F_SETFL, O_NONBLOCK); // sets the socket to non-blocking
+		if (setsockopt(_listen_sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
 			error_and_exit("Setsockopt");
 		}
-		if (bind(sockfd, _server_info->ai_addr, _server_info->ai_addrlen) == -1) {
-			close(sockfd);
+		if (bind(_listen_sockfd, _server_info->ai_addr, _server_info->ai_addrlen) == -1) {
+			close(_listen_sockfd);
 			perror("Bind");
 			continue;
 		}
 		break;
 	}
-	freeaddrinfo(_server_info); // free the pointers alloc'd by getaddrinfo
 	if (p == NULL) {
 		error_and_exit("Failed to bind");
 	}
-	if (listen(sockfd, BACKLOG) == -1) {
+	if (listen(_listen_sockfd, BACKLOG) == -1) {
 		error_and_exit("Listen");
 	}
+	freeaddrinfo(_server_info);
 	poll_loop();
 }
 
 void	HttpServer::setupAddrinfo()
 {
 	int	status;
-	struct addrinfo	data;
+	struct addrinfo	hints;
 
-	// should loop through each server config and create a new Server Data object
-	std::memset(&data, 0, sizeof data); // set data to be empty
-	data.ai_family = AF_UNSPEC; // IPv4 or IPv6
-	data.ai_socktype = SOCK_STREAM; // TCP stream socket
-	data.ai_flags = AI_PASSIVE; // auto fills IP address - sets to localhost's IP
-	if ((status = getaddrinfo(NULL, "3490", &data, &_server_info)) != 0) {
-		std::cerr << gai_strerror(EXIT_FAILURE);
-		exit(1);
+	std::memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_INET; // IPv4
+	hints.ai_socktype = SOCK_STREAM; // TCP stream socket
+
+	if ((status = getaddrinfo("localhost", "3490", &hints, &_server_info)) != 0) {
+		throw std::runtime_error(gai_strerror(status));
 	}
-	// servinfo now points to a linked list of 1 or more struct addrinfos
+	std::cout << "Getaddrinfo finished with status: " << status << "\n";
+	
+	// test function for printing server host addresses
+	struct addrinfo *p;
+	for(p = _server_info; p != NULL; p = p->ai_next) {
+        void *addr;
+		char ipstr[INET_ADDRSTRLEN];
+
+        struct sockaddr_in *ipv = (struct sockaddr_in *)p->ai_addr;
+        addr = &(ipv->sin_addr);
+        inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
+        printf("Address: %s\n", ipstr);
+    }
+
 }

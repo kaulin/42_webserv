@@ -17,8 +17,10 @@ void	ServerConfigParser::setConfigFilePath(std::string path)
 	_path = path;
 }
 
-void printServerConfigs(const std::vector<ServerConfigData>& servers) {
-    for (const auto& server : servers) {
+void printServerConfigs(const std::vector<ServerConfigData>& servers) 
+{
+    // for testing
+	for (const auto& server : servers) {
         std::cout << "Host: " << server.host << "\n"
                   << "Port: " << server.port << "\n"
                   << "Name: " << server.name << "\n"
@@ -38,7 +40,7 @@ void    ServerConfigParser::parseConfigFile()
 	ServerConfigData server_object;
 	// adding some test data
 	server_object.host = "localhost";
-	server_object.port = 8080;
+	server_object.port = 3490;
 	server_object.name = "example";
 	server_object.error_page = "err.com";
 	server_object.cli_max_bodysize = 1000;

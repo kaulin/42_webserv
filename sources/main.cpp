@@ -23,13 +23,13 @@ int main(int argc, char **argv)
 	}
 	try
 	{
-		configParser.parseConfigFile(); // after parsing there is a vector of serverData objects that hold all the server info
+		configParser.parseConfigFile();
 	}
 	catch(const std::exception& e)
 	{
 		std::cerr << e.what() << '\n';
 	}
-	HttpServer	httpServer(configParser.servers[0]); // New server with the parsed config data, loop vector to set up all
+	HttpServer	httpServer(configParser.servers[0]);
 	httpServer.setupAddrinfo();
 	httpServer.runServer();
 	return 0;
