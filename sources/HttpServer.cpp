@@ -138,7 +138,7 @@ void	HttpServer::setupAddrinfo()
 	hints.ai_family = AF_INET; // IPv4
 	hints.ai_socktype = SOCK_STREAM; // TCP stream socket
 
-	if ((status = getaddrinfo("localhost", "3490", &hints, &_server_info)) != 0) {
+	if ((status = getaddrinfo("localhost", "8080", &hints, &_server_info)) != 0) {
 		throw std::runtime_error(gai_strerror(status));
 	}
 	std::cout << "Getaddrinfo finished with status: " << status << "\n";
