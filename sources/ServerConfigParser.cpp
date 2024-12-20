@@ -3,7 +3,7 @@
 
 ServerConfigParser::ServerConfigParser () {
 	_path = "";
-	servers.clear();
+	serverConfigs.clear();
 }
 
 ServerConfigParser::~ServerConfigParser() {}
@@ -17,16 +17,16 @@ void	ServerConfigParser::setConfigFilePath(std::string path)
 	_path = path;
 }
 
-void printServerConfigs(const std::vector<ServerConfigData>& servers) 
+void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs) 
 {
     // for testing
-	for (const auto& server : servers) {
-        std::cout << "Host: " << server.host << "\n"
-                  << "Port: " << server.port << "\n"
-                  << "Name: " << server.name << "\n"
-                  << "Error Page: " << server.error_page << "\n"
-                  << "Client Max Body Size: " << server.cli_max_bodysize << "\n"
-                  << "--------------------------\n";
+	for (const auto& conf : serverConfigs) {
+        std::cout << "Host: " << conf.getHost() << "\n";
+		conf.printPorts(); // helper function to print all ports
+        std::cout << "Name: " << conf.getName() << "\n"
+        << "Error Page: " << conf.getErrorPage() << "\n"
+        << "Client Max Body Size: " << conf.getCliMaxBodysize() << "\n"
+        << "--------------------------\n";
     }
 }
 
@@ -38,13 +38,24 @@ void    ServerConfigParser::parseConfigFile()
 	}
 	// loop to set all the servers config data
 	ServerConfigData server_object;
-	// adding some test data
-	server_object.host = "localhost";
-	server_object.port = 3490;
-	server_object.name = "example";
-	server_object.error_page = "err.com";
-	server_object.cli_max_bodysize = 1000;
+	ServerConfigData server_object_2;
+	std::vector<std::string> test_ports = {"3490", "3491"};
+	std::vector<std::string> test_ports2 = {"8080"};
 
-	servers.push_back(server_object);
-	printServerConfigs(servers);
+	// adding some test data
+	server_object.setHost("localhost");
+	server_object.setPorts(test_ports);
+	server_object.setServerName("example 1");
+	server_object.setErrorPage("err.com");
+	server_object.setClientBodySize(1024);
+	serverConfigs.push_back(server_object);
+
+	server_object_2.setHost("localhost");
+	server_object_2.setPorts(test_ports2);
+	server_object_2.setServerName("example 2");
+	server_object_2.setErrorPage("err.com");
+	server_object_2.setClientBodySize(1024);
+	serverConfigs.push_back(server_object_2);
+
+	printServerConfigs(serverConfigs);
 }

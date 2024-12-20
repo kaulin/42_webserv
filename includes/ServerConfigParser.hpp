@@ -9,12 +9,11 @@ class HttpServer;
 class ServerConfigParser { 
 private:
         std::string     _path;
-        static size_t   _num_of_servers;
 public:
         ServerConfigParser();
         ~ServerConfigParser();
 
-        std::vector<ServerConfigData> servers;      
+        std::vector<ServerConfigData> serverConfigs;  
 
         // class member functions
         void    parseConfigFile();
