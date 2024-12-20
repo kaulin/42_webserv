@@ -3,7 +3,7 @@
 #include <netdb.h> // For getaddrinfo and freeaddrinfo
 #include <sys/socket.h> // For AF_INET, SOCK_STREAM
 #include <netinet/in.h> // For sockaddr_in
-#include <arpa/inet.h> // For ntohl
+#include <arpa/inet.h> // For htons (if needed)
 
 
 std::string convertBinaryToIPv4(uint32_t ip_binary)
@@ -44,7 +44,7 @@ bool resolveDNS(const std::string& hostname, std::string& ip_address)
     struct sockaddr_in* ipv4 = reinterpret_cast<struct sockaddr_in*>(res->ai_addr);
     uint32_t ip_binary = ipv4->sin_addr.s_addr; // Binary IP in network byte order
 
-    // Convert binary IP to human-readable format
+    // Convert binary IP to human-readable format (manual implementation of inet_ntop)
     ip_address = convertBinaryToIPv4(ip_binary);
 
     // Free the linked list
