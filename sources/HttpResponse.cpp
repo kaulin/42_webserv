@@ -1,15 +1,17 @@
 #include "HttpResponse.hpp"
 
 // Constructor
-HttpResponse::HttpResponse(HttpRequest& request) : _request(request), _statusCode(0)
+HttpResponse::HttpResponse(HttpRequest& request) : 
+	_request(request),
+	_resolved(false), 
+	_statusCode(0)
 {
-	checkRequest(); // check request errors (eg POST with no type or transfer encoding)
-	checkMethod(); // check method & allowed methods at location
-	checkResource(); // check if resource exists
-	checkCGI; // check cgi, execute cgi
-	handleMethod; // handle method
+	// checkRequest(); // check request errors (eg POST with no type or transfer encoding)
+	// checkMethod(); // check method & allowed methods at location
+	// checkResource(); // check if resource exists
+	// checkCGI; // check cgi, execute cgi
+	// handleMethod; // handle method
 }
-
 
 // Deconstructor
 HttpResponse::~HttpResponse() {}

@@ -33,6 +33,7 @@ class HttpResponse
 {
 private:
 	HttpRequest& _request;
+	bool _resolved;
 	int _statusCode;
 	std::string _statusLine;
 	std::deque<std::string> _headerKeys;
