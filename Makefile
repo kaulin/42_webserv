@@ -1,9 +1,12 @@
 NAME				:= webserv
 CXX					:= c++
-CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++11
+CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++11 -g
 
 # Sources
-SOURCES				:= main.cpp
+SOURCES				:= main.cpp \
+						HttpServer.cpp \
+						ServerConfigParser.cpp \
+						ServerConfigData.cpp
 VPATH				+= sources/
 
 # Objects
@@ -13,7 +16,10 @@ OBJECT_PATHS		:= $(addprefix $(OBJECT_DIRECTORY), $(OBJECTS))
 
 # Includes
 INCLUDE_DIRECTORY	:= includes/
-INCLUDES			:= webserv.hpp
+INCLUDES			:= webserv.hpp \
+						HttpServer.hpp \
+						ServerConfigParser.hpp \
+						ServerConfigData.hpp
 INCLUDE_PATHS		:= $(addprefix $(INCLUDE_DIRECTORY), $(INCLUDES))
 INCLUDE_FLAGS		:= -I includes/
 
@@ -25,7 +31,7 @@ $(NAME): $(OBJECT_DIRECTORY) $(OBJECT_PATHS) $(INCLUDE_PATHS) Makefile
 	@echo "$(NAME) built with $(CXX) and flags $(CXX_FLAGS)!"
 
 $(OBJECT_DIRECTORY):
-	@mkdir $(OBJECT_DIRECTORY)
+	@mkdir -p $(OBJECT_DIRECTORY)
 
 $(OBJECT_DIRECTORY)%.o: %.cpp $(INCLUDE_PATHS) Makefile 
 	@echo "Compiling $<"
