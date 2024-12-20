@@ -2,9 +2,13 @@
 #pragma once
 
 #include <iostream>
+#include <iomanip>
+#include <ctime>
+#include <sstream>
 #include <string>
 #include <deque>
 #include <unordered_map>
+#include <ctime>
 #include "HttpRequest.hpp"
 
 struct Request;
@@ -42,10 +46,14 @@ private:
 public:
 	HttpResponse(HttpRequest& request);
 	~HttpResponse(); 
-	void setStatusCode(const int statusCode);
 	void addHeader(const std::string& key, const std::string& value);
-	void setBody(const std::string& body);
-	const std::string getStatusText() const;
+	void checkRequest();
+	void checkMethod();
+	void checkResource();
+	void checkCGI();
+	void handleMethod();
+	void formResponse();
+	const std::string getStatus() const;
 	const std::string HttpResponse::toString() const;
 	friend std::ostream& std::operator<<(std::ostream& os, const HttpResponse& obj);
 };
