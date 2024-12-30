@@ -13,7 +13,12 @@ ServerConfigData::ServerConfigData()
 
 ServerConfigData::~ServerConfigData() {}
 
-void ServerConfigData::setHost(std::string host) 
+void ServerConfigData::setHost(const std::string& host) 
+{
+    _host = host;
+}
+
+void ServerConfigData::setHost(const std::string&& host) 
 {
     _host = std::move(host);
 }
@@ -26,12 +31,22 @@ void ServerConfigData::setPorts(std::vector<std::string> ports)
     _num_of_ports = _ports.size();
 }
 
-void ServerConfigData::setServerName(std::string server_name) 
+void ServerConfigData::setServerName(const std::string& server_name) 
+{
+    _name = server_name;
+}
+
+void ServerConfigData::setServerName(const std::string&& server_name) 
 {
     _name = std::move(server_name);
 }
 
-void ServerConfigData::setErrorPage(std::string error_page) 
+void ServerConfigData::setErrorPage(const std::string& error_page) 
+{
+    _error_page = error_page;
+}
+
+void ServerConfigData::setErrorPage(const std::string&& error_page) 
 {
     _error_page = std::move(error_page);
 }

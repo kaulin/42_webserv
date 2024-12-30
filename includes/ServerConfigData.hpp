@@ -16,10 +16,13 @@ public:
         ~ServerConfigData();
 
         // class member functions
-        void	setHost(std::string host);
+        void	setHost(const std::string& host);
+        void	setHost(const std::string&& host);
+        void	setServerName(const std::string& server_name);
+        void	setServerName(const std::string&& server_name);
         void	setPorts(std::vector<std::string> ports);
-        void	setServerName(std::string server_name);
-        void	setErrorPage(std::string error_page);
+        void	setErrorPage(const std::string& error_page);
+        void	setErrorPage(const std::string&& error_page);
         void	setClientBodySize(size_t client_body_size);
         void	addRoute(std::string route);
 

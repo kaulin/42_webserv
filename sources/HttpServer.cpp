@@ -7,11 +7,11 @@
 HttpServer::HttpServer(ServerConfigData server)
 {
 	_addr_info.clear();
+	_ports.clear();
 	_listen_sockfd = -1;
 	_running = true;
 	_num_of_ports = 1;
-	_name = server.name;
-	_ports = nullptr;
+	_name = server.getName();
 }
 
 HttpServer::~HttpServer() {}
@@ -33,7 +33,6 @@ void HttpServer::setupAddrinfo()
 			throw std::runtime_error(gai_strerror(status));
 		}
 		_addr_info.push_back(ai);
-		
 		// test function for printing server host addresses
 		struct addrinfo *p;
 		for(p = ai; p != NULL; p = p->ai_next) {
@@ -48,20 +47,20 @@ void HttpServer::setupAddrinfo()
 	}
 }
 
-void HttpServer::setPorts(std::string *ports)
+void HttpServer::setPorts(std::vector<std::string> ports)
 {
-	for (size_t i = 0; i < _num_of_ports; i++) {
-		_ports[i] = ports[i];
+	for (const auto& current : ports) {
+		_ports.push_back(current);
 	}
 }
 
-struct addrinfo *HttpServer::getAddrinfo() { return _addr_info; }
+const std::vector<addrinfo*> HttpServer::getAddrinfoVec() { return _addr_info; }
 
 std::string HttpServer::getName() { return _name; }
 
 int HttpServer::getListenSockfd() { return _listen_sockfd; }
 
-int HttpServer::getNumOfPorts() { return _num_of_ports; }
+size_t HttpServer::getNumOfPorts() { return _num_of_ports; }
 
 void HttpServer::setNumOfPorts(size_t num) { _num_of_ports = num; }
 

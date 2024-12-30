@@ -9,22 +9,22 @@ class HttpServer
 private:
         std::vector<struct addrinfo*>   _addr_info;
         std::vector<std::string>        _ports;
-        std::string     _name;
-        int             _listen_sockfd;
-        bool            _running;
-        size_t          _num_of_ports;
+        std::string                     _name;
+        int                             _listen_sockfd;
+        bool                            _running;
+        size_t                          _num_of_ports;
 public:
         HttpServer(class ServerConfigData server);
         ~HttpServer();
 
         void            setupAddrinfo();
+        bool            isRunning();
 
         // get functions
-        struct addrinfo *getAddrinfo();
+        const std::vector<struct addrinfo*> getAddrinfoVec();
         std::string     getName();
+        size_t          getNumOfPorts();
         int             getListenSockfd();
-        int             getNumOfPorts();
-        bool            isRunning();
         // set functions
         void            setNumOfPorts(size_t num);
         void            setSockfd(int listen_sockfd);
