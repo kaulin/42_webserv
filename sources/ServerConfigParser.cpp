@@ -29,7 +29,6 @@ void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs)
         << "Client Max Body Size: " << conf.getCliMaxBodysize() << "\n"
         << "--------------------------\n";
     }
-	std::cout << "Finished printing\n";
 }
 
 void    ServerConfigParser::parseConfigFile()
@@ -46,11 +45,11 @@ void    ServerConfigParser::parseConfigFile()
 
 	for (auto& port : test_ports)
 	{
-		std::cout << "test ports 1 " << port.c_str() << "\n";
+		std::cout << "test ports " << port.c_str() << "\n";
 	}
 	for (auto& port :test_ports2)
 	{
-		std::cout << "test ports 2 " << port.c_str() << "\n";
+		std::cout << "test ports2 " << port.c_str() << "\n";
 	}
 	// adding some test data server 1 and server 2
 	server_object.setHost("localhost");

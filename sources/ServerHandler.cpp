@@ -66,35 +66,55 @@ void    ServerHandler::poll_loop()
 	socklen_t		addrlen;
 	int 			conn_sockfd;
 	char			remoteIP[INET_ADDRSTRLEN];
+
 	struct sockaddr_storage remoteaddr_in;
-	std::vector<pollfd_obj> poll_list;
+	// std::vector<pollfd_obj> poll_list;
 
-	poll_list.clear();
-	std::memset(&poll_list, 0, sizeof(struct pollfd) * _server_count);
+	std::vector< struct pollfd> pollfd_list;
+	pollfd_list.clear();
 
-	for (auto& server : _servers) 
+	// std::memset(&poll_list, 0, sizeof(struct pollfd) * _server_count);
+
+	for (auto& server : _servers) // for each servers sockets
 	{
-		size_t num_of_ports = server.getNumOfPorts();
-		struct pollfd_obj poll_obj;
-		poll_obj.poll_fds = new pollfd[num_of_ports];
+		std::cout << "Server " << server.getName() << " waiting for connections...: \n";
 		std::vector<int> listen_sockfds = server.getListenSockfds();
-		
-		std::cout << "Server waiting for connections...: \n";
-		std::memset(poll_obj.poll_fds, 0, sizeof(struct pollfd) * num_of_ports);
-		poll_obj.num_of_ports = num_of_ports;
-		if (poll_obj.poll_fds == NULL) {
-			error_and_exit("Memset");
+		// size_t num_of_ports = server.getNumOfPorts();
+		pollfd_list.resize(server.getNumOfPorts());
+		for (size_t i = 0; i < server.getNumOfPorts(); i++) {
+			pollfd_list[i].fd = listen_sockfds[i];
+			pollfd_list[i].events = POLLIN;
 		}
-		for (size_t i = 0; i < num_of_ports; i++) {
-			poll_obj.poll_fds[i].fd = listen_sockfds[i];
-			poll_obj.poll_fds[i].events = POLLIN;
-		}
-		// poll_obj.listen_sockfd = server.getListenSockfd();
-		poll_list.push_back(poll_obj);
+	}
+	for (auto& poll_obj : pollfd_list)
+	{
+		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
 	}
 	while (1) // while running
 	{
-		for (auto& poll_obj : poll_list)
+		if ((poll_count = poll(pollfd_list.data(), pollfd_list.size(), -1)) == -1) {
+			error_and_exit("Poll");
+		}
+		std::cout << "Listening to " << poll_count << " fd:s\n";
+		for(size_t i = 0; i < pollfd_list.size(); i++) 
+		{
+			if (pollfd_list[i].revents & POLLIN) 
+			{
+				addrlen = sizeof(remoteaddr_in);
+				conn_sockfd = accept(pollfd_list[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
+				if (conn_sockfd == -1) {
+					error_and_exit("Accept");
+				}
+				printf("pollserver: new connection from %s on "
+							"socket %d\n",
+							inet_ntop(remoteaddr_in.ss_family,
+								get_in_addr((struct sockaddr*)&remoteaddr_in),
+								remoteIP, INET_ADDRSTRLEN), conn_sockfd);
+				handle_request(conn_sockfd);
+				close(conn_sockfd);
+			}
+		}
+		/* for (auto& poll_obj : pollfd_list)
 		{
 			std::cout << "Starting poll\n";
 			if ((poll_count = poll(poll_obj.poll_fds, poll_obj.num_of_ports, -1)) == -1) {
@@ -119,7 +139,7 @@ void    ServerHandler::poll_loop()
 					close(conn_sockfd);
 				}
 			}
-		}
+		} */
 	}
 }
 
@@ -146,8 +166,6 @@ void    ServerHandler::runServers()
 		std::vector<struct addrinfo*> server_addresses = server.getAddrinfoVec();
 
 		std::cout << "Setting up server " << server.getName() << "\n"; 
-		server.printListenFds();
-		
         for (auto& curr_addr : server_addresses) // loop through each address info
 		{
 	    	struct addrinfo *p = curr_addr; // pointer to current address info
@@ -176,13 +194,13 @@ void    ServerHandler::runServers()
 			std::vector<int> listenFds = server.getListenSockfds(); 
 			for (auto& currFd : listenFds)
 			{
-				std::cout << "Listen() ---> " << currFd << "\n";
 				if (listen(currFd, BACKLOG) == -1) {
 					error_and_exit("Listen");
 				}
 			}
 			freeaddrinfo(curr_addr);
         }
+		server.printListenFds();
     }
 	poll_loop();
 }
