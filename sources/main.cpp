@@ -4,17 +4,6 @@
 #include "ServerConfigData.hpp"
 #include "ServerHandler.hpp"
 
-void	ServerHandler::printServerData()
-{
-	// for testing
-	for (auto& server : _servers) {
-        std::cout << "Host: " << server.getName() << "\n"
-                  << "Listen sockfd: " << server.getListenSockfd() << "\n"
-                  << "Number of ports: " << server.getNumOfPorts() << "\n"
-                  << "--------------------------\n";
-    }
-}
-
 int main(int argc, char **argv) 
 {
 	std::string 		configFilePath;
@@ -44,7 +33,6 @@ int main(int argc, char **argv)
 	catch(const std::exception& e) {
 		std::cerr << e.what() << '\n';
 	}
-	serverHandler.printServerData(); // for testing
 	serverHandler.runServers();
 	return 0;
 }

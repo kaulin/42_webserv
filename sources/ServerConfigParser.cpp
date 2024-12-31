@@ -20,6 +20,7 @@ void	ServerConfigParser::setConfigFilePath(std::string path)
 void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs) 
 {
     // for testing
+	std::cout << "Printing all configs\n";
 	for (const auto& conf : serverConfigs) {
         std::cout << "Host: " << conf.getHost() << "\n";
 		conf.printPorts(); // helper function to print all ports
@@ -28,6 +29,7 @@ void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs)
         << "Client Max Body Size: " << conf.getCliMaxBodysize() << "\n"
         << "--------------------------\n";
     }
+	std::cout << "Finished printing\n";
 }
 
 void    ServerConfigParser::parseConfigFile()
@@ -42,7 +44,15 @@ void    ServerConfigParser::parseConfigFile()
 	std::vector<std::string> test_ports = {"3490", "3491"};
 	std::vector<std::string> test_ports2 = {"8080"};
 
-	// adding some test data
+	for (auto& port : test_ports)
+	{
+		std::cout << "test ports 1 " << port.c_str() << "\n";
+	}
+	for (auto& port :test_ports2)
+	{
+		std::cout << "test ports 2 " << port.c_str() << "\n";
+	}
+	// adding some test data server 1 and server 2
 	server_object.setHost("localhost");
 	server_object.setPorts(test_ports);
 	server_object.setServerName("example 1");

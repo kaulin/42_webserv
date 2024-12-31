@@ -9,6 +9,21 @@ ServerHandler::ServerHandler() {
 
 ServerHandler::~ServerHandler() {}
 
+void	ServerHandler::printServerData()
+{
+	std::vector<int> listensockfds;
+	// for testing
+	for (auto& server : _servers) {
+        std::cout << "Host: " << server.getName() << "\n";
+		listensockfds = server.getListenSockfds();
+		for (auto& curr : listensockfds) {
+			std::cout << "Listen sockfd: " << curr << "\n";
+		}
+        std::cout << "Number of ports: " << server.getNumOfPorts()
+        << "\n--------------------------\n";
+    }
+}
+
 void	ServerHandler::error_and_exit(const char *msg)
 {
 	perror(msg);
@@ -62,6 +77,7 @@ void    ServerHandler::poll_loop()
 		size_t num_of_ports = server.getNumOfPorts();
 		struct pollfd_obj poll_obj;
 		poll_obj.poll_fds = new pollfd[num_of_ports];
+		std::vector<int> listen_sockfds = server.getListenSockfds();
 		
 		std::cout << "Server waiting for connections...: \n";
 		std::memset(poll_obj.poll_fds, 0, sizeof(struct pollfd) * num_of_ports);
@@ -70,10 +86,10 @@ void    ServerHandler::poll_loop()
 			error_and_exit("Memset");
 		}
 		for (size_t i = 0; i < num_of_ports; i++) {
-			poll_obj.poll_fds[i].fd = server.getListenSockfd();
+			poll_obj.poll_fds[i].fd = listen_sockfds[i];
 			poll_obj.poll_fds[i].events = POLLIN;
 		}
-		poll_obj.listen_sockfd = server.getListenSockfd();
+		// poll_obj.listen_sockfd = server.getListenSockfd();
 		poll_list.push_back(poll_obj);
 	}
 	while (1) // while running
@@ -90,7 +106,7 @@ void    ServerHandler::poll_loop()
 				if (poll_obj.poll_fds[i].revents & POLLIN) 
 				{
 					addrlen = sizeof(remoteaddr_in);
-					conn_sockfd = accept(poll_obj.listen_sockfd, (struct sockaddr *)&remoteaddr_in, &addrlen);
+					conn_sockfd = accept(poll_obj.poll_fds[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
 					if (conn_sockfd == -1) {
 						error_and_exit("Accept");
 					}
@@ -107,13 +123,13 @@ void    ServerHandler::poll_loop()
 	}
 }
 
-void    ServerHandler::setupServers(std::vector<ServerConfigData> serverConfigs)
+void    ServerHandler::setupServers(std::vector<ServerConfigData> configs)
 {
-    for (const auto& config : serverConfigs) {
-        HttpServer  serverInstance(config);
+    for (const auto& current : configs) {
+        HttpServer  serverInstance(current);
+		serverInstance.setPorts(current.getPorts());
+        serverInstance.setNumOfPorts(current.getNumOfPorts());
         serverInstance.setupAddrinfo();
-		serverInstance.setPorts(config.getPorts());
-        serverInstance.setNumOfPorts(config.getNumOfPorts());
         _servers.push_back(serverInstance);
     }
 }
@@ -123,39 +139,47 @@ void    ServerHandler::runServers()
 	int yes = 1;
 
 	// create a socket for each server, bind and listen
+	printServerData(); // for testing
     for (auto& server : _servers)
     {
-        int	listen_sockfd;
+        int	sockfd;
 		std::vector<struct addrinfo*> server_addresses = server.getAddrinfoVec();
 
+		std::cout << "Setting up server " << server.getName() << "\n"; 
+		server.printListenFds();
+		
         for (auto& curr_addr : server_addresses) // loop through each address info
 		{
 	    	struct addrinfo *p = curr_addr; // pointer to current address info
 			
 			for (p = curr_addr; p != NULL; p = p->ai_next) 
 			{
-				if ((listen_sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+				if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
 					error_and_exit("Socket");
 					continue;
 				}
-				fcntl(listen_sockfd, F_SETFL, O_NONBLOCK); // sets the socket to non-blocking
-				std::cout << "Listening to " << server.getListenSockfd() << " \n";
-				if (setsockopt(listen_sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+				fcntl(sockfd, F_SETFL, O_NONBLOCK); // sets the socket to non-blocking
+				if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
 					error_and_exit("Setsockopt");
 				}
-				if (bind(listen_sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-					close(listen_sockfd);
+				if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+					close(sockfd);
 					error_and_exit("Bind");
 					continue;
 				}
-				server.setSockfd(listen_sockfd);
+				server.setSockfd(sockfd);
 				break;
 			}
 			if (p == NULL) {
 				error_and_exit("Failed to bind");
 			}
-			if (listen(server.getListenSockfd(), BACKLOG) == -1) {
-				error_and_exit("Listen");
+			std::vector<int> listenFds = server.getListenSockfds(); 
+			for (auto& currFd : listenFds)
+			{
+				std::cout << "Listen() ---> " << currFd << "\n";
+				if (listen(currFd, BACKLOG) == -1) {
+					error_and_exit("Listen");
+				}
 			}
 			freeaddrinfo(curr_addr);
         }
