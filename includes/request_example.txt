@@ -1,0 +1,37 @@
+
+ex.1
+    GET /index.html HTTP/1.1
+    Host: www.example.com
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+    Accept-Language: en-US,en;q=0.5
+    Accept-Encoding: gzip, deflate, br
+    Connection: keep-alive
+    Upgrade-Insecure-Requests: 1
+
+ex.2
+    POST /submit-form HTTP/1.1
+    Host: www.example.com
+    User-Agent: curl/7.79.1
+    Content-Type: application/x-www-form-urlencoded
+    Content-Length: 27
+
+    name=JohnDoe&age=30&city=NYC
+
+Request Line:
+    The first line of the request contains:
+    HTTP Method: GET, POST, DELETE, etc.
+    URI (Uniform Resource Identifier): The resource being requested (e.g., /index.html).
+    HTTP Version: Specifies the HTTP protocol version (e.g., HTTP/1.1).
+
+Headers:
+    Key-value pairs providing metadata about the request.
+    Examples:
+    Host: The domain name of the server being contacted.
+    User-Agent: Information about the client making the request.
+    Content-Type: The media type of the request body (for POST or PUT).
+    Content-Length: The size of the body in bytes.
+
+Body (optional):
+    For methods like POST or PUT, the request may include a body containing data, such as form inputs or JSON payloads.
+    In the second example, the body is name=JohnDoe&age=30&city=NYC.
