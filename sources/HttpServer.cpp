@@ -16,16 +16,6 @@ HttpServer::HttpServer(ServerConfigData server)
 
 HttpServer::~HttpServer() {}
 
-void	HttpServer::printListenFds()
-{
-	std::cout << "Host: " << _name << "\n";
-	std::cout << "Number of ports: " << _num_of_ports << "\n";
-	for (auto& curr : _listen_sockfds) {
-		std::cout << "Listen sockfd: " << curr << "\n";
-	}
-	std::cout << "--------------------------\n";
-}
-
 void HttpServer::setupAddrinfo()
 {
 	int	status;
@@ -39,20 +29,18 @@ void HttpServer::setupAddrinfo()
 	{
 		struct addrinfo* ai;
 		struct addrinfo *p;
-		std::cout << "getting address info for port " << port.c_str() << "\n";
 		if ((status = getaddrinfo("localhost", port.c_str(), &hints, &ai)) != 0) {
 			throw std::runtime_error(gai_strerror(status));
 		}
-		_addr_info.push_back(ai);
 		for(p = ai; p != NULL; p = p->ai_next) {
 			void *addr;
 			char ipstr[INET_ADDRSTRLEN];
-
 			struct sockaddr_in *ipv = (struct sockaddr_in *)p->ai_addr;
 			addr = &(ipv->sin_addr);
 			inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
 			printf("Address: %s\n", ipstr);
 		}
+		_addr_info.push_back(ai);
 	}
 	std::cout << "-----finished setup addrinfo-----\n";
 }
@@ -76,8 +64,4 @@ void HttpServer::setNumOfPorts(size_t num) { _num_of_ports = num; }
 
 bool HttpServer::isRunning() { return _running; }
 
-void HttpServer::setSockfd(int fd) 
-{ 
-	_listen_sockfds.push_back(fd);
-	std::cout << "Added sockfd " << fd << " to server " << _name << "\n";
-}
+void HttpServer::addSockfd(int fd) { _listen_sockfds.push_back(fd); }

@@ -27,8 +27,6 @@ public:
         std::vector<int>        getListenSockfds();
         // set functions
         void            setNumOfPorts(size_t num);
-        void            setSockfd(int listen_sockfd);
+        void            addSockfd(int listen_sockfd);
         void            setPorts(std::vector<std::string> ports);
-
-        void            printListenFds();
 };
