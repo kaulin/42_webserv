@@ -25,7 +25,7 @@ void	ServerHandler::error_and_exit(const char *msg)
 void	ServerHandler::cleanupServers()
 {
 	for (auto& server : _servers) {
-		std::vector<int> listen_sockfds = server.getListenSockfds();
+		std::vector<int> listen_sockfds = server->getListenSockfds();
 		for (auto& sockfd : listen_sockfds) {
 			close(sockfd);
 		}
@@ -135,7 +135,7 @@ void	ServerHandler::setupSockets()
 {
 	for (auto& server : _servers)
 	{
-		std::vector<struct addrinfo*> server_addresses = server.getAddrinfoVec();
+		std::vector<struct addrinfo*> server_addresses = server->getAddrinfoVec();
 		int	sockfd;
 
 		for (auto& curr_addr : server_addresses)
@@ -157,7 +157,7 @@ void	ServerHandler::setupSockets()
 					perror("Bind");
 					continue;
 				}
-				server.addSockfd(sockfd);
+				server->addSockfd(sockfd);
 				break;
 			}
 			if (p == NULL) {
