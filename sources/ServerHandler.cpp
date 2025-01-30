@@ -1,42 +1,35 @@
 #include "ServerHandler.hpp"
+#include "ConfigParser.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
 ServerHandler::ServerHandler() {
-	_servers.clear();
-	_pollfd_list.clear();
-	_server_count = 0;
+	FD_ZERO(&_servers);
+	FD_ZERO(&_pollfd_list);
+	FD_ZERO(&_server_count);
 }
 
-ServerHandler::~ServerHandler() {}
-
-void	ServerHandler::printServerData()
+ServerHandler::~ServerHandler() 
 {
-	std::vector<int> listensockfds;
-	// for testing
-	for (auto& server : _servers) {
-        std::cout << "Host: " << server.getName() << "\n";
-		listensockfds = server.getListenSockfds();
-		for (auto& curr : listensockfds) {
-			std::cout << "Listen sockfd: " << curr << "\n";
-		}
-        std::cout << "Number of ports: " << server.getNumOfPorts()
-        << "\n--------------------------\n";
-    }
+	_servers.clear();
+	_pollfd_list.clear();
 }
 
 void	ServerHandler::error_and_exit(const char *msg)
 {
-	perror(msg);
+	std::string errmsg = "Webserver: " + std::string(msg);
+	perror(errmsg.c_str());
 	exit(errno);
 }
 
-void	*ServerHandler::get_in_addr(struct sockaddr *sa)
+void	ServerHandler::cleanupServers()
 {
-    if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+	for (auto& server : _servers) {
+		std::vector<int> listen_sockfds = server.getListenSockfds();
+		for (auto& sockfd : listen_sockfds) {
+			close(sockfd);
+		}
+	}
 }
 
 void	ServerHandler::send_response(int client_sockfd)
@@ -55,24 +48,29 @@ void	ServerHandler::send_response(int client_sockfd)
 	std::cout << "Response sent successfully!" << " (sent " << bytes_sent << " bytes)"<< std::endl;
 }
 
-void    ServerHandler::setupServers(std::vector<ServerConfigData> configs)
+void    ServerHandler::setupServers(std::string path)
 {
-    for (const auto& current : configs) {
+	ServerConfigData config(path);
+	// set up shared_ptr for servers
+
+    /* for (const auto& current : configs) {
         HttpServer  serverInstance(current);
+		serverInstance.setName(current.getName());
 		serverInstance.setPorts(current.getPorts());
         serverInstance.setNumOfPorts(current.getNumOfPorts());
         serverInstance.setupAddrinfo();
         _servers.push_back(serverInstance);
-    }
+    } */
 }
 
-void	ServerHandler::handle_request(int new_sockfd)
+void	ServerHandler::read_request(int new_sockfd)
 {
 	int		numbytes;
 	char	buf[1024];
 
 	std::memset(buf, 0, 1024);
-	if ((numbytes = recv(new_sockfd, buf, 1023, 0)) == -1) {
+	if ((numbytes = recv(new_sockfd, buf, 1023, 0)) == -1) 
+	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK) {
 			std::cout << "No data available to read, try again later." << std::endl;
 		} else {
@@ -81,48 +79,42 @@ void	ServerHandler::handle_request(int new_sockfd)
 		}
 	}
 	std::cout << "Received request: " << buf << "\n";
-	send_response(new_sockfd);
 }
 
 void	ServerHandler::setPollList()
 {
-	size_t	num_of_ports = 0;
 	size_t	i = 0;
+	size_t	num_of_ports = getPortCount();
 
-	for (auto& server : _servers) {
-		num_of_ports += server.getNumOfPorts();
-	}
 	_pollfd_list.resize(num_of_ports);
-	for (auto& server : _servers) // for each servers sockets
+	for (auto& server : _servers)
 	{		
-		std::vector<int> listen_sockfds = server.getListenSockfds();
+		std::vector<int> listen_sockfds = server->getListenSockfds();
 		for (size_t j = 0; j < listen_sockfds.size() ; j++) {
 			_pollfd_list[i].fd = listen_sockfds[j];
 			_pollfd_list[i].events = POLLIN;
 			i++;
 		}
 	}
-	for (auto& poll_obj : _pollfd_list) {
+/* 	for (auto& poll_obj : _pollfd_list) {
 		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
-	}
+	} */
 }
 
 void    ServerHandler::poll_loop()
 {
 	int 			poll_count;
-	socklen_t		addrlen;
 	int 			conn_sockfd;
-	char			remoteIP[INET_ADDRSTRLEN];
+	socklen_t		addrlen;
 	struct sockaddr_storage remoteaddr_in;
 	
 	setPollList();
-	while (1) // while running
+	while (_running)
 	{
 		if ((poll_count = poll(_pollfd_list.data(), _pollfd_list.size(), -1)) == -1) {
 			error_and_exit("Poll");
 		}
-		std::cout << "Listening to " << poll_count << " fd:s\n";
-		for(size_t i = 0; i < _pollfd_list.size(); i++) 
+		for(size_t i = 0; i < _pollfd_list.size(); i++)
 		{
 			if (_pollfd_list[i].revents & POLLIN) 
 			{
@@ -131,31 +123,25 @@ void    ServerHandler::poll_loop()
 				if (conn_sockfd == -1) {
 					error_and_exit("Accept");
 				}
-				printf("pollserver: new connection from %s on "
-							"socket %d\n",
-							inet_ntop(remoteaddr_in.ss_family,
-								get_in_addr((struct sockaddr*)&remoteaddr_in),
-								remoteIP, INET_ADDRSTRLEN), conn_sockfd);
-				handle_request(conn_sockfd);
+				read_request(conn_sockfd);
+				send_response(conn_sockfd);
 				close(conn_sockfd);
 			}
 		}
 	}
 }
 
-void    ServerHandler::runServers()
+void	ServerHandler::setupSockets()
 {
-	int yes = 1;
-
-	printServerData();
-    for (auto& server : _servers)
-    {
+	for (auto& server : _servers)
+	{
 		std::vector<struct addrinfo*> server_addresses = server.getAddrinfoVec();
-        int	sockfd;
+		int	sockfd;
 
-        for (auto& curr_addr : server_addresses)
+		for (auto& curr_addr : server_addresses)
 		{
-	    	struct addrinfo *p = curr_addr;
+			struct addrinfo *p = curr_addr;
+			int yes = 1;
 			for (p = curr_addr; p != NULL; p = p->ai_next) 
 			{
 				if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
@@ -181,7 +167,15 @@ void    ServerHandler::runServers()
 				error_and_exit("Listen");
 			}
 			freeaddrinfo(curr_addr);
-        }
-    }
+		}
+	}
+}
+
+void    ServerHandler::runServers()
+{
+	// printServerData();
+	_running = true;
+	setupSockets();
 	poll_loop();
+	cleanupServers();
 }

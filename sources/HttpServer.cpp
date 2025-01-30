@@ -6,15 +6,22 @@
 
 HttpServer::HttpServer(ServerConfigData server)
 {
+	FD_ZERO(&_addr_info);
+	FD_ZERO(&_ports);
+	FD_ZERO(&_listen_sockfds);
+	FD_ZERO(&_num_of_ports);
+	FD_ZERO(&_name);
+}
+
+HttpServer::~HttpServer() 
+{
+	for (auto& listen_sockfd : _listen_sockfds) {
+		close(listen_sockfd);
+	}
 	_addr_info.clear();
 	_ports.clear();
 	_listen_sockfds.clear();
-	_running = true;
-	_num_of_ports = 1;
-	_name = server.getName();
 }
-
-HttpServer::~HttpServer() {}
 
 void HttpServer::setupAddrinfo()
 {
@@ -52,6 +59,8 @@ void HttpServer::setPorts(std::vector<std::string> ports)
 	}
 }
 
+void HttpServer::setName(std::string name) { _name = name; }
+
 const std::vector<addrinfo*> HttpServer::getAddrinfoVec() { return _addr_info; }
 
 std::string HttpServer::getName() { return _name; }
@@ -61,7 +70,5 @@ std::vector <int> HttpServer::getListenSockfds() { return _listen_sockfds; }
 size_t HttpServer::getNumOfPorts() { return _num_of_ports; }
 
 void HttpServer::setNumOfPorts(size_t num) { _num_of_ports = num; }
-
-bool HttpServer::isRunning() { return _running; }
 
 void HttpServer::addSockfd(int fd) { _listen_sockfds.push_back(fd); }

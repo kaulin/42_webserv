@@ -1,20 +1,16 @@
 #include "ServerConfigData.hpp"
-#include "ServerConfigParser.hpp"
+#include "ConfigParser.hpp"
 
-ServerConfigParser::ServerConfigParser () {
-	_path = "";
-	serverConfigs.clear();
-}
+ConfigParser::~ConfigParser() {}
 
-ServerConfigParser::~ServerConfigParser() {}
-
-void	ServerConfigParser::setConfigFilePath(std::string path)
+void	ConfigParser::checkConfigFilePath(std::string path)
 {
-	// check if valid file path, if not return error and exit
 	if (path.empty()) {
 		throw std::runtime_error("Error: No file path provided");
 	}
-	_path = path;
+	if (path.find(".conf") == std::string::npos) {
+		throw std::runtime_error("Error: Invalid file path");
+	}
 }
 
 void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs) 
@@ -31,11 +27,10 @@ void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs)
     }
 }
 
-void    ServerConfigParser::parseConfigFile()
+std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std::string path)
 {
-	// TO DO: parse here and throw error if config file has issues
-	if (this->_path == "") {
-		throw std::runtime_error("Error: Error in config file");
+	if (open(path.c_str(), O_RDONLY) == -1) {
+		throw std::runtime_error("Error: Could not open config file");
 	}
 	// loop to set all the servers config data
 	ServerConfigData server_object;
@@ -57,14 +52,13 @@ void    ServerConfigParser::parseConfigFile()
 	server_object.setServerName("example 1");
 	server_object.setErrorPage("err.com");
 	server_object.setClientBodySize(1024);
-	serverConfigs.push_back(server_object);
+	// serverConfigs.push_back(server_object);
 
 	server_object_2.setHost("localhost");
 	server_object_2.setPorts(test_ports2);
 	server_object_2.setServerName("example 2");
 	server_object_2.setErrorPage("err.com");
 	server_object_2.setClientBodySize(1024);
-	serverConfigs.push_back(server_object_2);
-
-	printServerConfigs(serverConfigs);
+	// serverConfigs.push_back(server_object_2);
+	// printServerConfigs(serverConfigs);
 }

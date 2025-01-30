@@ -1,19 +1,27 @@
 #include "ServerConfigData.hpp"
+#include "ConfigParser.hpp"
 
-ServerConfigData::ServerConfigData() 
+ServerConfigData::ServerConfigData(std::string path) 
 {
+    // needs to set the server configs for each server
+    serverConfigs = ConfigParser::parseConfigFile(path);
+/*     
     _host.clear();
     _name.clear();
-    _error_page.clear();
     _routes.clear();
     _ports.clear();
     _cli_max_bodysize = 0;
+    _location.clear(); */
+
+    // read file
+    // parse file and print config data
+    ConfigParser::parseConfigFile(path);
 	std::cout << "New server config data created...: \n";
 }
 
 ServerConfigData::~ServerConfigData() {}
 
-void ServerConfigData::setHost(const std::string& host) 
+/* void ServerConfigData::setHost(const std::string& host) 
 {
     _host = host;
 }
@@ -94,4 +102,4 @@ void    ServerConfigData::printPorts() const
     for (const auto& port : _ports) {
         std::cout << port << "\n";
     }
-}
+} */

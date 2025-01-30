@@ -1,18 +1,39 @@
 #pragma once
 
 #include "webserv.hpp"
+#include <map>
+
+struct Location {
+    std::string path;
+    std::string root;
+    std::string index;
+    std::string cgi_path;
+    std::string cgi_extension;
+    bool        dir_listing;
+    std::map<std::string, bool> methods = {{"GET", true}, {"POST", true}, {"DELETE", true}};
+};
+
+struct Config {
+        std::string                     _host;
+        std::string                     _name;
+        std::vector<std::string>        _ports;
+        std::vector<std::string>        _routes;
+        size_t                          _num_of_ports;
+        size_t                          _cli_max_bodysize;
+        std::map<int, std::string>      _default_pages;
+        std::map<int, std::string>      _error_pages;
+        std::map<int, std::string>      _error_codes;
+        std::vector<Location>           _location;
+        std::map<std::string, std::string> cgi_extensions;
+};
 
 class ServerConfigData {
 private:
-        std::string                 _host;
-        std::vector<std::string>    _ports;
-        std::vector<std::string>    _routes;
-        size_t                      _num_of_ports;
-        std::string                 _name;
-        std::string                 _error_page;
-        size_t                      _cli_max_bodysize;
+
+
 public:
         ServerConfigData();
+        ServerConfigData(std::string path);
         ~ServerConfigData();
 
         // class member functions
@@ -33,6 +54,6 @@ public:
         size_t                          getNumOfPorts() const;
         const std::string&              getErrorPage() const;
         size_t                          getCliMaxBodysize() const;
-
+        std::map<std::string, std::vector<Config>> serverConfigs;
         void    printPorts() const;
 };
