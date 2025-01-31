@@ -5,8 +5,10 @@ CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++11 -g
 # Sources
 SOURCES				:= main.cpp \
 						HttpServer.cpp \
-						ServerConfigParser.cpp \
-						ServerConfigData.cpp
+						ConfigParser.cpp \
+						ServerConfigData.cpp \
+						ServerHandler.cpp \
+						ServerUtils.cpp
 VPATH				+= sources/
 
 # Objects
@@ -18,7 +20,7 @@ OBJECT_PATHS		:= $(addprefix $(OBJECT_DIRECTORY), $(OBJECTS))
 INCLUDE_DIRECTORY	:= includes/
 INCLUDES			:= webserv.hpp \
 						HttpServer.hpp \
-						ServerConfigParser.hpp \
+						ConfigParser.hpp \
 						ServerConfigData.hpp
 INCLUDE_PATHS		:= $(addprefix $(INCLUDE_DIRECTORY), $(INCLUDES))
 INCLUDE_FLAGS		:= -I includes/

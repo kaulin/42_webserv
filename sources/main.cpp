@@ -1,36 +1,33 @@
 #include "webserv.hpp"
 #include "HttpServer.hpp"
-#include "ServerConfigParser.hpp"
-#include "ServerConfigData.hpp"\
+#include "ConfigParser.hpp"
+#include "ServerConfigData.hpp"
+#include "ServerHandler.hpp"
 
 int main(int argc, char **argv) 
 {
 	std::string 		configFilePath;
+	ServerHandler		serverHandler;
 
 	if (argc > 2) {
 		std::cerr << "Error: Too many arguments\n";
 		return 2;
 	}
+
 	configFilePath = (argc < 2) ? DEFAULT_CONFIG_FILE : argv[1];
-	ServerConfigParser	configParser;
-	try
-	{
-		configParser.setConfigFilePath(configFilePath);
+	
+	try {
+		ConfigParser::checkConfigFilePath(configFilePath);
 	}
-	catch(const std::exception& e)
-	{
+	catch(const std::exception& e) {
 		std::cerr << e.what() << '\n';
 	}
-	try
-	{
-		configParser.parseConfigFile();
+	try {
+		serverHandler.setupServers(configFilePath);
 	}
-	catch(const std::exception& e)
-	{
+	catch(const std::exception& e) {
 		std::cerr << e.what() << '\n';
 	}
-	HttpServer	httpServer(configParser.servers[0]);
-	httpServer.setupAddrinfo();
-	httpServer.runServer();
+	serverHandler.runServers();
 	return 0;
 }

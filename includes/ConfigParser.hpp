@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -7,6 +8,12 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include "webserv.hpp"
+
+
+class ServerConfigData;
+
+class HttpServer;
 
 // Struct to hold location-specific configuration
 struct LocationConfig
@@ -37,7 +44,7 @@ struct Config
 };
 
 // Class to parse the configuration file
-class ConfigParser
+class ConfigParser2
 {
 private:
 	// Helper functions to parse specific parts of the configuration
@@ -68,4 +75,15 @@ public:
 	Config parse();
 
 	const Config& getConfig() const;
+};
+
+class ConfigParser { 
+private:
+        ConfigParser() = delete;
+        ConfigParser(const ConfigParser &other) = delete;
+        ConfigParser& operator=(const ConfigParser &other) = delete;
+public:
+        // class member functions
+        static std::map<std::string, std::vector<Config>> parseConfigFile(std::string path);
+        static void     checkConfigFilePath(std::string path);
 };
