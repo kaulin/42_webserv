@@ -7,6 +7,7 @@
 HttpServer::HttpServer(ServerConfigData server)
 {
 	FD_ZERO(&_addr_info);
+	// make sure ports and other invariants are set correctly or throw error
 	FD_ZERO(&_ports);
 	FD_ZERO(&_listen_sockfds);
 	FD_ZERO(&_num_of_ports);

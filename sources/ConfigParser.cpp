@@ -5,6 +5,7 @@ ConfigParser::~ConfigParser() {}
 
 void	ConfigParser::checkConfigFilePath(std::string path)
 {
+	// check that format for relevant info is correct etc, throw error if not
 	if (path.empty()) {
 		throw std::runtime_error("Error: No file path provided");
 	}

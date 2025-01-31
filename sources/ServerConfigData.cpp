@@ -13,9 +13,7 @@ ServerConfigData::ServerConfigData(std::string path)
     _cli_max_bodysize = 0;
     _location.clear(); */
 
-    // read file
-    // parse file and print config data
-    ConfigParser::parseConfigFile(path);
+    // Print server data
 	std::cout << "New server config data created...: \n";
 }
 

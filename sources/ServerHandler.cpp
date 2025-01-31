@@ -52,7 +52,9 @@ void    ServerHandler::setupServers(std::string path)
 {
 	ServerConfigData config(path);
 	// set up shared_ptr for servers
-
+	for (const auto& current : config.serverConfigs) {
+		_servers.push_back(std::make_shared<HttpServer>(current));
+	}
     /* for (const auto& current : configs) {
         HttpServer  serverInstance(current);
 		serverInstance.setName(current.getName());
