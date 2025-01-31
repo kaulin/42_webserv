@@ -2,6 +2,11 @@
 #include "../includes/ConfigParser.hpp"
 #include "ServerConfigData.hpp"
 #include "ConfigParser.hpp"
+#include "webserv.hpp"
+#include <string>
+#include <iostream>
+#include <unistd.h>
+#include <fctntl.h>
 
 // Constructor: Opens the configuration file for reading
 ConfigParser::ConfigParser(const std::string& filepath)

@@ -2,6 +2,8 @@
 
 #include "webserv.hpp"
 #include <map>
+#include <vector>
+#include <string>
 
 struct Location {
     std::string path;
