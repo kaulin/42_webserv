@@ -16,6 +16,7 @@
 # include <unistd.h>
 # include <fcntl.h>
 # include <vector>
+# include <iostream>
 
 # define DEFAULT_CONFIG_FILE "config/default.conf"
 

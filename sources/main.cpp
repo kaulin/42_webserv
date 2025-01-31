@@ -7,6 +7,7 @@
 int main(int argc, char **argv) 
 {
 	std::string 		configFilePath;
+	std::string 		configData;
 	ServerHandler		serverHandler;
 
 	if (argc > 2) {
