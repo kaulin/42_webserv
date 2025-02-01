@@ -14,7 +14,7 @@
 class ServerConfigData;
 
 class HttpServer;
-
+/* 
 // Struct to hold location-specific configuration
 struct LocationConfig
 {
@@ -75,7 +75,7 @@ public:
 	Config parse();
 
 	const Config& getConfig() const;
-};
+}; */
 
 class ConfigParser { 
 private:
@@ -85,5 +85,7 @@ private:
 public:
         // class member functions
         static std::map<std::string, std::vector<Config>> parseConfigFile(std::string path);
-        static void     checkConfigFilePath(std::string path);
+        static void     				checkConfigFilePath(std::string path);
+		static std::string 				read_file(std::string path);
+		static std::vector<std::string> tokenize(std::string file_content);
 };

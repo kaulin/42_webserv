@@ -1,8 +1,4 @@
 #include "webserv.hpp"
-#include "HttpServer.hpp"
-#include "ConfigParser.hpp"
-#include "ServerConfigData.hpp"
-#include "ServerHandler.hpp"
 
 int main(int argc, char **argv) 
 {

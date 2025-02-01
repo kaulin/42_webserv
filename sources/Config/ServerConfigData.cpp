@@ -4,6 +4,7 @@
 ServerConfigData::ServerConfigData(std::string path) 
 {
     // needs to set the server configs for each server
+    // serverConfigs is of datastructure = std::map<std::string, std::vector<Config>>
     serverConfigs = ConfigParser::parseConfigFile(path);
 /*     
     _host.clear();
