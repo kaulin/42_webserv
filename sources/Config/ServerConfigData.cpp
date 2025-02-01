@@ -1,5 +1,11 @@
+#include "webserv.hpp"
 #include "ServerConfigData.hpp"
 #include "ConfigParser.hpp"
+
+ServerConfigData::ServerConfigData()
+{
+    // use default server
+}
 
 ServerConfigData::ServerConfigData(std::string path) 
 {

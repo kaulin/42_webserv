@@ -23,8 +23,8 @@
 # define DEFAULT_CONFIG_FILE "config/default.conf"
 
 #include "HttpServer.hpp"
+#include "ServerHandler.hpp"
 #include "ConfigParser.hpp"
 #include "ServerConfigData.hpp"
-#include "ServerHandler.hpp"
 
 #endif

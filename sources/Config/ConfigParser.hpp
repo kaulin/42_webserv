@@ -77,6 +77,11 @@ public:
 	const Config& getConfig() const;
 }; */
 
+struct ServerSection 
+{
+	std::unordered_map<std::string, std::vector<std::string>> configData;
+};
+
 class ConfigParser { 
 private:
         ConfigParser() = delete;
@@ -85,7 +90,9 @@ private:
 public:
         // class member functions
         static std::map<std::string, std::vector<Config>> parseConfigFile(std::string path);
-        static void     				checkConfigFilePath(std::string path);
-		static std::string 				read_file(std::string path);
-		static std::vector<std::string> tokenize(std::string file_content);
+        static void     					checkConfigFilePath(std::string path);
+		static std::string 					read_file(std::string path);
+		static std::vector<ServerSection>	tokenize(std::string file_content);
+		static std::vector<Location>		set_location_settings(ServerSection server);
+
 };

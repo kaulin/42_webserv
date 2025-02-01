@@ -14,7 +14,7 @@ HttpServer::HttpServer(ServerConfigData serverData)
 	FD_ZERO(&_name);
 }
 
-HttpServer::~HttpServer() 
+HttpServer::~HttpServer()
 {
 	for (auto& listen_sockfd : _listen_sockfds) {
 		close(listen_sockfd);
