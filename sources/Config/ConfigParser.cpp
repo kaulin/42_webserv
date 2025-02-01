@@ -247,7 +247,7 @@ void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs)
     }
 }
 
-std::vector<std::string>    tokenize(std::string file_data)
+std::vector<std::string>    ConfigParser::tokenize(std::string file_data)
 {
     std::vector<std::string> tokens;
 
@@ -256,7 +256,7 @@ std::vector<std::string>    tokenize(std::string file_data)
     return tokens;
 }
 
-std::string read_file(std::string path)
+std::string ConfigParser::read_file(std::string path)
 {
     std::string file_content;
 
@@ -273,7 +273,6 @@ std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std:
     std::string file_data = read_file(path);
 
     std::vector<std::string> tokens = tokenize(file_data);
-
 /* 
 	ServerConfigData server_object;
 	ServerConfigData server_object_2;
