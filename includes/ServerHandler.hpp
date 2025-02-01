@@ -10,10 +10,10 @@ class ServerHandler
 {
 private:
     std::vector<std::shared_ptr<HttpServer>>    _servers;
-    bool                         _running;
     size_t                      _server_count;
     std::vector<int>            _ports;
     std::vector<struct pollfd>  _pollfd_list;
+    bool                         _running;
 public:
     ServerHandler();
     ~ServerHandler();

@@ -1,6 +1,4 @@
 #include "webserv.hpp"
-#include "HttpServer.hpp"
-#include "ServerConfigData.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 

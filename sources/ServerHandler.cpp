@@ -2,14 +2,17 @@
 #include "ConfigParser.hpp"
 #include "ServerConfigData.hpp"
 #include "HttpServer.hpp"
-#include <pointer>
+#include "webserv.hpp"
+#include <memory>
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
 ServerHandler::ServerHandler() {
-	FD_ZERO(&_servers);
-	FD_ZERO(&_pollfd_list);
-	FD_ZERO(&_server_count);
+	_servers.clear();
+	_pollfd_list.clear();
+	_ports.clear();
+	_server_count = 0;
+	_running = true;
 }
 
 ServerHandler::~ServerHandler() 
@@ -48,16 +51,21 @@ void	ServerHandler::send_response(int client_sockfd)
 	if ((bytes_sent = send(client_sockfd, response.c_str(), response.length(), 0)) == -1) {
 		error_and_exit("Send");
 	}
-	std::cout << "Response sent successfully!" << " (sent " << bytes_sent << " bytes)"<< std::endl;
+	std::cout << "Response sent successfully!" 
+	<< " (sent " << bytes_sent << " bytes)"
+	<< std::endl;
 }
 
 void    ServerHandler::setupServers(std::string path)
 {
 	ServerConfigData config(path);
-	// set up shared_ptr for servers
-	for (const auto& current : config.serverConfigs) {
-		_servers.push_back(std::make_shared<HttpServer>(current));
+	// makes a new shared pointer for each virtual server
+
+	for (const auto& [servName, config] : config.serverConfigs) {
+		std::shared_ptr<HttpServer> virtual_server = std::make_shared<HttpServer>(config); // sets up the server with the current config
+		_servers.push_back(virtual_server);
 	}
+
     /* for (const auto& current : configs) {
         HttpServer  serverInstance(current);
 		serverInstance.setName(current.getName());

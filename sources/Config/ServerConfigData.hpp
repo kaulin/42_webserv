@@ -31,13 +31,14 @@ struct Config {
 
 class ServerConfigData {
 private:
-        std::map<std::string, std::vector<Config>> serverConfigs;
 public:
         ServerConfigData();
         ServerConfigData(std::string path);
         ~ServerConfigData();
 
         // class member functions
+        std::map<std::string, std::vector<Config>> serverConfigs;
+        
         void	setHost(const std::string& host);
         void	setHost(const std::string&& host);
         void	setServerName(const std::string& server_name);
