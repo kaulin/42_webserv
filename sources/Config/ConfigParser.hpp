@@ -77,7 +77,7 @@ public:
 	const Config& getConfig() const;
 }; */
 
-struct ServerSection 
+struct BlockDirective 
 {
 	std::unordered_map<std::string, std::vector<std::string>> configData;
 };
@@ -92,7 +92,7 @@ public:
         static std::map<std::string, std::vector<Config>> parseConfigFile(std::string path);
         static void     					checkConfigFilePath(std::string path);
 		static std::string 					read_file(std::string path);
-		static std::vector<ServerSection>	tokenize(std::string file_content);
-		static std::vector<Location>		set_location_settings(ServerSection server);
+		static std::vector<BlockDirective>	tokenize(std::string file_content);
+		static std::vector<Location>		set_location_context(BlockDirective server);
 
 };

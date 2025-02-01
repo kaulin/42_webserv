@@ -247,25 +247,27 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 	}
 } */
 
-std::vector<Location>	ConfigParser::set_location_settings(ServerSection server)
+std::vector<Location>	ConfigParser::set_location_context(BlockDirective block)
 {
+	Location location_settings;
 
 }
 
-std::vector<ServerSection>    ConfigParser::tokenize(std::string file_data)
+std::vector<BlockDirective>    ConfigParser::tokenize(std::string file_data)
 {
 	std::vector<std::string> tokens;
-	std::vector<ServerSection> sections;
+	std::vector<BlockDirective> sections;
 
 	// 1. tokenise
 	// 2. sets the Server sections --> 
 	/* 
-		vector of ServerSections {Server1, Server2, Server3...}, 
-		where each server holds ServerSection -> which is an unordered map with key pairs eg.
+		vector of BlockDirectives {Server1, Server2, Server3...}, 
+		where each server holds BlockDirective -> which is an unordered map with key pairs eg.
 			server_name : {value1, value2, value3}
 			client_max_body_size : {10M}
 			error_page : {404, /errors/404.html}
 			error_page : {500, /errors/500.html}
+			routes : {route, "/", "{", root, /var/www/html, ";", methods, GET ...}
 	 
 		return parsed sections
 	*/
@@ -286,25 +288,25 @@ std::string ConfigParser::read_file(std::string path)
 
 std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std::string path)
 {
-	std::map<std::string, std::vector<Config>> configs;
 	std::string file_data;
 	std::vector<std::string> tokens; // tokens are saved in map with key value pairs -> [setting][vector:values]
-	std::vector<ServerSection> serverSections;
+	std::vector<BlockDirective> blockDirectives;
 
-	int i = 0;
 
 	file_data = read_file(path);
-	serverSections = tokenize(file_data);
+	blockDirectives = tokenize(file_data);
 
-	for (auto& curr_server : serverSections)
+	std::map<std::string, std::vector<Config>> configs;
+	int i = 0;
+	for (auto& curr_block : blockDirectives)
 	{
-		Config config_instance;
-		std::vector<Config> sectionData;
-		config_instance._location = set_location_settings(curr_server);
-		configs.insert({"Server" + std::to_string(i), sectionData});
+		Config serverInstance;
+		std::vector<Config> block;
+
+		serverInstance._location = set_location_context(curr_block);
+		configs.insert({"Server" + std::to_string(i), block});
 		i++;
 	}
-	
 	return configs;
 /* 
 	ServerConfigData server_object;
