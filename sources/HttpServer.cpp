@@ -2,10 +2,12 @@
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
-HttpServer::HttpServer(ServerConfigData server)
+HttpServer::HttpServer(ServerConfigData serverData)
 {
+	// Server data is an serverConfigData instance
+	// Set up server instance using serverData
+	// last line of defense to make sure ports and other invariants are set correctly
 	FD_ZERO(&_addr_info);
-	// make sure ports and other invariants are set correctly or throw error
 	FD_ZERO(&_ports);
 	FD_ZERO(&_listen_sockfds);
 	FD_ZERO(&_num_of_ports);

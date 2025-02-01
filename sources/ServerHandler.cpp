@@ -12,7 +12,7 @@ ServerHandler::ServerHandler() {
 	_pollfd_list.clear();
 	_ports.clear();
 	_server_count = 0;
-	_running = true;
+	_running = false;
 }
 
 ServerHandler::~ServerHandler() 
@@ -186,6 +186,7 @@ void	ServerHandler::setupSockets()
 
 void    ServerHandler::runServers()
 {
+	// for testing, print server configs and return
 	// printServerData();
 	_running = true;
 	setupSockets();

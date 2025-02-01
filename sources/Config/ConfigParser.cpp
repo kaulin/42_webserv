@@ -1,6 +1,6 @@
 
-#include "../includes/ConfigParser.hpp"
-#include "ServerConfigData.hpp"
+// #include "../includes/ConfigParser.hpp"
+// #include "ServerConfigData.hpp"
 #include "ConfigParser.hpp"
 #include "webserv.hpp"
 #include <string>
@@ -222,8 +222,6 @@ int ConfigParser::parseWorkers(const std::string& line)
 const Config& ConfigParser::getConfig() const { return config_; }
  */
 // Erno's stuff above
-  
-ConfigParser::~ConfigParser() {}
 
 void	ConfigParser::checkConfigFilePath(std::string path)
 {
@@ -249,12 +247,34 @@ void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs)
     }
 }
 
-std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std::string path)
+std::vector<std::string>    tokenize(std::string file_data)
 {
-	if (open(path.c_str(), O_RDONLY) == -1) {
+    std::vector<std::string> tokens;
+
+    // tokenise implementation here
+    // returns tokens
+    return tokens;
+}
+
+std::string read_file(std::string path)
+{
+    std::string file_content;
+
+    // "Read file" implementation here...
+    if (open(path.c_str(), O_RDONLY) == -1) {
 		throw std::runtime_error("Error: Could not open config file");
 	}
-	// loop to set all the servers config data
+    // Returns read content with comments and whitespace removed
+    return file_content;
+}
+
+std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std::string path)
+{
+    std::string file_data = read_file(path);
+
+    std::vector<std::string> tokens = tokenize(file_data);
+
+/* 
 	ServerConfigData server_object;
 	ServerConfigData server_object_2;
 	std::vector<std::string> test_ports = {"3490", "3491"};
@@ -282,5 +302,5 @@ std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std:
 	server_object_2.setErrorPage("err.com");
 	server_object_2.setClientBodySize(1024);
 	// serverConfigs.push_back(server_object_2);
-	// printServerConfigs(serverConfigs);
+	// printServerConfigs(serverConfigs); */
 }
