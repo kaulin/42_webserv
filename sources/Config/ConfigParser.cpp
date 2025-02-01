@@ -1,7 +1,7 @@
 
 // #include "../includes/ConfigParser.hpp"
 // #include "ServerConfigData.hpp"
-#include "ConfigParser.hpp"
+
 #include "webserv.hpp"
 #include <string>
 #include <iostream>
@@ -233,11 +233,11 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 	}
 }
 
-/* void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs) 
+/* void printServerConfigBlocks(const std::vector<ServerConfigData>& ServerConfigBlocks) 
 {
 	// for testing
 	std::cout << "Printing all configs\n";
-	for (const auto& conf : serverConfigs) {
+	for (const auto& conf : ServerConfigBlocks) {
 		std::cout << "Host: " << conf.getHost() << "\n";
 		conf.printPorts(); // helper function to print all ports
 		std::cout << "Name: " << conf.getName() << "\n"
@@ -290,15 +290,14 @@ std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std:
 {
 	std::string file_data;
 	std::vector<std::string> tokens; // tokens are saved in map with key value pairs -> [setting][vector:values]
-	std::vector<BlockDirective> blockDirectives;
-
+	std::vector<BlockDirective> serverBlockDirectives;
 
 	file_data = read_file(path);
-	blockDirectives = tokenize(file_data);
+	serverBlockDirectives = tokenize(file_data);
 
 	std::map<std::string, std::vector<Config>> configs;
 	int i = 0;
-	for (auto& curr_block : blockDirectives)
+	for (auto& curr_block : serverBlockDirectives)
 	{
 		Config serverInstance;
 		std::vector<Config> block;
@@ -328,13 +327,13 @@ std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std:
 	server_object.setServerName("example 1");
 	server_object.setErrorPage("err.com");
 	server_object.setClientBodySize(1024);
-	// serverConfigs.push_back(server_object);
+	// ServerConfigBlocks.push_back(server_object);
 
 	server_object_2.setHost("localhost");
 	server_object_2.setPorts(test_ports2);
 	server_object_2.setServerName("example 2");
 	server_object_2.setErrorPage("err.com");
 	server_object_2.setClientBodySize(1024);
-	// serverConfigs.push_back(server_object_2);
-	// printServerConfigs(serverConfigs); */
+	// ServerConfigBlocks.push_back(server_object_2);
+	// printServerConfigBlocks(ServerConfigBlocks); */
 }

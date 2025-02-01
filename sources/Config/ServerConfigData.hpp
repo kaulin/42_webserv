@@ -36,7 +36,7 @@ public:
         ServerConfigData(std::string path);
         ~ServerConfigData();
 
-        std::map<std::string, std::vector<Config>> serverConfigs;
+        std::map<std::string, std::vector<Config>> ServerConfigBlocks;
 
         // class member functions
         // void	setHost(const std::string& host);
