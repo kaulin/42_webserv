@@ -31,8 +31,7 @@ struct Config {
 
 class ServerConfigData {
 private:
-
-
+        std::map<std::string, std::vector<Config>> serverConfigs;
 public:
         ServerConfigData();
         ServerConfigData(std::string path);
@@ -56,6 +55,5 @@ public:
         size_t                          getNumOfPorts() const;
         const std::string&              getErrorPage() const;
         size_t                          getCliMaxBodysize() const;
-        std::map<std::string, std::vector<Config>> serverConfigs;
         void    printPorts() const;
 };

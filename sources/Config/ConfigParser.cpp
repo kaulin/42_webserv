@@ -6,8 +6,9 @@
 #include <string>
 #include <iostream>
 #include <unistd.h>
-#include <fctntl.h>
-
+#include <fcntl.h>
+#include <fstream>
+/* 
 // Constructor: Opens the configuration file for reading
 ConfigParser::ConfigParser(const std::string& filepath)
 {
@@ -219,14 +220,13 @@ int ConfigParser::parseWorkers(const std::string& line)
 }
 
 const Config& ConfigParser::getConfig() const { return config_; }
-
+ */
 // Erno's stuff above
   
 ConfigParser::~ConfigParser() {}
 
 void	ConfigParser::checkConfigFilePath(std::string path)
 {
-	// check that format for relevant info is correct etc, throw error if not
 	if (path.empty()) {
 		throw std::runtime_error("Error: No file path provided");
 	}

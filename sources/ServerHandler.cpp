@@ -1,5 +1,8 @@
 #include "ServerHandler.hpp"
 #include "ConfigParser.hpp"
+#include "ServerConfigData.hpp"
+#include "HttpServer.hpp"
+#include <pointer>
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -98,7 +101,7 @@ void	ServerHandler::setPollList()
 			i++;
 		}
 	}
-/* 	for (auto& poll_obj : _pollfd_list) {
+	/* 	for (auto& poll_obj : _pollfd_list) {
 		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
 	} */
 }
