@@ -1,5 +1,4 @@
 #pragma once
-
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -77,11 +76,6 @@ public:
 	const Config& getConfig() const;
 }; */
 
-struct BlockDirective 
-{
-	std::unordered_map<std::string, std::vector<std::string>> configData;
-};
-
 class ConfigParser { 
 private:
         ConfigParser() = delete;
@@ -89,10 +83,11 @@ private:
         ConfigParser& operator=(const ConfigParser &other) = delete;
 public:
         // class member functions
-        static std::map<std::string, std::vector<Config>> parseConfigFile(std::string path);
+        static std::map<std::string, Config> parseConfigFile(std::string path);
         static void     					checkConfigFilePath(std::string path);
 		static std::string 					read_file(std::string path);
 		static std::vector<std::string>		tokenize(std::string file_content);
-		static std::vector<Location>		set_location_context(std::vector<std::string> token, int index);
+		static std::vector<Location>		set_location_context(const auto &iterator, const auto end);
+		std::string							validate_location_path(const std::string &path);
 
 };

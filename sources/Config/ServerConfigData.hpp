@@ -1,5 +1,4 @@
 #pragma once
-
 #include "webserv.hpp"
 #include <map>
 #include <vector>
@@ -16,27 +15,27 @@ struct Location {
 };
 
 struct Config {
-        std::string                     _host;
-        std::string                     _name;
-        std::vector<std::string>        _ports;
-        std::vector<std::string>        _routes;
-        size_t                          _num_of_ports;
-        size_t                          _cli_max_bodysize;
-        std::map<int, std::string>      _default_pages;
-        std::map<int, std::string>      _error_pages;
-        std::map<int, std::string>      _error_codes;
-        std::vector<Location>           _location;
-        std::map<std::string, std::string> cgi_extensions;
+        std::string                             _host;
+        std::string                             _name;
+        std::vector<std::string>                _ports;
+        size_t                                  _num_of_ports;
+        size_t                                  _cli_max_bodysize;
+        std::map<int, std::string>              _default_pages;
+        std::map<int, std::string>              _error_pages;
+        std::map<int, std::string>              _error_codes;
+        std::vector<Location>                   _location;
+        std::map<std::string, std::string>      _cgi_extensions;
 };
+
 
 class ServerConfigData {
 private:
 public:
-        ServerConfigData();
         ServerConfigData(std::string path);
+        ServerConfigData();
         ~ServerConfigData();
 
-        std::map<std::string, std::vector<Config>> ServerConfigBlocks;
+        std::map<std::string, Config>   serverConfigBlocks;
 
         // class member functions
         // void	setHost(const std::string& host);

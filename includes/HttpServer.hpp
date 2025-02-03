@@ -1,5 +1,4 @@
 #pragma once
-
 #include "webserv.hpp"
 
 class ServerConfigData;
@@ -7,6 +6,7 @@ class ServerConfigData;
 class HttpServer
 {
 private:
+        class ServerConfigData          _server_config; // stores the config for each server
         std::vector<struct addrinfo *>   _addr_info;
         std::vector<std::string>        _ports;
         std::string                     _name;

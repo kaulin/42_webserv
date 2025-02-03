@@ -1,5 +1,4 @@
 #include "webserv.hpp"
-#include <string>
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
@@ -31,11 +30,26 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 	}
 } */
 
-std::vector<Location>	ConfigParser::set_location_context(std::vector<std::string> token, int index)
+std::string	ConfigParser::validate_location_path(const std::string &path)
+{
+	// validate path
+}
+
+std::vector<Location>	ConfigParser::set_location_context(const auto &iterator, const auto end)
 {
 	Location location_settings;
 
-
+	if (iterator == end || validate_location_path(*iterator))
+		throw std::runtime_error("invalid location URI/path");
+	else
+		location_settings.path = *iterator;
+	for (; iterator != end && *iterator != "}")
+	{
+		if (*iterator == "methods")
+			location_settings.methods = set_location_methods(iterator);
+		else if (*iterator == "redirect")
+	}
+	// has to have path (ie can't be last token)
 }
 
 std::vector<std::string>    ConfigParser::tokenize(std::string file_data)
@@ -70,26 +84,29 @@ std::string ConfigParser::read_file(std::string path)
 	return file_content;
 }
 
-std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std::string path)
+std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 {
-	std::map<std::string, std::vector<Config>> configs;
-	std::string file_data;
-	std::vector<std::string> tokens; // tokens are saved in map with key value pairs -> [setting][vector:values]
+	std::map<std::string, Config>	configs;
+	std::string 					file_data;
+	std::vector<std::string> 		tokens; // tokens are saved in map with key value pairs -> [setting][vector:values]
+	size_t							server_count = 0;
 
 	file_data = read_file(path);
 	tokens = tokenize(file_data);
-	for (int i = 0; i < tokens.size(); i++)
+	auto it = tokens.begin();
+	for (; it != tokens.end(); it++)
 	{
-		if (tokens[i] == "server") // a new server block is encountered
+		if (*it == "server") // a new Server Block Directive is encountered -> create new server config instance
 		{
-			Config serverBlockInstance;
-			std::vector<Config> blockDirectives;
+			Config blockInstance;
 			// SET config directives
-			serverBlockInstance._location = set_location_context(tokens, i);
-			configs.insert({"Server" + std::to_string(i), blockDirectives});
+			// host...
+			// ports...
+			if (*it == "location")
+				blockInstance._location = set_location_context(it, tokens.end());
+			// insert server block directive into vector holding 
+			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}
-
-		i++;
 	}
 	return configs;
 /* 
