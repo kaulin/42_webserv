@@ -24,7 +24,10 @@ ServerConfigData::ServerConfigData(std::string path)
 	std::cout << "New server config data created...: \n";
 }
 
-ServerConfigData::~ServerConfigData() {}
+ServerConfigData::~ServerConfigData() {
+    // for debugging
+    std::cout << "Server config data instance deleted\n";
+}
 
 /* void ServerConfigData::setHost(const std::string& host) 
 {

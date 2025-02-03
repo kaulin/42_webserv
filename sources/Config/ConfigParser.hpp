@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -9,6 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include "webserv.hpp"
+#include "ServerConfigData.hpp"
 
 
 class ServerConfigData;
@@ -92,7 +92,7 @@ public:
         static std::map<std::string, std::vector<Config>> parseConfigFile(std::string path);
         static void     					checkConfigFilePath(std::string path);
 		static std::string 					read_file(std::string path);
-		static std::vector<BlockDirective>	tokenize(std::string file_content);
-		static std::vector<Location>		set_location_context(BlockDirective server);
+		static std::vector<std::string>		tokenize(std::string file_content);
+		static std::vector<Location>		set_location_context(std::vector<std::string> token, int index);
 
 };
