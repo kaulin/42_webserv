@@ -2,7 +2,7 @@
 
 #include "webserv.hpp"
 #include "HttpServer.hpp"
-#include "ServerConfigData.hpp"
+//#include "ServerConfigData.hpp"
 
 class HttpServer;
 
