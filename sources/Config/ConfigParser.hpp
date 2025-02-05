@@ -87,7 +87,15 @@ public:
         static void     					checkConfigFilePath(std::string path);
 		static std::string 					read_file(std::string path);
 		static std::vector<std::string>		tokenize(std::string file_content);
-		static std::vector<Location>		set_location_context(const std::vector<std::string>::const_iterator &iterator, const std::vector<std::string>::const_iterator end);
-		static int									validate_location_path(const std::string &path);
+		static Location						set_location_block(std::vector<std::string>::const_iterator &iterator, 
+																std::vector<std::string>::const_iterator &end,
+																const std::unordered_map<std::string, Location> &locations);
+		static int							validate_location_block(std::vector<std::string>::const_iterator &it);
+		static std::unordered_map<std::string, bool>	set_location_methods(std::vector<std::string>::const_iterator &it);
+		static std::pair<int, std::string>	set_redirect(std::vector<std::string>::const_iterator &it);
+		static std::string					set_location_path(std::string path);
 
+		static std::string	ConfigParser::set_root(std::vector<std::string>::const_iterator &it);
+		static std::string	ConfigParser::set_index(std::vector<std::string>::const_iterator &it);
+		static std::string	ConfigParser::set_cgi_path(std::vector<std::string>::const_iterator &it);
 };

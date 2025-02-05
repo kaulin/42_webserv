@@ -1,10 +1,12 @@
 #include "webserv.hpp"
+
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
 #include <fstream>
 #include "ServerConfigData.hpp"
 #include "ConfigParser.hpp"
+#include <unordered_map>
 
 void	ConfigParser::checkConfigFilePath(std::string path)
 {
@@ -30,27 +32,96 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 	}
 } */
 
-int	ConfigParser::validate_location_path(const std::string &path)
+int	ConfigParser::validate_location_block(std::vector<std::string>::const_iterator &it)
 {
-	// validate path
+	// check correct block structure and invalid data
+	return (0);
 }
 
-std::vector<Location>	ConfigParser::set_location_context(const std::vector<std::string>::const_iterator &it, const std::vector<std::string>::const_iterator end)
+std::string	ConfigParser::set_location_path(std::string path)
 {
-	Location location_settings;
+	// 1. Regex based location
+	// 2. Standard location block -> mapped to filesystem directory (root) ->  check existence
+	// 3. Redirection -> target URL has to be available
+	// 4. Upload directory -> check existence of root and has write permissions
+}
 
-	if (it == end || validate_location_path(*it))
-		throw std::runtime_error("invalid location URI/path");
-	else
-		location_settings._path = *it;
+std::pair<int, std::string>	ConfigParser::set_redirect(std::vector<std::string>::const_iterator &it)
+{
+	int 		code = std::stoi(*it);
+	std::string redir = *(++it);
+
+	return (std::pair<int, std::string> (code, redir));
+}
+
+std::string	ConfigParser::set_root(std::vector<std::string>::const_iterator &it)
+{
+
+}
+
+std::string	ConfigParser::set_index(std::vector<std::string>::const_iterator &it)
+{
+	
+}
+
+std::string	ConfigParser::set_cgi_path(std::vector<std::string>::const_iterator &it)
+{
+	
+}
+
+std::unordered_map<std::string, bool>	ConfigParser::set_location_methods(std::vector<std::string>::const_iterator &it)
+{
+	std::unordered_map<std::string, bool> methods = {{"GET", false}, {"POST", false}, {"DELETE", false}};
+
+	for (; *it != ";" ; it++)
+	{
+		if (*it == "GET")
+			methods["GET"] = true;
+		if (*it == "POST")
+			methods["POST"] = true;
+		if (*it == "DELETE")
+			methods["DELETE"] = true;
+	}
+	return (methods);
+}
+
+/* struct Location {
+    std::string _path;
+    std::string _root;
+    std::string _index;
+    std::string _cgi_path;
+    std::string _cgi_extension;
+    std::pair<int, std::string> _redirect;
+    std::unordered_map<std::string, bool> _methods;
+    bool        _dir_listing;
+}; */
+
+Location	ConfigParser::set_location_block(std::vector<std::string>::const_iterator &it, 
+											std::vector<std::string>::const_iterator &end,
+											const std::unordered_map<std::string, Location> &locations)
+{
+	Location location_block;
+
+	if (it == end || validate_location_block(it))
+		throw std::runtime_error("Invalid location URI/path");
+	if (locations.find(*it) == locations.end()) // checks for duplicate
+		throw std::runtime_error("Duplicate path");
+	location_block._path = set_location_path(*it);
 	for (; it != end && *it != "}";)
 	{
 		if (*it == "methods")
-			location_settings._methods = set_location_methods(it);
-		else if (*it == "redirect")
-			location_settings._redirect = set_redirect(it);
+			location_block._methods = set_location_methods(it);
+		if (*it == "redirect")
+			location_block._redirect = set_redirect(it);
+		if (*it == "root")
+			location_block._root = set_root(it);
+		if (*it == "index")
+			location_block._index = set_index(it);
+		if (*it == "cgi_path")
+			location_block._cgi_path = set_cgi_path(it);
+		it++;
 	}
-	// has to have path (ie can't be last token)
+	return (location_block);
 }
 
 std::vector<std::string>    ConfigParser::tokenize(std::string file_data)
@@ -94,22 +165,24 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 
 	file_data = read_file(path);
 	tokens = tokenize(file_data);
-	auto it = tokens.begin();
+	std::vector<std::string>::const_iterator it = tokens.begin();
 	for (; it != tokens.end(); it++)
 	{
 		if (*it == "server") // a new Server Block Directive is encountered -> create new server config instance
 		{
 			Config blockInstance;
+
 			// SET config directives
 			// host...
 			// ports...
 			if (*it == "location")
-				blockInstance._location = set_location_context(it, tokens.end());
+				set_location_block(it, tokens.end(), blockInstance._location);
 			// insert server block directive into vector holding 
 			// configs["Server" + std::to_string(server_count++)] = {blockInstance};
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}
 	}
+	
 	return configs;
 /* 
 	ServerConfigData server_object;

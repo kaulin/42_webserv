@@ -1,4 +1,5 @@
 #pragma once
+
 #include "webserv.hpp"
 #include <map>
 #include <vector>
@@ -10,33 +11,33 @@ struct Location {
     std::string _index;
     std::string _cgi_path;
     std::string _cgi_extension;
-    bool        _dir_listing;
     std::pair<int, std::string> _redirect;
-    std::unordered_map<std::string, bool> _methods = {{"GET", true}, {"POST", true}, {"DELETE", true}};
+    std::unordered_map<std::string, bool> _methods;
+    bool        _dir_listing;
 };
 
 struct Config {
-        std::string                             _host;
-        std::string                             _name;
-        std::vector<std::string>                _ports;
-        size_t                                  _num_of_ports;
-        size_t                                  _cli_max_bodysize;
-        std::map<int, std::string>              _default_pages;
-        std::map<int, std::string>              _error_pages;
-        std::map<int, std::string>              _error_codes;
-        std::vector<Location>                   _location;
-        std::map<std::string, std::string>      _cgi_extensions;
+        std::string									_host;
+        std::vector<std::string>					_names;
+        std::vector<std::string>					_ports;
+        std::unordered_map<std::string, Location>	_location;
+        size_t										_num_of_ports;
+        size_t										_cli_max_bodysize;
+        std::map<int, std::string>					_default_pages;
+        std::map<int, std::string>					_error_pages;
+        std::map<int, std::string>					_error_codes;
+        std::map<std::string, std::string>			_cgi_extensions;
 };
 
 
 class ServerConfigData {
 private:
+        std::map<std::string, Config>   serverConfigBlocks;
 public:
         ServerConfigData(std::string path);
         ServerConfigData();
         ~ServerConfigData();
 
-        std::map<std::string, Config>   serverConfigBlocks;
 
         // class member functions
         // void	setHost(const std::string& host);
