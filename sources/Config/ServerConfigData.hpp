@@ -5,13 +5,14 @@
 #include <string>
 
 struct Location {
-    std::string path;
-    std::string root;
-    std::string index;
-    std::string cgi_path;
-    std::string cgi_extension;
-    bool        dir_listing;
-    std::map<std::string, bool> methods = {{"GET", true}, {"POST", true}, {"DELETE", true}};
+    std::string _path;
+    std::string _root;
+    std::string _index;
+    std::string _cgi_path;
+    std::string _cgi_extension;
+    bool        _dir_listing;
+    std::pair<int, std::string> _redirect;
+    std::unordered_map<std::string, bool> _methods = {{"GET", true}, {"POST", true}, {"DELETE", true}};
 };
 
 struct Config {

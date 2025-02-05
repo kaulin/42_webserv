@@ -30,24 +30,25 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 	}
 } */
 
-std::string	ConfigParser::validate_location_path(const std::string &path)
+int	ConfigParser::validate_location_path(const std::string &path)
 {
 	// validate path
 }
 
-std::vector<Location>	ConfigParser::set_location_context(const auto &iterator, const auto end)
+std::vector<Location>	ConfigParser::set_location_context(const std::vector<std::string>::const_iterator &it, const std::vector<std::string>::const_iterator end)
 {
 	Location location_settings;
 
-	if (iterator == end || validate_location_path(*iterator))
+	if (it == end || validate_location_path(*it))
 		throw std::runtime_error("invalid location URI/path");
 	else
-		location_settings.path = *iterator;
-	for (; iterator != end && *iterator != "}")
+		location_settings._path = *it;
+	for (; it != end && *it != "}";)
 	{
-		if (*iterator == "methods")
-			location_settings.methods = set_location_methods(iterator);
-		else if (*iterator == "redirect")
+		if (*it == "methods")
+			location_settings._methods = set_location_methods(it);
+		else if (*it == "redirect")
+			location_settings._redirect = set_redirect(it);
 	}
 	// has to have path (ie can't be last token)
 }
@@ -105,6 +106,7 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 			if (*it == "location")
 				blockInstance._location = set_location_context(it, tokens.end());
 			// insert server block directive into vector holding 
+			// configs["Server" + std::to_string(server_count++)] = {blockInstance};
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}
 	}

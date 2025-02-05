@@ -87,7 +87,7 @@ public:
         static void     					checkConfigFilePath(std::string path);
 		static std::string 					read_file(std::string path);
 		static std::vector<std::string>		tokenize(std::string file_content);
-		static std::vector<Location>		set_location_context(const auto &iterator, const auto end);
-		std::string							validate_location_path(const std::string &path);
+		static std::vector<Location>		set_location_context(const std::vector<std::string>::const_iterator &iterator, const std::vector<std::string>::const_iterator end);
+		static int									validate_location_path(const std::string &path);
 
 };
