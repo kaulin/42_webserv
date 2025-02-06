@@ -12,7 +12,7 @@ HttpServer::HttpServer(ServerConfigData serverData)
 	FD_ZERO(&_listen_sockfds);
 	FD_ZERO(&_num_of_ports);
 	FD_ZERO(&_name);
-}
+} 
 
 HttpServer::~HttpServer()
 {

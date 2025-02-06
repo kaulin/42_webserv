@@ -26,5 +26,6 @@
 #include "ServerHandler.hpp"
 #include "ConfigParser.hpp"
 #include "ServerConfigData.hpp"
+#include "LocationParser.hpp"
 
 #endif
