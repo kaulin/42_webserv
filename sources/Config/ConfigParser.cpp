@@ -68,12 +68,14 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
 	std::vector<std::string> tokens;
     std::stringstream ss(file_content);
     std::string token, previous;
+    bool        semicolon;
     
     while (ss >> token)
 	{
-        // do we need the semicolons?
+        semicolon = false;
         if (!token.empty() && token.back() == ';')
 		{
+            semicolon = true;
             token.pop_back();
         }
 		if (previous == "host")
@@ -85,6 +87,8 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
 			}
 		}
         tokens.push_back(token);
+        if (semicolon)
+            tokens.push_back(";");
 		previous = token;
     }
     
