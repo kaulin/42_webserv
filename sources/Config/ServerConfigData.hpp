@@ -17,16 +17,16 @@ struct Location {
 };
 
 struct Config {
-        std::string									_host;
-        std::vector<std::string>					_names;
-        std::vector<std::string>					_ports;
+        std::string					_host;
+        std::vector<std::string>			_names;
+        std::vector<std::string>			_ports;
         std::unordered_map<std::string, Location>	_location;
-        size_t										_num_of_ports;
-        size_t										_cli_max_bodysize;
-        std::map<int, std::string>					_default_pages;
-        std::map<int, std::string>					_error_pages;
-        std::map<int, std::string>					_error_codes;
-        std::map<std::string, std::string>			_cgi_extensions;
+        size_t						_num_of_ports;
+        size_t						_cli_max_bodysize;
+        std::map<int, std::string>			_default_pages;
+        std::map<int, std::string>			_error_pages;
+        std::map<int, std::string>			_error_codes;
+        std::map<std::string, std::string>		_cgi_extensions;
 };
 
 

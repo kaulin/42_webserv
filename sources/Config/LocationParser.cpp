@@ -1,5 +1,5 @@
 #include "webserv.hpp"
-
+#include "tuple"
 
 int	LocationParser::validate_location_block(std::vector<std::string>::const_iterator &it)
 {
@@ -20,20 +20,11 @@ std::pair<int, std::string>	LocationParser::set_redirect(std::vector<std::string
 	return (std::pair<int, std::string> (std::stoi(*it), *(++it)));
 }
 
-std::string	LocationParser::set_root(std::vector<std::string>::const_iterator &it)
-{
+std::string	LocationParser::set_root(std::vector<std::string>::const_iterator &it) { return (*(++it)); }
 
-}
+std::string	LocationParser::set_index(std::vector<std::string>::const_iterator &it) { return (*(++it)); }
 
-std::string	LocationParser::set_index(std::vector<std::string>::const_iterator &it)
-{
-	
-}
-
-std::string	LocationParser::set_cgi_path(std::vector<std::string>::const_iterator &it)
-{
-	
-}
+std::string	LocationParser::set_cgi_path(std::vector<std::string>::const_iterator &it) { return (*(++it)); }
 
 std::unordered_map<std::string, bool>	LocationParser::set_location_methods(std::vector<std::string>::const_iterator &it)
 {
@@ -52,6 +43,7 @@ std::unordered_map<std::string, bool>	LocationParser::set_location_methods(std::
 }
 
 /* struct Location {
+    bool        _dir_listing;
     std::string _path;
     std::string _root;
     std::string _index;
@@ -59,10 +51,9 @@ std::unordered_map<std::string, bool>	LocationParser::set_location_methods(std::
     std::string _cgi_extension;
     std::pair<int, std::string> _redirect;
     std::unordered_map<std::string, bool> _methods;
-    bool        _dir_listing;
 }; */
 
-Location	LocationParser::set_location_block(std::vector<std::string>::const_iterator &it, 
+std::tuple<std::string, Location>	LocationParser::set_location_block(std::vector<std::string>::const_iterator &it, 
 											std::vector<std::string>::const_iterator &end,
 											const std::unordered_map<std::string, Location> &locations)
 {
@@ -87,5 +78,5 @@ Location	LocationParser::set_location_block(std::vector<std::string>::const_iter
 			location_block._cgi_path = set_cgi_path(it);
 		it++;
 	}
-	return (location_block);
+	return (std::tuple<std::string, Location>(location_block._path, location_block));
 }
