@@ -117,9 +117,11 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 		{
 			Config blockInstance;
 
-			// SET config directives
 			// host...
-			// ports...
+			// ports... one has to be default
+			// server_names...
+			// error_pages...
+			// limit client body size...
 			if (*it == "location")
 				LocationParser::set_location_block(it, tokens.end(), blockInstance._location);
 			// insert server block directive into vector holding 
@@ -127,7 +129,7 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}
 	}
-	
+	// print all configs
 	return configs;
 }
 /* 
