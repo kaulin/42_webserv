@@ -22,10 +22,19 @@
 
 # define DEFAULT_CONFIG_FILE "config/default.conf"
 
+// #include "HttpServer.hpp"
+// #include "ConfigParser.hpp"
+// #include "ServerConfigData.hpp"
+// #include "ServerHandler.hpp"
+
+// ------------ testing with relative paths ---------------
 #include "HttpServer.hpp"
 #include "ServerHandler.hpp"
 #include "ConfigParser.hpp"
 #include "ServerConfigData.hpp"
 #include "LocationParser.hpp"
+#include "../sources/Config/ConfigParser.hpp"
+#include "../sources/Config/ServerConfigData.hpp"
+
 
 #endif

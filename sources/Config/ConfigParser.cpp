@@ -1,13 +1,95 @@
 #include "webserv.hpp"
-
-#include <iostream>
-#include <unistd.h>
-#include <fcntl.h>
-#include <fstream>
-#include "ServerConfigData.hpp"
 #include "ConfigParser.hpp"
-#include <unordered_map>
-#include "LocationParser.hpp"
+
+// helper trimming function
+std::string trim(const std::string &str)
+{
+	size_t first = str.find_first_not_of(" \t");
+	if (first == std::string::npos) return "";
+	size_t last = str.find_last_not_of(" \t");
+	return str.substr(first, last - first + 1);
+}
+
+// helper function to validate IP address
+bool isValidIP(const std::string &ip)
+{
+    std::regex ipRegex(R"((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}))");
+    std::smatch match;
+    if (std::regex_match(ip, match, ipRegex))
+	{
+        for (int i = 1; i <= 4; ++i)
+		{
+            int octet = std::stoi(match[i].str());
+            if (octet < 0 || octet > 255)
+			{
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+// function to read file, remove comments, return string
+std::string ConfigParser::read_file(std::string path)
+{
+	std::ifstream file(path);
+    std::stringstream content;
+    std::string line;
+    
+    if (!file.is_open())
+	{
+        std::cerr << "Error: Could not open file " << path << std::endl;
+        return "";
+    }
+    
+    while (std::getline(file, line))
+	{
+        size_t commentPos = line.find('#');
+        if (commentPos != std::string::npos)
+		{
+            line = line.substr(0, commentPos);
+        }
+        
+        line = trim(line);
+        if (!line.empty())
+		{
+            content << line << '\n';
+        }
+    }
+    
+    file.close();
+    return content.str();
+}
+
+// Function to parse the configuration file
+std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
+{
+	std::vector<std::string> tokens;
+    std::stringstream ss(file_content);
+    std::string token, previous;
+    
+    while (ss >> token)
+	{
+        // do we need the semicolons?
+        if (!token.empty() && token.back() == ';')
+		{
+            token.pop_back();
+        }
+		if (previous == "host")
+		{
+			if (!isValidIP(token))
+			{
+				std::cerr << "Error: Invalid IP format: " << token << std::endl;
+				return {};
+			}
+		}
+        tokens.push_back(token);
+		previous = token;
+    }
+    
+    return tokens;
+}
 
 void	ConfigParser::checkConfigFilePath(std::string path)
 {
@@ -17,53 +99,6 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 	if (path.find(".conf") == std::string::npos) {
 		throw std::runtime_error("Error: Invalid file path");
 	}
-}
-
-/* void printServerConfigBlocks(const std::vector<ServerConfigData>& ServerConfigBlocks) 
-{
-	// for testing
-	std::cout << "Printing all configs\n";
-	for (const auto& conf : ServerConfigBlocks) {
-		std::cout << "Host: " << conf.getHost() << "\n";
-		conf.printPorts(); // helper function to print all ports
-		std::cout << "Name: " << conf.getName() << "\n"
-		<< "Error Page: " << conf.getErrorPage() << "\n"
-		<< "Client Max Body Size: " << conf.getCliMaxBodysize() << "\n"
-		<< "--------------------------\n";
-	}
-} */
-
-
-std::vector<std::string>    ConfigParser::tokenize(std::string file_data)
-{
-	std::vector<std::string> tokens;
-
-	// 1. tokenise
-	// 2. sets the Server sections --> 
-	/* 
-		vector of BlockDirectives {Server1, Server2, Server3...}, 
-		where each server holds BlockDirective -> which is an unordered map with key pairs eg.
-			server_name : {value1, value2, value3}
-			client_max_body_size : {10M}
-			error_page : {404, /errors/404.html}
-			error_page : {500, /errors/500.html}
-			routes : {route, "/", "{", root, /var/www/html, ";", methods, GET ...}
-	 
-		return parsed sections
-	*/
-	return tokens;
-}
-
-std::string ConfigParser::read_file(std::string path)
-{
-	std::string file_content;
-
-	// "Read file" implementation here...
-	if (open(path.c_str(), O_RDONLY) == -1) {
-		throw std::runtime_error("Error: Could not open config file");
-	}
-	// Returns read content with comments and whitespace removed
-	return file_content;
 }
 
 std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
@@ -94,33 +129,71 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 	}
 	
 	return configs;
+}
 /* 
 	ServerConfigData server_object;
 	ServerConfigData server_object_2;
 	std::vector<std::string> test_ports = {"3490", "3491"};
 	std::vector<std::string> test_ports2 = {"8080"};
+// void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs) 
+// {
+// 	// for testing
+// 	std::cout << "Printing all configs\n";
+// 	for (const auto& conf : serverConfigs) {
+// 		std::cout << "Host: " << conf.getHost() << "\n";
+// 		conf.printPorts(); // helper function to print all ports
+// 		std::cout << "Name: " << conf.getName() << "\n"
+// 		<< "Error Page: " << conf.getErrorPage() << "\n"
+// 		<< "Client Max Body Size: " << conf.getCliMaxBodysize() << "\n"
+// 		<< "--------------------------\n";
+// 	}
+// }
 
-	for (auto& port : test_ports)
-	{
-		std::cout << "test ports " << port.c_str() << "\n";
-	}
-	for (auto& port :test_ports2)
-	{
-		std::cout << "test ports2 " << port.c_str() << "\n";
-	}
-	// adding some test data server 1 and server 2
-	server_object.setHost("localhost");
-	server_object.setPorts(test_ports);
-	server_object.setServerName("example 1");
-	server_object.setErrorPage("err.com");
-	server_object.setClientBodySize(1024);
-	// ServerConfigBlocks.push_back(server_object);
 
-	server_object_2.setHost("localhost");
-	server_object_2.setPorts(test_ports2);
-	server_object_2.setServerName("example 2");
-	server_object_2.setErrorPage("err.com");
-	server_object_2.setClientBodySize(1024);
-	// ServerConfigBlocks.push_back(server_object_2);
-	// printServerConfigBlocks(ServerConfigBlocks); */
+// std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std::string path)
+// {
+// 	std::string file_content = read_file(path);
+
+// 	std::vector<std::string> tokens = tokenize(file_content);
+// /* 
+// 	ServerConfigData server_object;
+// 	ServerConfigData server_object_2;
+// 	std::vector<std::string> test_ports = {"3490", "3491"};
+// 	std::vector<std::string> test_ports2 = {"8080"};
+
+// 	for (auto& port : test_ports)
+// 	{
+// 		std::cout << "test ports " << port.c_str() << "\n";
+// 	}
+// 	for (auto& port :test_ports2)
+// 	{
+// 		std::cout << "test ports2 " << port.c_str() << "\n";
+// 	}
+// 	// adding some test data server 1 and server 2
+// 	server_object.setHost("localhost");
+// 	server_object.setPorts(test_ports);
+// 	server_object.setServerName("example 1");
+// 	server_object.setErrorPage("err.com");
+// 	server_object.setClientBodySize(1024);
+// 	// serverConfigs.push_back(server_object);
+
+// 	server_object_2.setHost("localhost");
+// 	server_object_2.setPorts(test_ports2);
+// 	server_object_2.setServerName("example 2");
+// 	server_object_2.setErrorPage("err.com");
+// 	server_object_2.setClientBodySize(1024);
+// 	// serverConfigs.push_back(server_object_2);
+// 	// printServerConfigs(serverConfigs); */
+// }
+int main()
+{
+	std::string file_content = ConfigParser::read_file("../../config/test1.conf");
+
+	std::vector<std::string> tokens = ConfigParser::tokenize(file_content);
+
+	for (const auto &token : tokens)
+	{
+		std::cout << token << std::endl;
+	}
+	return 0;
 }
