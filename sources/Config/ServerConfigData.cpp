@@ -29,6 +29,11 @@ ServerConfigData::~ServerConfigData() {
     std::cout << "Server config data instance deleted\n";
 }
 
+std::map<std::string, Config>&	ServerConfigData::getConfigBlocks()
+{
+    return (this->serverConfigBlocks);
+}
+
 /* void ServerConfigData::setHost(const std::string& host) 
 {
     _host = host;

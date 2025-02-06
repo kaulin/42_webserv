@@ -38,6 +38,7 @@ public:
         ServerConfigData();
         ~ServerConfigData();
 
+        std::map<std::string, Config>&   getConfigBlocks();
 
         // class member functions
         // void	setHost(const std::string& host);

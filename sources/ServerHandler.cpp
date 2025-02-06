@@ -65,9 +65,9 @@ void    ServerHandler::setupServers(std::string path)
 	// then, going through all serverBlock instances, a new shared pointer is made for each virtual server
 	// with the appropriate configurations
 	
-	for (const auto& [servName, config] : config.ServerConfigBlocks) {
-		std::shared_ptr<HttpServer> virtual_server = std::make_shared<HttpServer>(config); // sets up the server with the current config
-		_servers.push_back(virtual_server);
+	for (const auto& [servName, config] : config.getConfigBlocks()) 
+	{
+		_servers.emplace_back(std::make_shared<HttpServer>(config));
 	}
 }
 
