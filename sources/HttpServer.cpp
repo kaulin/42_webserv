@@ -12,9 +12,9 @@ HttpServer::HttpServer(ServerConfigData serverData)
 	FD_ZERO(&_listen_sockfds);
 	FD_ZERO(&_num_of_ports);
 	FD_ZERO(&_name);
-}
+} 
 
-HttpServer::~HttpServer() 
+HttpServer::~HttpServer()
 {
 	for (auto& listen_sockfd : _listen_sockfds) {
 		close(listen_sockfd);
@@ -48,7 +48,7 @@ void HttpServer::setupAddrinfo()
 			inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
 			printf("Address: %s\n", ipstr);
 		}
-		_addr_info.push_back(ai);
+		_addr_info.emplace_back(ai);
 	}
 	std::cout << "-----finished setup addrinfo-----\n";
 }
@@ -56,7 +56,7 @@ void HttpServer::setupAddrinfo()
 void HttpServer::setPorts(std::vector<std::string> ports)
 {
 	for (const auto& current : ports) {
-		_ports.push_back(current);
+		_ports.emplace_back(current);
 	}
 }
 
@@ -72,4 +72,4 @@ size_t HttpServer::getNumOfPorts() { return _num_of_ports; }
 
 void HttpServer::setNumOfPorts(size_t num) { _num_of_ports = num; }
 
-void HttpServer::addSockfd(int fd) { _listen_sockfds.push_back(fd); }
+void HttpServer::addSockfd(int fd) { _listen_sockfds.emplace_back(fd); }

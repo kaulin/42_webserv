@@ -1,6 +1,5 @@
-
+#include "webserv.hpp"
 #include "ConfigParser.hpp"
-//#include "webserv.hpp"
 
 // helper trimming function
 std::string trim(const std::string &str)
@@ -92,7 +91,6 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
     return tokens;
 }
 
-
 void	ConfigParser::checkConfigFilePath(std::string path)
 {
 	if (path.empty()) {
@@ -103,6 +101,40 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 	}
 }
 
+std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
+{
+	std::map<std::string, Config>	configs;
+	std::string 					file_data;
+	std::vector<std::string> 		tokens; // tokens are saved in map with key value pairs -> [setting][vector:values]
+	size_t							server_count = 0;
+
+	file_data = read_file(path);
+	tokens = tokenize(file_data);
+	std::vector<std::string>::const_iterator it = tokens.begin();
+	for (; it != tokens.end(); it++)
+	{
+		if (*it == "server") // a new Server Block Directive is encountered -> create new server config instance
+		{
+			Config blockInstance;
+
+			// SET config directives
+			// host...
+			// ports...
+			if (*it == "location")
+				LocationParser::set_location_block(it, tokens.end(), blockInstance._location);
+			// insert server block directive into vector holding 
+			// configs["Server" + std::to_string(server_count++)] = {blockInstance};
+			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
+		}
+	}
+	
+	return configs;
+}
+/* 
+	ServerConfigData server_object;
+	ServerConfigData server_object_2;
+	std::vector<std::string> test_ports = {"3490", "3491"};
+	std::vector<std::string> test_ports2 = {"8080"};
 // void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs) 
 // {
 // 	// for testing
@@ -163,6 +195,5 @@ int main()
 	{
 		std::cout << token << std::endl;
 	}
-	
 	return 0;
 }

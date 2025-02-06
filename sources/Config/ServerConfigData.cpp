@@ -1,11 +1,17 @@
+#include "webserv.hpp"
 #include "ServerConfigData.hpp"
 #include "ConfigParser.hpp"
+
+ServerConfigData::ServerConfigData()
+{
+    // use default server
+}
 
 ServerConfigData::ServerConfigData(std::string path) 
 {
     // needs to set the server configs for each server
-    // serverConfigs is of datastructure = std::map<std::string, std::vector<Config>>
-    serverConfigs = ConfigParser::parseConfigFile(path);
+    // ServerConfigBlocks is of datastructure = std::map<std::string, std::vector<Config>>
+    serverConfigBlocks = ConfigParser::parseConfigFile(path);
 /*     
     _host.clear();
     _name.clear();
@@ -18,7 +24,15 @@ ServerConfigData::ServerConfigData(std::string path)
 	std::cout << "New server config data created...: \n";
 }
 
-ServerConfigData::~ServerConfigData() {}
+ServerConfigData::~ServerConfigData() {
+    // for debugging
+    std::cout << "Server config data instance deleted\n";
+}
+
+std::map<std::string, Config>&	ServerConfigData::getConfigBlocks()
+{
+    return (this->serverConfigBlocks);
+}
 
 /* void ServerConfigData::setHost(const std::string& host) 
 {

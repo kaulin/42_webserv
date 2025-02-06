@@ -58,22 +58,17 @@ void	ServerHandler::send_response(int client_sockfd)
 
 void    ServerHandler::setupServers(std::string path)
 {
-	ServerConfigData config(path);
-	// makes a new shared pointer for each virtual server
+	ServerConfigData config(path); // creates a new ServerConfigData instance
 
-	for (const auto& [servName, config] : config.serverConfigs) {
-		std::shared_ptr<HttpServer> virtual_server = std::make_shared<HttpServer>(config); // sets up the server with the current config
-		_servers.push_back(virtual_server);
+	// only one is created. The config file is parsed in the constructor and
+	// the appropriate values in the class instance is set.
+	// then, going through all serverBlock instances, a new shared pointer is made for each virtual server
+	// with the appropriate configurations
+	
+	for (const auto& [servName, config] : config.getConfigBlocks()) 
+	{
+		_servers.emplace_back(std::make_shared<HttpServer>(config));
 	}
-
-    /* for (const auto& current : configs) {
-        HttpServer  serverInstance(current);
-		serverInstance.setName(current.getName());
-		serverInstance.setPorts(current.getPorts());
-        serverInstance.setNumOfPorts(current.getNumOfPorts());
-        serverInstance.setupAddrinfo();
-        _servers.push_back(serverInstance);
-    } */
 }
 
 void	ServerHandler::read_request(int new_sockfd)
