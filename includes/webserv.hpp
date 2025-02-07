@@ -30,9 +30,9 @@
 // ------------ testing with relative paths ---------------
 #include "HttpServer.hpp"
 #include "ServerHandler.hpp"
-#include "ConfigParser.hpp"
-#include "ServerConfigData.hpp"
-#include "LocationParser.hpp"
+//#include "ConfigParser.hpp"
+//#include "ServerConfigData.hpp"
+//#include "LocationParser.hpp"
 #include "../sources/Config/ConfigParser.hpp"
 #include "../sources/Config/ServerConfigData.hpp"
 

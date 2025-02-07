@@ -1,4 +1,4 @@
-#include "webserv.hpp"
+//#include "webserv.hpp"
 #include "ConfigParser.hpp"
 
 // helper trimming function
@@ -95,111 +95,171 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
     return tokens;
 }
 
-void	ConfigParser::checkConfigFilePath(std::string path)
+std::unordered_map<std::string, std::string>	ConfigParser::assignKeyToValue(std::vector<std::string> &tokens)
 {
-	if (path.empty()) {
-		throw std::runtime_error("Error: No file path provided");
-	}
-	if (path.find(".conf") == std::string::npos) {
-		throw std::runtime_error("Error: Invalid file path");
-	}
-}
+	std::unordered_map<std::string, std::string> configMap;
+	std::string key;
+	std::string keytype;
+	std::string value;
+	size_t i;
+	bool isValue = false;
+	int num = 1;
 
-std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
-{
-	std::map<std::string, Config>	configs;
-	std::string 					file_data;
-	std::vector<std::string> 		tokens; // tokens are saved in map with key value pairs -> [setting][vector:values]
-	size_t							server_count = 0;
-
-	file_data = read_file(path);
-	tokens = tokenize(file_data);
-	std::vector<std::string>::const_iterator it = tokens.begin();
-	for (; it != tokens.end(); it++)
+	auto it = std::find(tokens.begin(), tokens.end(), "{");
+	if (it == tokens.end())
 	{
-		if (*it == "server") // a new Server Block Directive is encountered -> create new server config instance
-		{
-			Config blockInstance;
-
-			// host...
-			// ports... one has to be default
-			// server_names...
-			// error_pages...
-			// limit client body size...
-			if (*it == "location")
-				LocationParser::set_location_block(it, tokens.end(), blockInstance._location);
-			// insert server block directive into vector holding 
-			// configs["Server" + std::to_string(server_count++)] = {blockInstance};
-			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
-		}
+		std::cerr << "Error: No opening bracket '{' found in configuration file." << std::endl;
+        return configMap;
 	}
-	// print all configs
-	return configs;
+	i = std::distance(tokens.begin(), it);
+	i++;
+	while (i < tokens.size())
+	{
+		if (tokens[i + 1] == "{")
+			break;	// next: handle nested configuration settings or break loop?
+		if (tokens[i] == ";")
+		{
+			isValue = false;
+			i++;
+			continue;
+		}
+		if (!isValue)
+		{
+			key = tokens[i++];
+			keytype = key;
+			isValue = true;
+			num = 1;
+		}
+		if (tokens[i - 1] == key)
+			value = tokens[i++];
+		else
+		{
+			key = keytype + std::to_string(++num);
+			value = tokens[i++];
+		}
+		configMap[key] = value;
+	}
+	return configMap;
 }
-/* 
-	ServerConfigData server_object;
-	ServerConfigData server_object_2;
-	std::vector<std::string> test_ports = {"3490", "3491"};
-	std::vector<std::string> test_ports2 = {"8080"};
-// void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs) 
+
+// void	ConfigParser::checkConfigFilePath(std::string path)
 // {
-// 	// for testing
-// 	std::cout << "Printing all configs\n";
-// 	for (const auto& conf : serverConfigs) {
-// 		std::cout << "Host: " << conf.getHost() << "\n";
-// 		conf.printPorts(); // helper function to print all ports
-// 		std::cout << "Name: " << conf.getName() << "\n"
-// 		<< "Error Page: " << conf.getErrorPage() << "\n"
-// 		<< "Client Max Body Size: " << conf.getCliMaxBodysize() << "\n"
-// 		<< "--------------------------\n";
+// 	if (path.empty()) {
+// 		throw std::runtime_error("Error: No file path provided");
+// 	}
+// 	if (path.find(".conf") == std::string::npos) {
+// 		throw std::runtime_error("Error: Invalid file path");
 // 	}
 // }
 
-
-// std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std::string path)
+// std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 // {
-// 	std::string file_content = read_file(path);
+// 	std::map<std::string, Config>	configs;
+// 	std::string 					file_data;
+// 	std::vector<std::string> 		tokens; // tokens are saved in map with key value pairs -> [setting][vector:values]
+// 	size_t							server_count = 0;
 
-// 	std::vector<std::string> tokens = tokenize(file_content);
+// 	file_data = read_file(path);
+// 	tokens = tokenize(file_data);
+// 	std::vector<std::string>::const_iterator it = tokens.begin();
+// 	for (; it != tokens.end(); it++)
+// 	{
+// 		if (*it == "server") // a new Server Block Directive is encountered -> create new server config instance
+// 		{
+// 			Config blockInstance;
+
+// 			// host...
+// 			// ports... one has to be default
+// 			// server_names...
+// 			// error_pages...
+// 			// limit client body size...
+// 			if (*it == "location")
+// 				LocationParser::set_location_block(it, tokens.end(), blockInstance._location);
+// 			// insert server block directive into vector holding 
+// 			// configs["Server" + std::to_string(server_count++)] = {blockInstance};
+// 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
+// 		}
+// 	}
+// 	// print all configs
+// 	return configs;
+// }
 // /* 
 // 	ServerConfigData server_object;
 // 	ServerConfigData server_object_2;
 // 	std::vector<std::string> test_ports = {"3490", "3491"};
 // 	std::vector<std::string> test_ports2 = {"8080"};
+// // void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs) 
+// // {
+// // 	// for testing
+// // 	std::cout << "Printing all configs\n";
+// // 	for (const auto& conf : serverConfigs) {
+// // 		std::cout << "Host: " << conf.getHost() << "\n";
+// // 		conf.printPorts(); // helper function to print all ports
+// // 		std::cout << "Name: " << conf.getName() << "\n"
+// // 		<< "Error Page: " << conf.getErrorPage() << "\n"
+// // 		<< "Client Max Body Size: " << conf.getCliMaxBodysize() << "\n"
+// // 		<< "--------------------------\n";
+// // 	}
+// // }
 
-// 	for (auto& port : test_ports)
-// 	{
-// 		std::cout << "test ports " << port.c_str() << "\n";
-// 	}
-// 	for (auto& port :test_ports2)
-// 	{
-// 		std::cout << "test ports2 " << port.c_str() << "\n";
-// 	}
-// 	// adding some test data server 1 and server 2
-// 	server_object.setHost("localhost");
-// 	server_object.setPorts(test_ports);
-// 	server_object.setServerName("example 1");
-// 	server_object.setErrorPage("err.com");
-// 	server_object.setClientBodySize(1024);
-// 	// serverConfigs.push_back(server_object);
 
-// 	server_object_2.setHost("localhost");
-// 	server_object_2.setPorts(test_ports2);
-// 	server_object_2.setServerName("example 2");
-// 	server_object_2.setErrorPage("err.com");
-// 	server_object_2.setClientBodySize(1024);
-// 	// serverConfigs.push_back(server_object_2);
-// 	// printServerConfigs(serverConfigs); */
-// }
+// // std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std::string path)
+// // {
+// // 	std::string file_content = read_file(path);
+
+// // 	std::vector<std::string> tokens = tokenize(file_content);
+// // /* 
+// // 	ServerConfigData server_object;
+// // 	ServerConfigData server_object_2;
+// // 	std::vector<std::string> test_ports = {"3490", "3491"};
+// // 	std::vector<std::string> test_ports2 = {"8080"};
+
+// // 	for (auto& port : test_ports)
+// // 	{
+// // 		std::cout << "test ports " << port.c_str() << "\n";
+// // 	}
+// // 	for (auto& port :test_ports2)
+// // 	{
+// // 		std::cout << "test ports2 " << port.c_str() << "\n";
+// // 	}
+// // 	// adding some test data server 1 and server 2
+// // 	server_object.setHost("localhost");
+// // 	server_object.setPorts(test_ports);
+// // 	server_object.setServerName("example 1");
+// // 	server_object.setErrorPage("err.com");
+// // 	server_object.setClientBodySize(1024);
+// // 	// serverConfigs.push_back(server_object);
+
+// // 	server_object_2.setHost("localhost");
+// // 	server_object_2.setPorts(test_ports2);
+// // 	server_object_2.setServerName("example 2");
+// // 	server_object_2.setErrorPage("err.com");
+// // 	server_object_2.setClientBodySize(1024);
+// // 	// serverConfigs.push_back(server_object_2);
+// // 	// printServerConfigs(serverConfigs); */
+// // }
 int main()
 {
 	std::string file_content = ConfigParser::read_file("../../config/test1.conf");
 
 	std::vector<std::string> tokens = ConfigParser::tokenize(file_content);
 
+	std::unordered_map<std::string, std::string> configMap = ConfigParser::assignKeyToValue(tokens);
+
 	for (const auto &token : tokens)
 	{
 		std::cout << token << std::endl;
 	}
+
+	std::cout << "Keys in config map:\n";
+	for (const auto &[key, _] : configMap)
+	{
+		std::cout << key << std::endl;
+	}
+
+	std::cout << "Some values in config map:\n";
+	std::cout << "host: " << configMap["host"] << std::endl;
+	std::cout << "server_name: " << configMap["server_name"] << std::endl;
+	std::cout << "server_name2: " << configMap["server_name2"] << std::endl;
 	return 0;
 }
