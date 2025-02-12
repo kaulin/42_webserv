@@ -12,7 +12,8 @@ static const std::unordered_map<std::string, int> directiveMap = {
         {"redirect", 3},
         {"root", 4},
         {"index", 5},
-        {"cgi_path", 6}
+        {"cgi_path", 6},
+        {"cgi_param", 7}
 };
 
 class LocationParser {
@@ -29,6 +30,6 @@ class LocationParser {
 		static std::string					set_location_path(std::string path);
 		static std::string	                set_root(std::vector<std::string>::const_iterator &it);
 		static std::string	                set_index(std::vector<std::string>::const_iterator &it);
-		static std::string	                set_cgi_path(std::vector<std::string>::const_iterator &it);
+		static std::string	                set_cgi(std::vector<std::string>::const_iterator &it);
 		static bool			                set_autoindex(std::vector<std::string>::const_iterator &it);
 };

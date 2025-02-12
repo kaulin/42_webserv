@@ -129,25 +129,6 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 	// print all configs
 	return configs;
 }
-/* 
-	ServerConfigData server_object;
-	ServerConfigData server_object_2;
-	std::vector<std::string> test_ports = {"3490", "3491"};
-	std::vector<std::string> test_ports2 = {"8080"};
-// void printServerConfigs(const std::vector<ServerConfigData>& serverConfigs) 
-// {
-// 	// for testing
-// 	std::cout << "Printing all configs\n";
-// 	for (const auto& conf : serverConfigs) {
-// 		std::cout << "Host: " << conf.getHost() << "\n";
-// 		conf.printPorts(); // helper function to print all ports
-// 		std::cout << "Name: " << conf.getName() << "\n"
-// 		<< "Error Page: " << conf.getErrorPage() << "\n"
-// 		<< "Client Max Body Size: " << conf.getCliMaxBodysize() << "\n"
-// 		<< "--------------------------\n";
-// 	}
-// }
-
 
 // std::map<std::string, std::vector<Config>>    ConfigParser::parseConfigFile(std::string path)
 // {

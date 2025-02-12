@@ -21,7 +21,10 @@ std::string	LocationParser::set_root(std::vector<std::string>::const_iterator &i
 
 std::string	LocationParser::set_index(std::vector<std::string>::const_iterator &it) { return *(++it); }
 
-std::string	LocationParser::set_cgi_path(std::vector<std::string>::const_iterator &it) { return *(++it); }
+std::string	LocationParser::set_cgi(std::vector<std::string>::const_iterator &it) 
+{ 
+	return *(++it); 
+}
 
 bool LocationParser::set_autoindex(std::vector<std::string>::const_iterator &it) 
 {
@@ -50,7 +53,7 @@ std::unordered_map<std::string, bool>	LocationParser::set_location_methods(std::
     std::string _root;
     std::string _index;
     std::string _cgi_path;
-    std::string _cgi_extension;
+    std::string _cgi_param;
     std::pair<int, std::string> _redirect;
     std::unordered_map<std::string, bool> _methods;
 }; */
@@ -90,7 +93,10 @@ std::tuple<std::string, Location>	LocationParser::set_location_block(std::vector
 				location_block._index = set_index(it);
 				break;
 			case 6:
-				location_block._cgi_path = set_cgi_path(it);
+				location_block._cgi_path = set_cgi(it);
+				break;
+			case 7:
+				location_block._cgi_param = set_cgi(it);
 				break;
 			default:
 				throw std::runtime_error("Invalid directive"); // fatal
