@@ -4,6 +4,7 @@
 #include "HttpServer.hpp"
 #include "webserv.hpp"
 #include <memory>
+#include <csignal>
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -38,7 +39,7 @@ void	ServerHandler::cleanupServers()
 	}
 }
 
-void	ServerHandler::send_response(int client_sockfd)
+void	ServerHandler::sendResponse(int client_sockfd)
 {
 	std::string response =
         "HTTP/1.1 200 OK\r\n"
@@ -56,22 +57,22 @@ void	ServerHandler::send_response(int client_sockfd)
 	<< std::endl;
 }
 
+/* 	One server config data instance is created. The config file is parsed in 
+	the constructor and the appropriate values in the class instance is set. 
+	Going through all serverBlock instances, a new shared pointer is made 
+	for each virtual server with the appropriate configurations */
 void    ServerHandler::setupServers(std::string path)
 {
 	ServerConfigData config(path); // creates a new ServerConfigData instance
-
-	// only one is created. The config file is parsed in the constructor and
-	// the appropriate values in the class instance is set.
-	// then, going through all serverBlock instances, a new shared pointer is made for each virtual server
-	// with the appropriate configurations
 	
 	for (const auto& [servName, config] : config.getConfigBlocks()) 
 	{
-		_servers.emplace_back(std::make_shared<HttpServer>(config));
+		_servers.emplace_back(std::make_shared<HttpServer>(new HttpServer(config)));
 	}
+	_server_count = _servers.size();
 }
 
-void	ServerHandler::read_request(int new_sockfd)
+void	ServerHandler::readRequest(int new_sockfd)
 {
 	int		numbytes;
 	char	buf[1024];
@@ -104,12 +105,13 @@ void	ServerHandler::setPollList()
 			i++;
 		}
 	}
-	/* 	for (auto& poll_obj : _pollfd_list) {
+	for (auto& poll_obj : _pollfd_list) 
+	{
 		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
-	} */
+	}
 }
 
-void    ServerHandler::poll_loop()
+void    ServerHandler::pollLoop()
 {
 	int 			poll_count;
 	int 			conn_sockfd;
@@ -128,11 +130,12 @@ void    ServerHandler::poll_loop()
 			{
 				addrlen = sizeof(remoteaddr_in);
 				conn_sockfd = accept(_pollfd_list[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
-				if (conn_sockfd == -1) {
-					error_and_exit("Accept");
+				if (conn_sockfd == -1) 
+				{
+					error_and_exit("Accept"); // log error
 				}
-				read_request(conn_sockfd);
-				send_response(conn_sockfd);
+				readRequest(conn_sockfd);
+				sendResponse(conn_sockfd);
 				close(conn_sockfd);
 			}
 		}
@@ -179,12 +182,21 @@ void	ServerHandler::setupSockets()
 	}
 }
 
+void	ServerHandler::signalHandler() 
+{
+	// handle shutdown
+	exit(130);
+}
+
 void    ServerHandler::runServers()
 {
 	// for testing, print server configs and return
 	// printServerData();
+	std::signal(SIGINT, signalHandler);
+	std::signal(SIGPIPE, SIG_IGN);
+
 	_running = true;
 	setupSockets();
-	poll_loop();
+	pollLoop();
 	cleanupServers();
 }
