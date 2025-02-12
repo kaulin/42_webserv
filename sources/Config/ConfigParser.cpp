@@ -69,10 +69,17 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
     std::stringstream ss(file_content);
     std::string token, previous;
     bool        semicolon;
+	bool		openingBracket = false;
     
     while (ss >> token)
 	{
         semicolon = false;
+		if (openingBracket && token == "{")
+			continue;
+		if (token == "{")
+			openingBracket = true;
+		if (token == "}")
+			continue;
         if (!token.empty() && token.back() == ';')
 		{
             semicolon = true;
@@ -91,6 +98,7 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
             tokens.push_back(";");
 		previous = token;
     }
+	tokens.push_back("}");
     
     return tokens;
 }
@@ -115,8 +123,6 @@ std::unordered_map<std::string, std::string>	ConfigParser::assignKeyToValue(std:
 	i++;
 	while (i < tokens.size())
 	{
-		if (tokens[i + 1] == "{")
-			break;	// next: handle nested configuration settings or break loop?
 		if (tokens[i] == ";")
 		{
 			isValue = false;
@@ -261,5 +267,6 @@ int main()
 	std::cout << "host: " << configMap["host"] << std::endl;
 	std::cout << "server_name: " << configMap["server_name"] << std::endl;
 	std::cout << "server_name2: " << configMap["server_name2"] << std::endl;
+	std::cout << "root: " << configMap["root"] << std::endl;
 	return 0;
 }
