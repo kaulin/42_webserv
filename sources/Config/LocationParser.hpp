@@ -1,7 +1,19 @@
 #pragma once
 
 #include "webserv.hpp"
+#include <vector>
+#include <unordered_map>
+#include "ServerConfigData.hpp"
+#include <unordered_map>
 
+static const std::unordered_map<std::string, int> directiveMap = {
+        {"methods", 1},
+        {"autoindex", 2},
+        {"redirect", 3},
+        {"root", 4},
+        {"index", 5},
+        {"cgi_path", 6}
+};
 
 class LocationParser {
     private:
@@ -18,5 +30,5 @@ class LocationParser {
 		static std::string	                set_root(std::vector<std::string>::const_iterator &it);
 		static std::string	                set_index(std::vector<std::string>::const_iterator &it);
 		static std::string	                set_cgi_path(std::vector<std::string>::const_iterator &it);
-		static int							validate_location_block(std::vector<std::string>::const_iterator &it);
+		static bool			                set_autoindex(std::vector<std::string>::const_iterator &it);
 };

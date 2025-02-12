@@ -1,4 +1,5 @@
 #include "webserv.hpp"
+#include "LocationParser.hpp"
 #include "ConfigParser.hpp"
 
 // helper trimming function
@@ -111,19 +112,15 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 	file_data = read_file(path);
 	tokens = tokenize(file_data);
 	std::vector<std::string>::const_iterator it = tokens.begin();
-	for (; it != tokens.end(); it++)
+	std::vector<std::string>::const_iterator end = tokens.end();
+	for (; it != end; it++)
 	{
 		if (*it == "server") // a new Server Block Directive is encountered -> create new server config instance
 		{
 			Config blockInstance;
 
-			// host...
-			// ports... one has to be default
-			// server_names...
-			// error_pages...
-			// limit client body size...
 			if (*it == "location")
-				blockInstance._location.insert(LocationParser::set_location_block(it, tokens.end(), blockInstance._location));
+				blockInstance._location.insert(LocationParser::set_location_block(it, end, blockInstance._location));
 			// insert server block directive into vector holding 
 			// configs["Server" + std::to_string(server_count++)] = {blockInstance};
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
