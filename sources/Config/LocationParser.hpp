@@ -1,9 +1,9 @@
 #pragma once
 
 #include "webserv.hpp"
+#include "ServerConfigData.hpp"
 #include <vector>
 #include <unordered_map>
-#include "ServerConfigData.hpp"
 #include <unordered_map>
 
 static const std::unordered_map<std::string, int> directiveMap = {
@@ -22,7 +22,7 @@ class LocationParser {
         LocationParser(const LocationParser &other) = delete;
         LocationParser& operator=(const LocationParser &other) = delete;
     public:
-        static std::tuple<std::string, Location>	set_location_block(std::vector<std::string>::const_iterator &iterator, 
+        static std::pair<std::string, Location>	set_location_block(std::vector<std::string>::const_iterator &iterator, 
 												                        std::vector<std::string>::const_iterator &end,
 												                        const std::unordered_map<std::string, Location> &locations);
 		static std::unordered_map<std::string, bool>	set_location_methods(std::vector<std::string>::const_iterator &it);

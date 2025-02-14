@@ -25,7 +25,7 @@ public:
     void    sendResponse(int sockfd_out);
     void    cleanupServers();
     size_t  getPortCount();
-    void    signalHandler();
+    static void    signalHandler(int);
 
     // Helper functions for debugging
     // void    *get_in_addr(struct sockaddr *sa);

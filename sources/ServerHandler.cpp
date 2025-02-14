@@ -1,8 +1,6 @@
-#include "ServerHandler.hpp"
-#include "ConfigParser.hpp"
-#include "ServerConfigData.hpp"
-#include "HttpServer.hpp"
 #include "webserv.hpp"
+#include "ServerHandler.hpp"
+#include "HttpServer.hpp"
 #include <memory>
 #include <csignal>
 
@@ -67,7 +65,7 @@ void    ServerHandler::setupServers(std::string path)
 	
 	for (const auto& [servName, config] : config.getConfigBlocks()) 
 	{
-		_servers.emplace_back(std::make_shared<HttpServer>(new HttpServer(config)));
+		_servers.emplace_back(std::make_shared<HttpServer>(config));
 	}
 	_server_count = _servers.size();
 }
@@ -182,17 +180,18 @@ void	ServerHandler::setupSockets()
 	}
 }
 
-void	ServerHandler::signalHandler() 
+void	ServerHandler::signalHandler(int signal) 
 {
 	// handle shutdown
-	exit(130);
+	std::cout << "Ctrl + C signal received, shutting down\n";
+	exit(signal);
 }
 
 void    ServerHandler::runServers()
 {
 	// for testing, print server configs and return
 	// printServerData();
-	std::signal(SIGINT, signalHandler);
+	std::signal(SIGINT, ServerHandler::signalHandler);
 	std::signal(SIGPIPE, SIG_IGN);
 
 	_running = true;

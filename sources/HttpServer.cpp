@@ -10,6 +10,7 @@ HttpServer::HttpServer(Config serverData)
 	_settings = serverData;
 	_ports = serverData._ports;
 	_num_of_ports = serverData._ports.size();
+	std::cout << "Created new virtual server instance\n";
 } 
 
 HttpServer::~HttpServer()

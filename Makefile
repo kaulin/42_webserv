@@ -1,14 +1,14 @@
 NAME				:= webserv
 CXX					:= c++
-CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++11 -g
+CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++17 -g
 
 # Sources
 SOURCES				:= main.cpp \
-						HttpServer.cpp \
 						Config/ConfigParser.cpp \
 						Config/ServerConfigData.cpp \
-						Config/ServerHandler.cpp \
 						Config/LocationParser.cpp \
+						HttpServer.cpp \
+						ServerHandler.cpp \
 						ServerUtils.cpp
 						
 VPATH				+= sources/

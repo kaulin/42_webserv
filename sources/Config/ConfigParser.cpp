@@ -120,7 +120,7 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 			Config blockInstance;
 
 			if (*it == "location")
-				blockInstance._location.insert(LocationParser::set_location_block(it, end, blockInstance._location));
+				blockInstance._location.emplace(LocationParser::set_location_block(it, end, blockInstance._location));
 			// insert server block directive into vector holding 
 			// configs["Server" + std::to_string(server_count++)] = {blockInstance};
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
@@ -165,7 +165,7 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 // 	// serverConfigs.push_back(server_object_2);
 // 	// printServerConfigs(serverConfigs); */
 // }
-int main()
+/* int main()
 {
 	std::string file_content = ConfigParser::read_file("../../config/test1.conf");
 
@@ -176,4 +176,4 @@ int main()
 		std::cout << token << std::endl;
 	}
 	return 0;
-}
+} */

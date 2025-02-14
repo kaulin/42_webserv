@@ -1,7 +1,8 @@
 #include "webserv.hpp"
-#include "tuple"
 #include "LocationParser.hpp"
+#include <tuple>
 #include <regex>
+#include <utility>
 
 std::string	LocationParser::set_location_path(std::string path)
 {
@@ -58,7 +59,7 @@ std::unordered_map<std::string, bool>	LocationParser::set_location_methods(std::
     std::unordered_map<std::string, bool> _methods;
 }; */
 
-std::tuple<std::string, Location>	LocationParser::set_location_block(std::vector<std::string>::const_iterator &it, 
+std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<std::string>::const_iterator &it, 
 											std::vector<std::string>::const_iterator &end,
 											const std::unordered_map<std::string, Location> &locations)
 {
@@ -103,5 +104,5 @@ std::tuple<std::string, Location>	LocationParser::set_location_block(std::vector
 		}
 		it++;
 	}
-	return std::tuple<std::string, Location>(std::make_tuple(location_block._path, location_block));
+	return std::pair<std::string, Location>(location_block._path, location_block);
 }
