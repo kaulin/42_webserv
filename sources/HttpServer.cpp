@@ -1,17 +1,12 @@
 #include "webserv.hpp"
-#include "ServerConfigData.hpp"
 #include "HttpServer.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
 HttpServer::HttpServer(Config serverData)
 {
-	// make sure ports and other invariants are set correctly
-	FD_ZERO(&_addr_info);
-	FD_ZERO(&_ports);
-	FD_ZERO(&_listen_sockfds);
-	FD_ZERO(&_num_of_ports);
-
+	_addr_info.clear();
+	_listen_sockfds.clear();
 	_settings = serverData;
 	_ports = serverData._ports;
 	_num_of_ports = serverData._ports.size();

@@ -1,7 +1,5 @@
 #pragma once
-
 #include "webserv.hpp"
-#include "ServerConfigData.hpp"
 
 class HttpServer
 {

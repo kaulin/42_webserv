@@ -5,10 +5,12 @@ CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++11 -g
 # Sources
 SOURCES				:= main.cpp \
 						HttpServer.cpp \
-						ConfigParser.cpp \
-						ServerConfigData.cpp \
-						ServerHandler.cpp \
+						Config/ConfigParser.cpp \
+						Config/ServerConfigData.cpp \
+						Config/ServerHandler.cpp \
+						Config/LocationParser.cpp \
 						ServerUtils.cpp
+						
 VPATH				+= sources/
 
 # Objects
@@ -18,16 +20,14 @@ OBJECT_PATHS		:= $(addprefix $(OBJECT_DIRECTORY), $(OBJECTS))
 
 # Includes
 INCLUDE_DIRECTORY	:= includes/
-INCLUDES			:= webserv.hpp \
-						HttpServer.hpp \
-						ConfigParser.hpp \
-						ServerConfigData.hpp
+INCLUDES			:= webserv.hpp
+
 INCLUDE_PATHS		:= $(addprefix $(INCLUDE_DIRECTORY), $(INCLUDES))
 INCLUDE_FLAGS		:= -I includes/
 
 all: $(NAME)
 
-$(NAME): $(OBJECT_DIRECTORY) $(OBJECT_PATHS) $(INCLUDE_PATHS) Makefile
+$(NAME): $(OBJECT_DIRECTORY) $(OBJECT_DIRECTORY)subdirs $(OBJECT_PATHS) $(INCLUDE_PATHS) Makefile
 	@echo "Linking executable $(NAME)..."
 	@$(CXX) $(CXX_FLAGS) $(INCLUDE_FLAGS) $(OBJECT_PATHS) -o $(NAME)
 	@echo "$(NAME) built with $(CXX) and flags $(CXX_FLAGS)!"
@@ -35,7 +35,10 @@ $(NAME): $(OBJECT_DIRECTORY) $(OBJECT_PATHS) $(INCLUDE_PATHS) Makefile
 $(OBJECT_DIRECTORY):
 	@mkdir -p $(OBJECT_DIRECTORY)
 
-$(OBJECT_DIRECTORY)%.o: %.cpp $(INCLUDE_PATHS) Makefile 
+$(OBJECT_DIRECTORY)subdirs:
+	@mkdir -p $(sort $(dir $(OBJECT_PATHS)))
+
+$(OBJECT_DIRECTORY)%.o: %.cpp $(INCLUDE_PATHS) Makefile | $(OBJECT_DIRECTORY)subdirs
 	@echo "Compiling $<"
 	@$(CXX) $(CXX_FLAGS) $(INCLUDE_FLAGS) -c $< -o $@
 

@@ -103,5 +103,5 @@ std::tuple<std::string, Location>	LocationParser::set_location_block(std::vector
 		}
 		it++;
 	}
-	return (std::tuple<std::string, Location>(location_block._path, location_block));
+	return std::tuple<std::string, Location>(std::make_tuple(location_block._path, location_block));
 }
