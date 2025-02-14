@@ -68,6 +68,12 @@ void    ServerHandler::setupServers(std::string path)
 		_servers.emplace_back(std::make_shared<HttpServer>(config));
 	}
 	_server_count = _servers.size();
+
+	// HttpServer  serverInstance(current);
+	// serverInstance.setPorts(current.getPorts());
+    // serverInstance.setNumOfPorts(current.getNumOfPorts());
+    // serverInstance.setupAddrinfo();
+    // _servers.push_back(serverInstance);
 }
 
 void	ServerHandler::readRequest(int new_sockfd)
@@ -189,8 +195,6 @@ void	ServerHandler::signalHandler(int signal)
 
 void    ServerHandler::runServers()
 {
-	// for testing, print server configs and return
-	// printServerData();
 	std::signal(SIGINT, ServerHandler::signalHandler);
 	std::signal(SIGPIPE, SIG_IGN);
 
