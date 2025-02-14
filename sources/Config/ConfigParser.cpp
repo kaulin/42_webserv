@@ -99,7 +99,7 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
 std::unordered_map<std::string, std::string>	ConfigParser::assignKeyToValue(std::vector<std::string> &tokens,
 																				std::vector<std::string>::iterator &it)
 {
-	std::unordered_map<std::string, std::string> configMap;
+	std::unordered_map<std::string, std::string> configMap; // use map<string, vector<string>> ?
 	std::string key;
 	std::string keytype;
 	std::string value;
