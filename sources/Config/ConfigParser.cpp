@@ -74,12 +74,6 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
     while (ss >> token)
 	{
         semicolon = false;
-		if (openingBracket && token == "{")
-			continue;
-		if (token == "{")
-			openingBracket = true;
-		if (token == "}")
-			continue;
         if (!token.empty() && token.back() == ';')
 		{
             semicolon = true;
@@ -98,52 +92,51 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
             tokens.push_back(";");
 		previous = token;
     }
-	tokens.push_back("}");
     
     return tokens;
 }
 
-std::unordered_map<std::string, std::string>	ConfigParser::assignKeyToValue(std::vector<std::string> &tokens)
+std::unordered_map<std::string, std::string>	ConfigParser::assignKeyToValue(std::vector<std::string> &tokens,
+																				std::vector<std::string>::iterator &it)
 {
 	std::unordered_map<std::string, std::string> configMap;
 	std::string key;
 	std::string keytype;
 	std::string value;
-	size_t i;
 	bool isValue = false;
 	int num = 1;
 
-	auto it = std::find(tokens.begin(), tokens.end(), "{");
-	if (it == tokens.end())
+	std::cout << "1: " << *it << std::endl;
+	while (it < tokens.end() && *it != "{")
+		*it++;
+	*it++;
+	std::cout << "2: " << *it << std::endl;
+	while (it < tokens.end())
 	{
-		std::cerr << "Error: No opening bracket '{' found in configuration file." << std::endl;
-        return configMap;
-	}
-	i = std::distance(tokens.begin(), it);
-	i++;
-	while (i < tokens.size())
-	{
-		if (tokens[i] == ";")
+		if (*it == "server")
+			break; 
+		if (*it == ";")
 		{
 			isValue = false;
-			i++;
+			*it++;
 			continue;
 		}
 		if (!isValue)
 		{
-			key = tokens[i++];
+			key = *it;
 			keytype = key;
 			isValue = true;
 			num = 1;
 		}
-		if (tokens[i - 1] == key)
-			value = tokens[i++];
+		if (*it == key)
+			value = *++it;
 		else
 		{
 			key = keytype + std::to_string(++num);
-			value = tokens[i++];
+			value = *it++;
 		}
 		configMap[key] = value;
+		std::cout << "3: " << *it << std::endl;
 	}
 	return configMap;
 }
@@ -158,37 +151,40 @@ std::unordered_map<std::string, std::string>	ConfigParser::assignKeyToValue(std:
 // 	}
 // }
 
-// std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
-// {
-// 	std::map<std::string, Config>	configs;
-// 	std::string 					file_data;
-// 	std::vector<std::string> 		tokens; // tokens are saved in map with key value pairs -> [setting][vector:values]
-// 	size_t							server_count = 0;
+std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
+{
+	std::map<std::string, Config>	configs;
+	std::string 					file_data;
+	std::vector<std::string> 		tokens; // tokens are saved in map with key value pairs -> [setting][vector:values]
+	size_t							server_count = 0;
 
-// 	file_data = read_file(path);
-// 	tokens = tokenize(file_data);
-// 	std::vector<std::string>::const_iterator it = tokens.begin();
-// 	for (; it != tokens.end(); it++)
-// 	{
-// 		if (*it == "server") // a new Server Block Directive is encountered -> create new server config instance
-// 		{
-// 			Config blockInstance;
+	std::string file_content = ConfigParser::read_file("../../config/test1.conf");
+	tokens = ConfigParser::tokenize(file_content);
+	std::vector<std::string>::iterator it = tokens.begin();
+	std::unordered_map<std::string, std::string> configMap = ConfigParser::assignKeyToValue(tokens, it);
+	
+	std::vector<std::string>::const_iterator it = tokens.begin();
+	for (; it != tokens.end(); it++)
+	{
+		if (*it == "server") // a new Server Block Directive is encountered -> create new server config instance
+		{
+			Config blockInstance;
 
-// 			// host...
-// 			// ports... one has to be default
-// 			// server_names...
-// 			// error_pages...
-// 			// limit client body size...
-// 			if (*it == "location")
-// 				LocationParser::set_location_block(it, tokens.end(), blockInstance._location);
-// 			// insert server block directive into vector holding 
-// 			// configs["Server" + std::to_string(server_count++)] = {blockInstance};
-// 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
-// 		}
-// 	}
-// 	// print all configs
-// 	return configs;
-// }
+			// host...
+			// ports... one has to be default
+			// server_names...
+			// error_pages...
+			// limit client body size...
+			if (*it == "location")
+				LocationParser::set_location_block(it, tokens.end(), blockInstance._location);
+			// insert server block directive into vector holding 
+			// configs["Server" + std::to_string(server_count++)] = {blockInstance};
+			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
+		}
+	}
+	// print all configs
+	return configs;
+}
 // /* 
 // 	ServerConfigData server_object;
 // 	ServerConfigData server_object_2;
@@ -250,7 +246,8 @@ int main()
 
 	std::vector<std::string> tokens = ConfigParser::tokenize(file_content);
 
-	std::unordered_map<std::string, std::string> configMap = ConfigParser::assignKeyToValue(tokens);
+	std::vector<std::string>::iterator it = tokens.begin();
+	std::unordered_map<std::string, std::string> configMap = ConfigParser::assignKeyToValue(tokens, it);
 
 	for (const auto &token : tokens)
 	{
@@ -268,5 +265,6 @@ int main()
 	std::cout << "server_name: " << configMap["server_name"] << std::endl;
 	std::cout << "server_name2: " << configMap["server_name2"] << std::endl;
 	std::cout << "root: " << configMap["root"] << std::endl;
+	std::cout << "route: " << configMap["route"] << std::endl;
 	return 0;
 }
