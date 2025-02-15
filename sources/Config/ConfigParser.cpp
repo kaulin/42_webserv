@@ -70,7 +70,7 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
 	std::stringstream ss(file_content);
 	std::string token, previous;
 	bool        semicolon;
-	bool		openingBracket = false;
+	// bool		openingBracket = false;
 	
 	while (ss >> token)
 	{
@@ -161,7 +161,7 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 {
 	std::map<std::string, Config>	configs; // map containing all virtual server configurations
 	size_t							server_count = 0;
-	std::string 					file_content = read_file("../../config/test1.conf");
+	std::string 					file_content = read_file(path);
 	std::vector<std::string>		tokens = tokenize(file_content);
 
 	std::vector<std::string>::const_iterator it = tokens.begin();
@@ -238,7 +238,7 @@ int main()
 {
 	std::map<std::string, Config> configs;
 
-	configs = ConfigParser::parseConfigFile("../../config/test1.conf");
+	configs = ConfigParser::parseConfigFile("../../config/test1.conf"); // insert here test config file to try
 
 	testPrintConfigs(configs);
 	return 0;
