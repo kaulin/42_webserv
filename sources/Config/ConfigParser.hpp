@@ -28,6 +28,7 @@ public:
     	static void                             checkConfigFilePath(std::string path);
 	static std::string                      read_file(std::string path);
 	static std::vector<std::string>         tokenize(std::string &file_content);
-        static std::unordered_map<std::string, std::vector<std::string>>	assignKeyToValue(std::vector<std::string> &tokens, std::vector<std::string>::iterator &it);
+        static void                             assignKeyToValue(std::vector<std::string>::const_iterator&, std::vector<std::string>::const_iterator&,
+                                                Config);
 
 };

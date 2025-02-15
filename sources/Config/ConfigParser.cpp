@@ -97,10 +97,10 @@ std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
 	return tokens;
 }
 
-std::unordered_map<std::string, std::vector<std::string>>	ConfigParser::assignKeyToValue(std::vector<std::string> &tokens,
-																				std::vector<std::string>::iterator &it)
+void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it, std::vector<std::string>::const_iterator &end,
+									Config blockInstance)
 {
-	std::unordered_map<std::string, std::vector<std::string>> configMap; // use map<string, vector<string>> ?
+	std::unordered_map<std::string, std::vector<std::string>> configMap;
 	std::string key;
 	std::string keytype;
 	std::string value;
@@ -108,13 +108,16 @@ std::unordered_map<std::string, std::vector<std::string>>	ConfigParser::assignKe
 	int num = 1;
 
 	std::cout << "1: " << *it << std::endl;
-	while (it < tokens.end() && *it != "{")
+	while (it < end && *it != "{")
 		*it++;
 	*it++;
 	std::cout << "2: " << *it << std::endl;
-	while (it < tokens.end())
+	// this could use switch statements and for loop
+	while (it < end)
 	{
-		if (*it == "server")
+		if (*it == "location") // sets location
+				blockInstance._location.emplace(LocationParser::set_location_block(it, end, blockInstance._location));
+		if (*it == "}") // this checks when the server block ends ("server is checked in calling function")
 			break; 
 		if (*it == ";")
 		{
@@ -136,10 +139,11 @@ std::unordered_map<std::string, std::vector<std::string>>	ConfigParser::assignKe
 			key = keytype + std::to_string(++num);
 			value = *it++;
 		}
-		configMap[key] = value;
+		configMap[key].emplace_back(value); // changed to emplace because of vector
 		std::cout << "3: " << *it << std::endl;
 	}
-	return configMap;
+	// Here the parsed values should be set into blockInstance (which is a struct Config datatype)
+	// returns (void) to calling method and comes back here when another "server" block is encountered
 }
 
 
@@ -155,7 +159,7 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 
 std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 {
-	std::map<std::string, Config>	configs; // map containing all vitual server configurations
+	std::map<std::string, Config>	configs; // map containing all virtual server configurations
 	size_t							server_count = 0;
 	std::string 					file_content = read_file("../../config/test1.conf");
 	std::vector<std::string>		tokens = tokenize(file_content);
@@ -163,43 +167,79 @@ std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
 	std::vector<std::string>::const_iterator it = tokens.begin();
 	std::vector<std::string>::const_iterator end = tokens.end();
 
-
 	for (; it != end; it++)
 	{
 		if (*it == "server") // a new Server Block Directive is encountered -> create new server config instance
 		{
 			Config blockInstance;
 			
-			std::unordered_map<std::string, std::string> configMap = assignKeyToValue(tokens, ++it); // pass in here the config block instead and set data
-			if (*it == "location")
-				blockInstance._location.emplace(LocationParser::set_location_block(it, end, blockInstance._location));
-			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
+			assignKeyToValue(++it, end, blockInstance); // pass in here the config block and set data -> returns at the end of server block
+			configs.insert({"Server" + std::to_string(server_count++), blockInstance}); // adds the blockInstance to configs
 		}
 	}
 	return configs;
 }
 
+void	testPrintConfigs(std::map<std::string, Config> configs)
+{
+    for (const auto &config : configs)
+    {
+        std::cout << "Host: " << config.second._host << "\n"; 
+        std::cout << "Names: ";
+        for (const auto& name : config.second._names)
+            std::cout << name << " ";
+        std::cout << "\n";
+        
+        std::cout << "Ports: ";
+        for (const auto& port : config.second._ports)
+            std::cout << port << " ";
+        std::cout << "\n";
+        
+        std::cout << "Number of Ports: " << config.second._num_of_ports << "\n";
+        std::cout << "Client Max Body Size: " << config.second._cli_max_bodysize << "\n";
+        
+        std::cout << "Default Pages:\n";
+        for (const auto& page : config.second._default_pages)
+            std::cout << "  " << page.first << ": " << page.second << "\n";
+        
+        std::cout << "Error Pages:\n";
+        for (const auto& page : config.second._error_pages)
+            std::cout << "  " << page.first << ": " << page.second << "\n";
+        
+        std::cout << "Error Codes:\n";
+        for (const auto& code : config.second._error_codes)
+            std::cout << "  " << code.first << ": " << code.second << "\n";
+        
+        std::cout << "CGI Params:\n";
+        for (const auto& param : config.second._cgi_params)
+            std::cout << "  " << param.first << " = " << param.second << "\n";
+        
+        std::cout << "Locations:\n";
+        for (const auto& loc : config.second._location) {
+            const Location& location = loc.second;
+            std::cout << "  Path: " << location._path << "\n";
+            std::cout << "  Root: " << location._root << "\n";
+            std::cout << "  Index: " << location._index << "\n";
+            std::cout << "  CGI Path: " << location._cgi_path << "\n";
+            std::cout << "  CGI Param: " << location._cgi_param << "\n";
+            std::cout << "  Redirect: " << location._redirect.first << " -> " << location._redirect.second << "\n";
+            std::cout << "  Directory Listing: " << (location._dir_listing ? "Enabled" : "Disabled") << "\n";
+            
+            std::cout << "  Methods:\n";
+            for (const auto& method : location._methods)
+                std::cout << "    " << method.first << ": " << (method.second ? "Allowed" : "Not Allowed") << "\n";
+            
+            std::cout << "\n";
+        }
+    }
+}
+
 int main()
 {
+	std::map<std::string, Config> configs;
 
-	std::vector<std::string>::iterator it = tokens.begin();
+	configs = ConfigParser::parseConfigFile("../../config/test1.conf");
 
-	for (const auto &token : tokens)
-	{
-		std::cout << token << std::endl;
-	}
-
-	std::cout << "Keys in config map:\n";
-	for (const auto &[key, _] : configMap)
-	{
-		std::cout << key << std::endl;
-	}
-
-	std::cout << "Some values in config map:\n";
-	std::cout << "host: " << configMap["host"] << std::endl;
-	std::cout << "server_name: " << configMap["server_name"] << std::endl;
-	std::cout << "server_name2: " << configMap["server_name2"] << std::endl;
-	std::cout << "root: " << configMap["root"] << std::endl;
-	std::cout << "route: " << configMap["route"] << std::endl;
+	testPrintConfigs(configs);
 	return 0;
 }

@@ -74,7 +74,7 @@ ServerConfigData::ServerConfigData(std::string path)
     _cli_max_bodysize = 0;
     _location.clear(); */
 
-    printConfigs();
+    // printConfigs();
 	std::cout << "New server config data created...: \n";
 }
 
