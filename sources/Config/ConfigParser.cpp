@@ -57,6 +57,7 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
             std::cout << "\n";
         }
     }
+	std::cout << "Finished printing configs\n";
 }
 
 // helper trimming function
@@ -91,13 +92,13 @@ bool isValidIP(const std::string &ip)
 // function to read file, remove comments, return string
 std::string ConfigParser::read_file(std::string path)
 {
-	/* Testing */
-	std::cout << "Path is: " << path << "\n";
-    std::filesystem::path current_path = std::filesystem::current_path();
-    std::cout << "Current directory: " << current_path << std::endl;
-	/* ... */
+	/* Updates the file path to the correct path */
+    std::string filePath = std::filesystem::current_path().c_str();
+	size_t pathIndex = filePath.find("webserv");
+	filePath = filePath.substr(0, pathIndex);
+	filePath.append(CONFIG_DIRECTORY + path);
 
-	std::ifstream file(path);
+	std::ifstream file(filePath);
 	std::stringstream content;
 	std::string line;
 	

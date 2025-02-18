@@ -85,9 +85,6 @@ std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<
 	location_block._path = set_location_path(it);
 	for (; *it != "}";)
 	{
-		/* Testing */
-		std::cout << "IT: " << *it << "\n";
-		/* ... */
 		auto found = directiveMap.find(*it);
 		if (found == directiveMap.end() || it == end)
 			throw std::runtime_error("Invalid location block");

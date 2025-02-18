@@ -22,6 +22,7 @@
 #include <utility>
 
 # define DEFAULT_CONFIG_FILE "config/default.conf"
+# define CONFIG_DIRECTORY "webserv/config/"
 
 // #include "HttpServer.hpp"
 // #include "ConfigParser.hpp"

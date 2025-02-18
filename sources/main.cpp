@@ -10,10 +10,7 @@ int main(int argc, char **argv)
 		std::cerr << "Error: Too many arguments\n";
 		return 2;
 	}
-
 	configFilePath = (argc < 2) ? DEFAULT_CONFIG_FILE : argv[1];
-	configFilePath = "config/test1.conf";
-	
 	try {
 		ConfigParser::checkConfigFilePath(configFilePath);
 	}
@@ -26,6 +23,6 @@ int main(int argc, char **argv)
 	catch(const std::exception& e) {
 		std::cerr << e.what() << '\n';
 	}
-	// serverHandler.runServers(); // comment out for testing only
+	// serverHandler.runServers(); // comment out when only testing config
 	return 0;
 }
