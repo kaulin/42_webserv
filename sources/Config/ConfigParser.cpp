@@ -1,6 +1,7 @@
 #include "webserv.hpp"
 #include "LocationParser.hpp"
 #include "ConfigParser.hpp"
+#include <filesystem>
 
 // helper trimming function
 std::string trim(const std::string &str)
@@ -34,6 +35,12 @@ bool isValidIP(const std::string &ip)
 // function to read file, remove comments, return string
 std::string ConfigParser::read_file(std::string path)
 {
+	/* Testing */
+	std::cout << "Path is: " << path << "\n";
+    std::filesystem::path current_path = std::filesystem::current_path();
+    std::cout << "Current directory: " << current_path << std::endl;
+	/* ... */
+
 	std::ifstream file(path);
 	std::stringstream content;
 	std::string line;
@@ -127,6 +134,9 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 	// content starts here
 	while (it != end)
 	{
+		/* Testing */
+		std::cout << "IT: " << *it << "\n";
+		
 		auto keywordIt = keywordMap.find(*it);
 		ConfigKey keyEnum = (keywordIt != keywordMap.end()) ? keywordIt->second : ConfigKey::UNKNOWN;
 
@@ -134,10 +144,12 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 		{
 			case ConfigKey::LOCATION:
 			{
-				auto locationPair = LocationParser::set_location_block(it, end, blockInstance._location);
+				auto locationPair = LocationParser::set_location_block(++it, end, blockInstance._location);
 				blockInstance._location.emplace(locationPair.first, locationPair.second);
-			}
+				std::cout << "IT: " << *it << "\n";
+				++it;
 				continue;
+			}
 			case ConfigKey::END_BLOCK:
 				return;
 			case ConfigKey::SEMICOLON:
@@ -284,7 +296,7 @@ int main()
 {
 	std::map<std::string, Config> configs;
 
-	configs = ConfigParser::parseConfigFile("config/test1.conf"); // insert here test config file to try
+	configs = ConfigParser::parseConfigFile("../../config/test1.conf"); // insert here test config file to try
 
 	testPrintConfigs(configs);
 	return 0;
