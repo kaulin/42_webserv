@@ -52,19 +52,10 @@ void HttpServer::setupAddrinfo()
 	std::cout << "-----finished setup addrinfo-----\n";
 }
 
-void HttpServer::setPorts(std::vector<std::string> ports)
-{
-	for (const auto& current : ports) {
-		_ports.emplace_back(current);
-	}
-}
-
 const std::vector<addrinfo*> HttpServer::getAddrinfoVec() { return _addr_info; }
 
 std::vector <int> HttpServer::getListenSockfds() { return _listen_sockfds; }
 
 size_t HttpServer::getNumOfPorts() { return _num_of_ports; }
-
-void HttpServer::setNumOfPorts(size_t num) { _num_of_ports = num; }
 
 void HttpServer::addSockfd(int fd) { _listen_sockfds.emplace_back(fd); }
