@@ -30,7 +30,7 @@ size_t	ServerHandler::getPortCount()
 	size_t	num_of_ports = 0;
 
 	for (auto& server : _servers) {
-		num_of_ports += server.getNumOfPorts();
+		num_of_ports += server->getNumOfPorts();
 	}
 	return (num_of_ports);
 }

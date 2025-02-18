@@ -1,44 +1,54 @@
 #include "webserv.hpp"
+#include "LocationParser.hpp"
+#include <tuple>
+#include <regex>
+#include <utility>
 
-
-int	LocationParser::validate_location_block(std::vector<std::string>::const_iterator &it)
+std::string	LocationParser::set_location_path(std::vector<std::string>::const_iterator &it)
 {
-	// check correct block structure and invalid data
-	return (0);
-}
+	std::string path = *it;
+	std::regex locationPattern(R"(^\/([A-Za-z0-9._-]+\/?)*$)");
 
-std::string	LocationParser::set_location_path(std::string path)
-{
-	// 1. Regex based location
-	// 2. Standard location block -> mapped to filesystem directory (root) ->  check existence
-	// 3. Redirection -> target URL has to be available
-	// 4. Upload directory -> check existence of root and has write permissions
+	if (std::regex_match(path, locationPattern))
+	{
+		it += 2;
+		return path;
+	}
+	else
+		throw std::runtime_error("Invalid location path format");
 }
 
 std::pair<int, std::string>	LocationParser::set_redirect(std::vector<std::string>::const_iterator &it)
 {
-	return (std::pair<int, std::string> (std::stoi(*it), *(++it)));
+	int redir_code = 301;
+
+	try
+	{
+		redir_code = std::stoi(*(++it));
+	}
+	catch(const std::exception& e) 
+	{
+		std::cerr << "Invalid/No redirection code, using default" << '\n';
+	}
+	return std::pair<int, std::string> (redir_code, *(++it));
 }
 
-std::string	LocationParser::set_root(std::vector<std::string>::const_iterator &it)
-{
+std::string	LocationParser::set_root(std::vector<std::string>::const_iterator &it) { return *(++it); }
 
+std::string	LocationParser::set_index(std::vector<std::string>::const_iterator &it) { return *(++it); }
+
+std::string	LocationParser::set_cgi(std::vector<std::string>::const_iterator &it) 
+{ 
+	return *(++it); 
 }
 
-std::string	LocationParser::set_index(std::vector<std::string>::const_iterator &it)
+bool LocationParser::set_autoindex(std::vector<std::string>::const_iterator &it) 
 {
-	
+	return *(++it) == "on" ? true : false;
 }
 
-std::string	LocationParser::set_cgi_path(std::vector<std::string>::const_iterator &it)
+void	LocationParser::set_location_methods(std::vector<std::string>::const_iterator &it, std::unordered_map<std::string, bool> methods)
 {
-	
-}
-
-std::unordered_map<std::string, bool>	LocationParser::set_location_methods(std::vector<std::string>::const_iterator &it)
-{
-	std::unordered_map<std::string, bool> methods = {{"GET", false}, {"POST", false}, {"DELETE", false}};
-
 	for (; *it != ";" ; it++)
 	{
 		if (*it == "GET")
@@ -48,44 +58,65 @@ std::unordered_map<std::string, bool>	LocationParser::set_location_methods(std::
 		if (*it == "DELETE")
 			methods["DELETE"] = true;
 	}
-	return (methods);
 }
 
 /* struct Location {
+    bool        _dir_listing;
     std::string _path;
     std::string _root;
     std::string _index;
     std::string _cgi_path;
-    std::string _cgi_extension;
+    std::string _cgi_param;
     std::pair<int, std::string> _redirect;
     std::unordered_map<std::string, bool> _methods;
-    bool        _dir_listing;
 }; */
 
-Location	LocationParser::set_location_block(std::vector<std::string>::const_iterator &it, 
+std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<std::string>::const_iterator &it, 
 											std::vector<std::string>::const_iterator &end,
 											const std::unordered_map<std::string, Location> &locations)
 {
 	Location location_block;
 
-	if (it == end || validate_location_block(it))
+
+	if (it == end)
 		throw std::runtime_error("Invalid location URI/path");
-	if (locations.find(*it) == locations.end()) // checks for duplicate
+	if (locations.find(*it) != locations.end())
 		throw std::runtime_error("Duplicate path");
-	location_block._path = set_location_path(*it);
-	for (; it != end && *it != "}";)
+	location_block._path = set_location_path(it);
+	for (; *it != "}";)
 	{
-		if (*it == "methods")
-			location_block._methods = set_location_methods(it);
-		if (*it == "redirect")
-			location_block._redirect = set_redirect(it);
-		if (*it == "root")
-			location_block._root = set_root(it);
-		if (*it == "index")
-			location_block._index = set_index(it);
-		if (*it == "cgi_path")
-			location_block._cgi_path = set_cgi_path(it);
+		auto found = directiveMap.find(*it);
+		if (found == directiveMap.end() || it == end)
+			throw std::runtime_error("Invalid location block");
+		switch (found->second)
+		{
+			case LocationConfigKey::METHODS:
+				set_location_methods(it, location_block._methods);
+				break;
+			case LocationConfigKey::AUTOINDEX:
+				location_block._dir_listing = set_autoindex(it);
+				break;
+			case LocationConfigKey::REDIR:
+				location_block._redirect = set_redirect(it);
+				break;
+			case LocationConfigKey::ROOT:
+				location_block._root = set_root(it);
+				break;
+			case LocationConfigKey::INDEX:
+				location_block._index = set_index(it);
+				break;
+			case LocationConfigKey::CGI_PATH:
+				location_block._cgi_path = set_cgi(it);
+				break;
+			case LocationConfigKey::CGI_PARAM:
+				location_block._cgi_param = set_cgi(it);
+				break;
+			case LocationConfigKey::BREAK:
+				break;
+			default:
+				throw std::runtime_error("Invalid directive"); // fatal
+		}
 		it++;
 	}
-	return (location_block);
+	return std::pair<std::string, Location>(location_block._path, location_block);
 }

@@ -1,17 +1,16 @@
 #include "webserv.hpp"
+#include "HttpServer.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
-HttpServer::HttpServer(ServerConfigData serverData)
+HttpServer::HttpServer(Config serverData)
 {
-	// Server data is an serverConfigData instance
-	// Set up server instance using serverData
-	// last line of defense to make sure ports and other invariants are set correctly
-	FD_ZERO(&_addr_info);
-	FD_ZERO(&_ports);
-	FD_ZERO(&_listen_sockfds);
-	FD_ZERO(&_num_of_ports);
-	FD_ZERO(&_name);
+	_addr_info.clear();
+	_listen_sockfds.clear();
+	_settings = serverData;
+	_ports = serverData._ports;
+	_num_of_ports = serverData._ports.size();
+	std::cout << "Created new virtual server instance\n";
 } 
 
 HttpServer::~HttpServer()
@@ -60,11 +59,7 @@ void HttpServer::setPorts(std::vector<std::string> ports)
 	}
 }
 
-void HttpServer::setName(std::string name) { _name = name; }
-
 const std::vector<addrinfo*> HttpServer::getAddrinfoVec() { return _addr_info; }
-
-std::string HttpServer::getName() { return _name; }
 
 std::vector <int> HttpServer::getListenSockfds() { return _listen_sockfds; }
 

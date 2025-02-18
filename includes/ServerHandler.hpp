@@ -1,8 +1,5 @@
 #pragma once
-
 #include "webserv.hpp"
-#include "HttpServer.hpp"
-//#include "ServerConfigData.hpp"
 
 class HttpServer;
 
@@ -21,13 +18,14 @@ public:
     void    runServers();
     void    setupSockets();
     void    setupServers(std::string path);
-    void    poll_loop();
+    void    pollLoop();
     void    setPollList();
     void    error_and_exit(const char *msg);
-    void    read_request(int new_sockfd);
-    void    send_response(int sockfd_out);
+    void    readRequest(int new_sockfd);
+    void    sendResponse(int sockfd_out);
     void    cleanupServers();
     size_t  getPortCount();
+    static void    signalHandler(int);
 
     // Helper functions for debugging
     // void    *get_in_addr(struct sockaddr *sa);
