@@ -4,8 +4,6 @@
 #include <memory>
 #include <csignal>
 
-#define BACKLOG 10 // how many pending connections queue will hold
-
 ServerHandler::ServerHandler() {
 	_servers.clear();
 	_pollfd_list.clear();
@@ -16,8 +14,11 @@ ServerHandler::ServerHandler() {
 
 ServerHandler::~ServerHandler() 
 {
+	this->cleanupServers();
 	_servers.clear();
 	_pollfd_list.clear();
+
+	std::cout << "Servers closed down\n";
 }
 
 void	ServerHandler::error_and_exit(const char *msg)
@@ -27,6 +28,7 @@ void	ServerHandler::error_and_exit(const char *msg)
 	exit(errno);
 }
 
+	/* Handles clean up of all servers */
 void	ServerHandler::cleanupServers()
 {
 	for (auto& server : _servers) {
@@ -37,6 +39,7 @@ void	ServerHandler::cleanupServers()
 	}
 }
 
+	/* Handles response */
 void	ServerHandler::sendResponse(int client_sockfd)
 {
 	std::string response =
@@ -67,13 +70,12 @@ void    ServerHandler::setupServers(std::string path)
 	{
 		_servers.emplace_back(std::make_shared<HttpServer>(config));
 	}
+	//sets up ports and address info for all servers
+	for (const auto& server : _servers)
+	{
+		server->setupAddrinfo();
+	}
 	_server_count = _servers.size();
-
-	// HttpServer  serverInstance(current);
-	// serverInstance.setPorts(current.getPorts());
-    // serverInstance.setNumOfPorts(current.getNumOfPorts());
-    // serverInstance.setupAddrinfo();
-    // _servers.push_back(serverInstance);
 }
 
 void	ServerHandler::readRequest(int new_sockfd)
@@ -189,7 +191,7 @@ void	ServerHandler::setupSockets()
 void	ServerHandler::signalHandler(int signal) 
 {
 	// handle shutdown
-	std::cout << "Ctrl + C signal received, shutting down\n";
+	std::cout << " Ctrl + C signal received, shutting down\n";
 	exit(signal);
 }
 

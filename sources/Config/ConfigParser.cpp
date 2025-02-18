@@ -38,7 +38,7 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
         std::cout << "CGI Params:\n";
         for (const auto& param : config.second._cgi_params)
             std::cout << "  " << param.first << " = " << param.second << "\n";
-        
+        std::cout << "---------------------\n";
         std::cout << "Locations:\n";
         for (const auto& loc : config.second._location) {
             const Location& location = loc.second;
@@ -200,7 +200,6 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 			{
 				auto locationPair = LocationParser::set_location_block(++it, end, blockInstance._location);
 				blockInstance._location.emplace(locationPair.first, locationPair.second);
-				std::cout << "IT: " << *it << "\n";
 				++it;
 				continue;
 			}

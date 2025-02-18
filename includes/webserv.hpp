@@ -21,8 +21,10 @@
 # include <memory>
 #include <utility>
 
-# define DEFAULT_CONFIG_FILE "config/default.conf"
+# define DEFAULT_CONFIG_FILE "default.conf"
 # define CONFIG_DIRECTORY "webserv/config/"
+
+# define BACKLOG 10 // how many pending connections queue will hold
 
 // #include "HttpServer.hpp"
 // #include "ConfigParser.hpp"
