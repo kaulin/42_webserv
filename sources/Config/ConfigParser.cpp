@@ -64,86 +64,128 @@ std::string ConfigParser::read_file(std::string path)
 }
 
 // Function to parse the configuration file
-std::vector<std::string>    ConfigParser::tokenize(std::string &file_content)
+std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 {
-	std::vector<std::string> tokens;
-	std::stringstream ss(file_content);
-	std::string token, previous;
-	bool        semicolon;
-	// bool		openingBracket = false;
-	
-	while (ss >> token)
-	{
-		semicolon = false;
-		if (!token.empty() && token.back() == ';')
-		{
-			semicolon = true;
-			token.pop_back();
-		}
-		if (previous == "host")
-		{
+    std::vector<std::string> tokens;
+    std::stringstream ss(file_content);
+    std::string token, previous;
+    bool semicolon = false;
+
+    while (ss >> token)
+    {
+        semicolon = false;
+        if (!token.empty() && token.back() == ';')
+        {
+            semicolon = true;
+            token.pop_back();
+        }
+        if (token == "{" || token == "}")
+        {
+            tokens.push_back(token);
+            continue;
+        }
+        if (previous == "host")
+        {
 			if (!isValidIP(token))
-			{
+            {
 				std::cerr << "Error: Invalid IP format: " << token << std::endl;
-				return {};
-			}
+                return {};
+            }
+        }
+		if (previous == "error_page")
+		{
+			tokens.pop_back();
+			token = previous + token;
 		}
-		tokens.push_back(token);
-		if (semicolon)
-			tokens.push_back(";");
-		previous = token;
-	}
-	
-	return tokens;
+        tokens.push_back(token);
+        if (semicolon)
+            tokens.push_back(";");
+        previous = token;
+    }
+	for (const auto &token : tokens)
+		std::cout << token << std::endl;
+
+    return tokens;
 }
 
-void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it, std::vector<std::string>::const_iterator &end,
-									Config blockInstance)
-{
-	std::unordered_map<std::string, std::vector<std::string>> configMap;
-	std::string key;
-	std::string keytype;
-	std::string value;
-	bool isValue = false;
-	int num = 1;
 
-	std::cout << "1: " << *it << std::endl;
-	while (it < end && *it != "{")
-		*it++;
-	*it++;
-	std::cout << "2: " << *it << std::endl;
-	// this could use switch statements and for loop
-	while (it < end)
+void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it, 
+	std::vector<std::string>::const_iterator &end,
+	Config &blockInstance)
+{
+	// find opening bracket
+	while (it != end && *it != "{")
+	++it;
+	if (it == end)
 	{
-		if (*it == "location") // sets location
-				blockInstance._location.emplace(LocationParser::set_location_block(it, end, blockInstance._location));
-		if (*it == "}") // this checks when the server block ends ("server is checked in calling function")
-			break; 
-		if (*it == ";")
-		{
-			isValue = false;
-			*it++;
-			continue;
-		}
-		if (!isValue)
-		{
-			key = *it;
-			keytype = key;
-			isValue = true;
-			num = 1;
-		}
-		if (*it == key)
-			value = *++it;
-		else
-		{
-			key = keytype + std::to_string(++num);
-			value = *it++;
-		}
-		configMap[key].emplace_back(value); // changed to emplace because of vector
-		std::cout << "3: " << *it << std::endl;
+		std::cerr << "Error: Missing '{' in config block.\n";
+		return;
 	}
-	// Here the parsed values should be set into blockInstance (which is a struct Config datatype)
-	// returns (void) to calling method and comes back here when another "server" block is encountered
+	++it; // step over bracket
+
+	blockInstance._num_of_ports = 0;
+	// content starts here
+	while (it != end)
+	{
+		auto keywordIt = keywordMap.find(*it);
+		ConfigKey keyEnum = (keywordIt != keywordMap.end()) ? keywordIt->second : ConfigKey::UNKNOWN;
+
+		switch (keyEnum)
+		{
+			case ConfigKey::LOCATION:
+			{
+				auto locationPair = LocationParser::set_location_block(it, end, blockInstance._location);
+				blockInstance._location.emplace(locationPair.first, locationPair.second);
+			}
+				continue;
+			case ConfigKey::END_BLOCK:
+				return;
+			case ConfigKey::SEMICOLON:
+				++it;
+				continue;
+			case ConfigKey::HOST:
+				++it;
+				blockInstance._host = *it;
+				++it; break;
+			case ConfigKey::PORT:
+				++it;
+				while (it != end && *it != ";")
+					{ blockInstance._ports.push_back(*it); blockInstance._num_of_ports++; ++it; }
+				break;
+			case ConfigKey::SERVER_NAME:
+				++it;
+				while (it != end && *it != ";")
+					{ blockInstance._names.push_back(*it); ++it; }
+				break;
+			case ConfigKey::ERROR_404:
+				++it;
+				blockInstance._error_pages.push_back(*it);
+				++it; break;
+			case ConfigKey::ERROR_500:
+				++it;
+				blockInstance._error_pages.push_back(*it);
+				++it; break;
+			case ConfigKey::CLIENT_MAX_BODY_SIZE:
+			{
+				++it;
+				unsigned int mult = 1;
+				std::string number = *it;
+				if (!std::isdigit(number.back()))
+				{
+					if (number.back() == 'M')
+					{
+						mult = 1024 * 1024; // takes care of 'M', maybe implement a whole separate method for converting 'K', 'M', and 'G'...
+						number.pop_back();
+					}
+				}
+				blockInstance._cli_max_bodysize = std::stoul(number) * mult;
+				++it; break;
+			}
+			case ConfigKey::UNKNOWN:
+				break; // default handling
+		}
+		++it; // iterates main loop in case of default handling
+	}
 }
 
 
@@ -157,28 +199,31 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 	}
 }
 
-std::map<std::string, Config>    ConfigParser::parseConfigFile(std::string path)
+std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 {
-	std::map<std::string, Config>	configs; // map containing all virtual server configurations
-	size_t							server_count = 0;
-	std::string 					file_content = read_file(path);
-	std::vector<std::string>		tokens = tokenize(file_content);
+    std::map<std::string, Config> configs;
+    size_t server_count = 0;
+    std::string file_content = read_file(path);
+    std::vector<std::string> tokens = tokenize(file_content);
 
-	std::vector<std::string>::const_iterator it = tokens.begin();
-	std::vector<std::string>::const_iterator end = tokens.end();
+    std::vector<std::string>::const_iterator it = tokens.begin();
+    std::vector<std::string>::const_iterator end = tokens.end();
 
-	for (; it != end; it++)
-	{
-		if (*it == "server") // a new Server Block Directive is encountered -> create new server config instance
-		{
-			Config blockInstance;
-			
-			assignKeyToValue(++it, end, blockInstance); // pass in here the config block and set data -> returns at the end of server block
-			configs.insert({"Server" + std::to_string(server_count++), blockInstance}); // adds the blockInstance to configs
-		}
-	}
-	return configs;
+    while (it != end)
+    {
+        if (*it == "server")
+        {
+            Config blockInstance; // new server block
+            
+            assignKeyToValue(++it, end, blockInstance);
+            
+            configs.insert({"Server" + std::to_string(server_count++), blockInstance});
+        }
+        ++it;
+    }
+    return configs;
 }
+
 
 void	testPrintConfigs(std::map<std::string, Config> configs)
 {
@@ -204,7 +249,8 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
         
         std::cout << "Error Pages:\n";
         for (const auto& page : config.second._error_pages)
-            std::cout << "  " << page.first << ": " << page.second << "\n";
+            //std::cout << "  " << page.first << ": " << page.second << "\n";
+			std::cout << page << " ";
         
         std::cout << "Error Codes:\n";
         for (const auto& code : config.second._error_codes)
@@ -238,7 +284,7 @@ int main()
 {
 	std::map<std::string, Config> configs;
 
-	configs = ConfigParser::parseConfigFile("../../config/test1.conf"); // insert here test config file to try
+	configs = ConfigParser::parseConfigFile("config/test1.conf"); // insert here test config file to try
 
 	testPrintConfigs(configs);
 	return 0;
