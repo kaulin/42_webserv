@@ -4,6 +4,8 @@ int main(int argc, char **argv)
 {
 	ServerHandler		serverHandler;
 	std::string 		configFilePath;
+	Logger				toConsole;
+	Logger				toFile("logtest.log");
 
 	if (argc > 2) {
 		std::cerr << "Error: Too many arguments\n";
@@ -22,6 +24,8 @@ int main(int argc, char **argv)
 	catch(const std::exception& e) {
 		std::cerr << e.what() << '\n';
 	}
+	toConsole.log("INFO", "Server running.");
+	toFile.log("INFO", "Server running.");
 	serverHandler.runServers(); // comment out when only testing config
 	return 0;
 }
