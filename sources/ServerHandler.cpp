@@ -4,12 +4,15 @@
 #include <memory>
 #include <csignal>
 
-ServerHandler::ServerHandler() {
-	_servers.clear();
-	_pollfd_list.clear();
-	_ports.clear();
-	_server_count = 0;
+ServerHandler::ServerHandler(std::string path) : 
+	_config(ServerConfigData(path))
+{
+	_server_count = _config.getServerCount();
+	_servers.reserve(_server_count);
+	_ports.reserve(_config.getPortCount());
+	_pollfd_list.reserve(_config.getPortCount()); // reserves space for ports
 	_running = false;
+	std::cout << "Constructor Size of pollfd list: " << _pollfd_list.size() << "\n";
 }
 
 ServerHandler::~ServerHandler() 
@@ -62,15 +65,12 @@ void	ServerHandler::sendResponse(int client_sockfd)
 	the constructor and the appropriate values in the class instance is set. 
 	Going through all serverBlock instances, a new shared pointer is made 
 	for each virtual server with the appropriate configurations */
-void    ServerHandler::setupServers(std::string path)
+void    ServerHandler::setupServers()
 {
-	ServerConfigData config(path); // creates a new ServerConfigData instance
-	
-	for (const auto& [servName, config] : config.getConfigBlocks()) 
+	for (const auto& [servName, config] : _config.getConfigBlocks()) 
 	{
 		_servers.emplace_back(std::make_shared<HttpServer>(config));
 	}
-	//sets up ports and address info for all servers
 	for (const auto& server : _servers)
 	{
 		server->setupAddrinfo();
@@ -101,7 +101,9 @@ void	ServerHandler::setPollList()
 	size_t	i = 0;
 	size_t	num_of_ports = getPortCount();
 
+	std::cout << "Size of pollfd list: " << _pollfd_list.size() << "\n";
 	_pollfd_list.resize(num_of_ports);
+	std::cout << "Size of pollfd list: " << _pollfd_list.size() << "\n";
 	for (auto& server : _servers)
 	{		
 		std::vector<int> listen_sockfds = server->getListenSockfds();
@@ -111,10 +113,7 @@ void	ServerHandler::setPollList()
 			i++;
 		}
 	}
-	for (auto& poll_obj : _pollfd_list) 
-	{
-		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
-	}
+	printPollFds(); // for testing
 }
 
 void    ServerHandler::pollLoop()
@@ -155,11 +154,11 @@ void	ServerHandler::setupSockets()
 		std::vector<struct addrinfo*> server_addresses = server->getAddrinfoVec();
 		int	sockfd;
 
-		for (auto& curr_addr : server_addresses)
+		for (auto& currentAddress : server_addresses)
 		{
-			struct addrinfo *p = curr_addr;
+			struct addrinfo *p = currentAddress;
 			int yes = 1;
-			for (p = curr_addr; p != NULL; p = p->ai_next) 
+			for (p = currentAddress; p != NULL; p = p->ai_next) 
 			{
 				if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
 					error_and_exit("Socket");
@@ -183,7 +182,7 @@ void	ServerHandler::setupSockets()
 			if (listen(sockfd, BACKLOG) == -1) {
 				error_and_exit("Listen");
 			}
-			freeaddrinfo(curr_addr);
+			freeaddrinfo(currentAddress);
 		}
 	}
 }
