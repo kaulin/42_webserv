@@ -31,6 +31,7 @@
 // #include "ServerHandler.hpp"
 
 // ------------ testing with relative paths ---------------
+#include "Logger.hpp"
 #include "../sources/Config/ConfigParser.hpp"
 #include "../sources/Config/ServerConfigData.hpp"
 // #include "ServerConfigData.hpp"
