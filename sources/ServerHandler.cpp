@@ -118,7 +118,7 @@ void	ServerHandler::setPollList()
 
 void    ServerHandler::pollLoop()
 {
-	int 			poll_count;
+	int 			event_count;
 	int 			conn_sockfd;
 	socklen_t		addrlen;
 	struct sockaddr_storage remoteaddr_in;
@@ -126,7 +126,7 @@ void    ServerHandler::pollLoop()
 	setPollList();
 	while (_running)
 	{
-		if ((poll_count = poll(_pollfd_list.data(), _pollfd_list.size(), -1)) == -1) {
+		if ((event_count = poll(_pollfd_list.data(), _pollfd_list.size(), -1)) == -1) {
 			error_and_exit("Poll");
 		}
 		for(size_t i = 0; i < _pollfd_list.size(); i++)
