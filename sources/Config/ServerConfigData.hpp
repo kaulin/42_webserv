@@ -32,13 +32,15 @@ struct Config {
 
 class ServerConfigData {
 private:
-        std::map<std::string, Config>   serverConfigBlocks;
+        std::map<std::string, Config>   _serverConfigBlocks;
 public:
         ServerConfigData(std::string path);
         ServerConfigData();
         ~ServerConfigData();
 
         std::map<std::string, Config>&   getConfigBlocks();
+        size_t  getServerCount();
+        size_t  getPortCount();
 
         // class member functions
         void    printConfigs();

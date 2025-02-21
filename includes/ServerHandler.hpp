@@ -11,13 +11,14 @@ private:
     std::vector<int>            _ports;
     std::vector<struct pollfd>  _pollfd_list;
     bool                         _running;
+    ServerConfigData            _config;
 public:
-    ServerHandler();
+    ServerHandler(std::string path);
     ~ServerHandler();
 
     void    runServers();
     void    setupSockets();
-    void    setupServers(std::string path);
+    void    setupServers();
     void    pollLoop();
     void    setPollList();
     void    error_and_exit(const char *msg);
@@ -25,9 +26,11 @@ public:
     void    sendResponse(int sockfd_out);
     void    cleanupServers();
     size_t  getPortCount();
+
     static void    signalHandler(int);
 
     // Helper functions for debugging
+    void	printPollFds();
     // void    *get_in_addr(struct sockaddr *sa);
     // void    printServerData();
 };

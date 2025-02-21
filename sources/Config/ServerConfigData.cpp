@@ -11,7 +11,7 @@ ServerConfigData::ServerConfigData(std::string path)
 {
     // needs to set the server configs for each server
     // ServerConfigBlocks is of datastructure = std::map<std::string, std::vector<Config>>
-    serverConfigBlocks = ConfigParser::parseConfigFile(path);
+    _serverConfigBlocks = ConfigParser::parseConfigFile(path);
 /*     
     _host.clear();
     _name.clear();
@@ -29,5 +29,20 @@ ServerConfigData::~ServerConfigData() {
 
 std::map<std::string, Config>&	ServerConfigData::getConfigBlocks()
 {
-    return (this->serverConfigBlocks);
+    return (this->_serverConfigBlocks);
+}
+
+size_t  ServerConfigData::getServerCount()
+{
+    return _serverConfigBlocks.size();
+}
+
+size_t  ServerConfigData::getPortCount()
+{
+    size_t portCount = 0;
+
+    for (const auto& serverInstance : this->_serverConfigBlocks)
+        portCount += serverInstance.second._num_of_ports;
+    std::cout << "num of ports: " << portCount << "\n";
+    return portCount;
 }
