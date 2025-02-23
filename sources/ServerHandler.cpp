@@ -42,30 +42,33 @@ void	ServerHandler::cleanupServers()
 	}
 }
 
-	/* Handles response */
-void	ServerHandler::sendResponse(int client_sockfd)
+void	ServerHandler::sendResponse(size_t& i)
 {
+	int clientFd = _pollfd_list[i].fd;
+	
 	std::string response =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html; charset=UTF-8\r\n"
-        "Content-Length: 13\r\n"
-        "\r\n"
-        "Hello, world!";
-   	ssize_t bytes_sent;
+		"HTTP/1.1 200 OK\r\n"
+		"Content-Type: text/html; charset=UTF-8\r\n"
+		"Content-Length: 13\r\n"
+		"\r\n"
+		"Hello, world!";
+	ssize_t bytes_sent;
 	std::cout << "Sending back response: " << "\n";
-	if ((bytes_sent = send(client_sockfd, response.c_str(), response.length(), 0)) == -1) {
+	if ((bytes_sent = send(clientFd, response.c_str(), response.length(), 0)) == -1) {
 		error_and_exit("Send");
 	}
 	std::cout << "Response sent successfully!" 
 	<< " (sent " << bytes_sent << " bytes)"
 	<< std::endl;
+	if (_clients[clientFd].keep_alive == false)
+		closeConnection(i);
 }
 
 /* 	One server config data instance is created. The config file is parsed in 
 	the constructor and the appropriate values in the class instance is set. 
 	Going through all serverBlock instances, a new shared pointer is made 
 	for each virtual server with the appropriate configurations */
-void    ServerHandler::setupServers()
+void	ServerHandler::setupServers(std::string path)
 {
 	for (const auto& [servName, config] : _config.getConfigBlocks()) 
 	{
@@ -76,19 +79,53 @@ void    ServerHandler::setupServers()
 		server->setupAddrinfo();
 	}
 	_server_count = _servers.size();
+
+	// HttpServer  serverInstance(current);
+	// serverInstance.setPorts(current.getPorts());
+	// serverInstance.setNumOfPorts(current.getNumOfPorts());
+	// serverInstance.setupAddrinfo();
+	// _servers.push_back(serverInstance);
 }
 
 void	ServerHandler::addConnection(size_t& i) {
+	int clientFd;
+	socklen_t addrlen;
+	struct sockaddr_storage remoteaddr_in;
+	struct pollfd new_pollfd;
 
+	addrlen = sizeof(remoteaddr_in);
+	clientFd = accept(_pollfd_list[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
+	if (clientFd == -1) 
+	{
+		error_and_exit("Accept"); // log error
+	}
+	new_pollfd.fd = clientFd;
+	new_pollfd.events = POLLIN | POLLOUT;
+	new_pollfd.revents = 0;
+	_pollfd_list.emplace_back(new_pollfd);
+	t_client client = {};
+	_clients[clientFd] = client;
 }
 
-void	ServerHandler::readRequest(int new_sockfd)
+void	ServerHandler::closeConnection(size_t& i) {
+	int clientFd = _pollfd_list[i].fd;
+	close(clientFd);
+	_pollfd_list.erase(_pollfd_list.begin() + i);
+	if (_clients[clientFd].request != nullptr) {
+		delete _clients[clientFd].request;
+		_clients[clientFd].request = nullptr;
+	}
+	_clients.erase(clientFd);
+}
+
+void	ServerHandler::readRequest(size_t& i)
 {
+	int clientFd = _pollfd_list[i].fd;
 	int		numbytes;
 	char	buf[1024];
 
 	std::memset(buf, 0, 1024);
-	if ((numbytes = recv(new_sockfd, buf, 1023, 0)) == -1) 
+	if ((numbytes = recv(clientFd, buf, 1023, 0)) == -1) 
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK) {
 			std::cout << "No data available to read, try again later." << std::endl;
@@ -120,33 +157,26 @@ void	ServerHandler::setPollList()
 	printPollFds(); // for testing
 }
 
-void    ServerHandler::pollLoop()
+void	ServerHandler::pollLoop()
 {
-	int 			event_count;
-	int 			conn_sockfd;
-	socklen_t		addrlen;
-	struct sockaddr_storage remoteaddr_in;
+	int			poll_count;
 	
 	setPollList();
 	while (_running)
 	{
-		if ((event_count = poll(_pollfd_list.data(), _pollfd_list.size(), -1)) == -1) {
-			error_and_exit("Poll");
+		if ((poll_count = poll(_pollfd_list.data(), _pollfd_list.size(), -1)) == -1) {
+			error_and_exit("Poll failed");
 		}
 		for(size_t i = 0; i < _pollfd_list.size(); i++)
 		{
-			if (_pollfd_list[i].revents & POLLIN) 
-			{
-				addrlen = sizeof(remoteaddr_in);
-				conn_sockfd = accept(_pollfd_list[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
-				if (conn_sockfd == -1) 
-				{
-					error_and_exit("Accept"); // log error
-				}
-				readRequest(conn_sockfd);
-				sendResponse(conn_sockfd);
-				close(conn_sockfd);
+			if (_pollfd_list[i].revents & POLLIN) {
+				if (_clients.find(_pollfd_list[i].fd) == _clients.end())
+					addConnection(i);
+				else
+					readRequest(i);
 			}
+			else if (_pollfd_list[i].revents & POLLOUT && _clients[_pollfd_list[i].fd].requestReady == true)
+				sendResponse(i);
 		}
 	}
 }
@@ -198,7 +228,7 @@ void	ServerHandler::signalHandler(int signal)
 	exit(signal);
 }
 
-void    ServerHandler::runServers()
+void	ServerHandler::runServers()
 {
 	std::signal(SIGINT, ServerHandler::signalHandler);
 	std::signal(SIGPIPE, SIG_IGN);
