@@ -4,13 +4,14 @@
 #include <memory>
 #include <csignal>
 
-ServerHandler::ServerHandler(std::string path) : 
-	_config(ServerConfigData(path))
-{
-	_server_count = _config.getServerCount();
-	_servers.reserve(_server_count);
-	_ports.reserve(_config.getPortCount());
-	_pollfd_list.reserve(_config.getPortCount()); // reserves space for ports
+#define BACKLOG 10 // how many pending connections queue will hold
+
+ServerHandler::ServerHandler() {
+	
+	_servers.clear();
+	_pollfd_list.clear();
+	_ports.clear();
+	_server_count = 0;
 	_running = false;
 	std::cout << "Constructor Size of pollfd list: " << _pollfd_list.size() << "\n";
 }
@@ -20,8 +21,7 @@ ServerHandler::~ServerHandler()
 	this->cleanupServers();
 	_servers.clear();
 	_pollfd_list.clear();
-
-	std::cout << "Servers closed down\n";
+	_clients.clear();
 }
 
 void	ServerHandler::error_and_exit(const char *msg)
@@ -76,6 +76,10 @@ void    ServerHandler::setupServers()
 		server->setupAddrinfo();
 	}
 	_server_count = _servers.size();
+}
+
+void	ServerHandler::addConnection(size_t& i) {
+
 }
 
 void	ServerHandler::readRequest(int new_sockfd)
