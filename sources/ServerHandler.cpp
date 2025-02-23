@@ -9,9 +9,9 @@
 ServerHandler::ServerHandler() {
 	
 	_servers.clear();
-	_pollfd_list.clear();
+	_pollFds.clear();
 	_ports.clear();
-	_server_count = 0;
+	_serverCount = 0;
 	_running = false;
 	std::cout << "Constructor Size of pollfd list: " << _pollfd_list.size() << "\n";
 }
@@ -20,7 +20,7 @@ ServerHandler::~ServerHandler()
 {
 	this->cleanupServers();
 	_servers.clear();
-	_pollfd_list.clear();
+	_pollFds.clear();
 	_clients.clear();
 }
 
@@ -44,7 +44,7 @@ void	ServerHandler::cleanupServers()
 
 void	ServerHandler::sendResponse(size_t& i)
 {
-	int clientFd = _pollfd_list[i].fd;
+	int clientFd = _pollFds[i].fd;
 	
 	std::string response =
 		"HTTP/1.1 200 OK\r\n"
@@ -94,7 +94,7 @@ void	ServerHandler::addConnection(size_t& i) {
 	struct pollfd new_pollfd;
 
 	addrlen = sizeof(remoteaddr_in);
-	clientFd = accept(_pollfd_list[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
+	clientFd = accept(_pollFds[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
 	if (clientFd == -1) 
 	{
 		error_and_exit("Accept"); // log error
@@ -102,15 +102,15 @@ void	ServerHandler::addConnection(size_t& i) {
 	new_pollfd.fd = clientFd;
 	new_pollfd.events = POLLIN | POLLOUT;
 	new_pollfd.revents = 0;
-	_pollfd_list.emplace_back(new_pollfd);
+	_pollFds.emplace_back(new_pollfd);
 	t_client client = {};
 	_clients[clientFd] = client;
 }
 
 void	ServerHandler::closeConnection(size_t& i) {
-	int clientFd = _pollfd_list[i].fd;
+	int clientFd = _pollFds[i].fd;
 	close(clientFd);
-	_pollfd_list.erase(_pollfd_list.begin() + i);
+	_pollFds.erase(_pollFds.begin() + i);
 	if (_clients[clientFd].request != nullptr) {
 		delete _clients[clientFd].request;
 		_clients[clientFd].request = nullptr;
@@ -120,7 +120,7 @@ void	ServerHandler::closeConnection(size_t& i) {
 
 void	ServerHandler::readRequest(size_t& i)
 {
-	int clientFd = _pollfd_list[i].fd;
+	int clientFd = _pollFds[i].fd;
 	int		numbytes;
 	char	buf[1024];
 
@@ -142,19 +142,20 @@ void	ServerHandler::setPollList()
 	size_t	i = 0;
 	size_t	num_of_ports = getPortCount();
 
-	std::cout << "Size of pollfd list: " << _pollfd_list.size() << "\n";
-	_pollfd_list.resize(num_of_ports);
-	std::cout << "Size of pollfd list: " << _pollfd_list.size() << "\n";
+	_pollFds.resize(num_of_ports);
 	for (auto& server : _servers)
 	{		
 		std::vector<int> listen_sockfds = server->getListenSockfds();
 		for (size_t j = 0; j < listen_sockfds.size() ; j++) {
-			_pollfd_list[i].fd = listen_sockfds[j];
-			_pollfd_list[i].events = POLLIN;
+			_pollFds[i].fd = listen_sockfds[j];
+			_pollFds[i].events = POLLIN;
 			i++;
 		}
 	}
-	printPollFds(); // for testing
+	for (auto& poll_obj : _pollFds) 
+	{
+		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
+	}
 }
 
 void	ServerHandler::pollLoop()
@@ -164,18 +165,18 @@ void	ServerHandler::pollLoop()
 	setPollList();
 	while (_running)
 	{
-		if ((poll_count = poll(_pollfd_list.data(), _pollfd_list.size(), -1)) == -1) {
+		if ((poll_count = poll(_pollFds.data(), _pollFds.size(), -1)) == -1) {
 			error_and_exit("Poll failed");
 		}
-		for(size_t i = 0; i < _pollfd_list.size(); i++)
+		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
-			if (_pollfd_list[i].revents & POLLIN) {
-				if (_clients.find(_pollfd_list[i].fd) == _clients.end())
+			if (_pollFds[i].revents & POLLIN) {
+				if (_clients.find(_pollFds[i].fd) == _clients.end())
 					addConnection(i);
 				else
 					readRequest(i);
 			}
-			else if (_pollfd_list[i].revents & POLLOUT && _clients[_pollfd_list[i].fd].requestReady == true)
+			else if (_pollFds[i].revents & POLLOUT && _clients[_pollFds[i].fd].requestReady == true)
 				sendResponse(i);
 		}
 	}

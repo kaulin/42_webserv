@@ -20,10 +20,10 @@ class ServerHandler
 {
 private:
 	std::vector<std::shared_ptr<HttpServer>>	_servers;
-	size_t					  _server_count;
+	size_t					  _serverCount;
 	std::vector<int>			_ports;
 	std::unordered_map<int, t_client> _clients;
-	std::vector<struct pollfd>  _pollfd_list;
+	std::vector<struct pollfd>  _pollFds;
 	bool						 _running;
 public:
 	ServerHandler();
