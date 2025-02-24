@@ -92,20 +92,24 @@ bool isValidIP(const std::string &ip)
 // function to read file, remove comments, return string
 std::string ConfigParser::read_file(std::string path)
 {
-	/* Updates the file path to the correct path */
-    std::string filePath = std::filesystem::current_path().c_str();
-	size_t pathIndex = filePath.find("webserv");
-	filePath = filePath.substr(0, pathIndex);
-	filePath.append(CONFIG_DIRECTORY + path);
+	std::string fullPath;
+	std::filesystem::path filePath(path);
 
-	std::ifstream file(filePath);
+	if (!filePath.is_absolute()) {
+		fullPath = filePath;
+    }
+	else {
+		fullPath = std::filesystem::absolute(filePath);
+	}
+
+	std::ifstream file(fullPath);
 	std::stringstream content;
 	std::string line;
 	
 	if (!file.is_open())
 	{
 		std::cerr << "Error: Could not open file " << path << std::endl;
-		return "";
+		exit (1);
 	}
 	
 	while (std::getline(file, line))
