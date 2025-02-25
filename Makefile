@@ -8,7 +8,8 @@ SOURCES				:= main.cpp \
 						Config/ServerConfigData.cpp \
 						Config/LocationParser.cpp \
 						HttpServer.cpp \
-						ServerHandler.cpp
+						ServerHandler.cpp \
+						Request.cpp
 						
 VPATH				+= sources/
 
@@ -19,7 +20,7 @@ OBJECT_PATHS		:= $(addprefix $(OBJECT_DIRECTORY), $(OBJECTS))
 
 # Includes
 INCLUDE_DIRECTORY	:= includes/
-INCLUDES			:= webserv.hpp
+INCLUDES			:= webserv.hpp Request.hpp HttpServer.hpp ServerHandler.hpp
 
 INCLUDE_PATHS		:= $(addprefix $(INCLUDE_DIRECTORY), $(INCLUDES))
 INCLUDE_FLAGS		:= -I includes/
