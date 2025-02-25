@@ -9,8 +9,8 @@ ServerHandler::ServerHandler(std::string path) :
 {
 	_server_count = _config.getServerCount();
 	_servers.reserve(_server_count);
-	_ports.reserve(_config.getPortCount());
-	_pollFds.reserve(_config.getPortCount()); // reserves space for ports
+	_ports.reserve(_config.getServerCount());
+	_pollFds.reserve(_config.getServerCount()); // reserves space for ports
 	_running = false;
 	std::cout << "Constructor Size of pollfd list: " << _pollFds.size() << "\n";
 }
@@ -97,11 +97,8 @@ void	ServerHandler::readRequest(int new_sockfd)
 void	ServerHandler::setPollList()
 {
 	size_t	i = 0;
-	size_t	num_of_ports = getPortCount();
 
-	std::cout << "Size of pollfd list: " << _pollFds.size() << "\n";
-	_pollFds.resize(num_of_ports);
-	std::cout << "Size of pollfd list: " << _pollFds.size() << "\n";
+	_pollFds.resize(_server_count);
 	for (auto& server : _servers)
 	{		
 		int listen_sockfd = server->getListenSockfd();
@@ -143,40 +140,6 @@ void    ServerHandler::pollLoop()
 	}
 }
 
-void	ServerHandler::setupSockets()
-{
-	for (auto& server : _servers)
-	{
-		struct addrinfo* ai = server->getAddrinfo();
-		int	sockfd;
-		int yes = 1;
-
-		if ((sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
-			error_and_exit("Socket");
-		}
-		// sets the socket to non-blocking
-		if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1) {
-			close(sockfd);
-			error_and_exit("fcntl");
-		}
-		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-			error_and_exit("Setsockopt");
-		}
-		if (bind(sockfd, ai->ai_addr, ai->ai_addrlen) == -1) {
-			close(sockfd);
-			perror("Bind");
-		}	
-		if (ai == NULL) {
-			error_and_exit("Failed to bind");
-		}
-		if (listen(sockfd, BACKLOG) == -1) {
-			error_and_exit("Listen");
-		}
-		freeaddrinfo(ai);
-		server->setSocket(sockfd);
-	}
-}
-
 void	ServerHandler::signalHandler(int signal) 
 {
 	// handle shutdown
@@ -190,7 +153,6 @@ void    ServerHandler::runServers()
 	std::signal(SIGPIPE, SIG_IGN);
 
 	_running = true;
-	setupSockets();
 	pollLoop();
 	cleanupServers();
 }
