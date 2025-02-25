@@ -1,6 +1,7 @@
 #include "webserv.hpp"
 #include "ServerHandler.hpp"
 #include "HttpServer.hpp"
+#include "Request.hpp"
 #include <memory>
 #include <csignal>
 
@@ -129,24 +130,40 @@ void	ServerHandler::readRequest(size_t& i)
 	char buf[1024] = {};
 
 	try {
-		receivedBytes = recv(clientFd, buf, 1023, 0);
+		receivedBytes = recv(clientFd, buf, 1024, 0);
 		if (receivedBytes < 0)
 			throw std::runtime_error("Internal Server Error 500: recv failed");
 		else if (receivedBytes == 0)
 			closeConnection(i);
 		else {
 			_clients[clientFd].requestString.append(buf, receivedBytes);
-			if (receivedBytes < 1024) {
+			if (receivedBytes < 1024) { // whole request read
 				_clients[clientFd].requestReady = true;
 				std::cout << "Client [" << clientFd << "] request ready: " << _clients[clientFd].requestString << "\n";
+				processRequest(i);
 			}
-			else
+			else // more incoming
 				std::cout << "Received request portion: " << buf << "\n";
 		}
 	} catch (std::exception &e) {
 		closeConnection(i);
-		throw ;
+		throw;
 	}
+}
+
+void	ServerHandler::processRequest(size_t& i) {
+	t_client client = _clients[_pollFds[i].fd];
+	client.request = {};
+	HttpRequestParser requestParser;
+	
+	try {
+		requestParser.parseRequest(client.requestString, *client.request);
+	} catch (std::exception& e) {
+		throw;
+	}
+	if (client.request->headers.find("Connection") != client.request->headers.end() 
+		&& (client.request->headers["Connection"] == "keep-alive" || client.request->headers["Connection"] == "Keep-Alive"))
+		client.keep_alive = true;
 }
 
 void	ServerHandler::setPollList()
