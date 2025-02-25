@@ -9,7 +9,7 @@ private:
     std::vector<std::shared_ptr<HttpServer>>    _servers;
     size_t                      _server_count;
     std::vector<int>            _ports;
-    std::vector<struct pollfd>  _pollfd_list;
+    std::vector<struct pollfd>  _pollFds;
     bool                         _running;
     ServerConfigData            _config;
 public:

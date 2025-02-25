@@ -10,16 +10,16 @@ ServerHandler::ServerHandler(std::string path) :
 	_server_count = _config.getServerCount();
 	_servers.reserve(_server_count);
 	_ports.reserve(_config.getPortCount());
-	_pollfd_list.reserve(_config.getPortCount()); // reserves space for ports
+	_pollFds.reserve(_config.getPortCount()); // reserves space for ports
 	_running = false;
-	std::cout << "Constructor Size of pollfd list: " << _pollfd_list.size() << "\n";
+	std::cout << "Constructor Size of pollfd list: " << _pollFds.size() << "\n";
 }
 
 ServerHandler::~ServerHandler() 
 {
 	this->cleanupServers();
 	_servers.clear();
-	_pollfd_list.clear();
+	_pollFds.clear();
 
 	std::cout << "Servers closed down\n";
 }
@@ -99,14 +99,14 @@ void	ServerHandler::setPollList()
 	size_t	i = 0;
 	size_t	num_of_ports = getPortCount();
 
-	std::cout << "Size of pollfd list: " << _pollfd_list.size() << "\n";
-	_pollfd_list.resize(num_of_ports);
-	std::cout << "Size of pollfd list: " << _pollfd_list.size() << "\n";
+	std::cout << "Size of pollfd list: " << _pollFds.size() << "\n";
+	_pollFds.resize(num_of_ports);
+	std::cout << "Size of pollfd list: " << _pollFds.size() << "\n";
 	for (auto& server : _servers)
 	{		
 		int listen_sockfd = server->getListenSockfd();
-		_pollfd_list[i].fd = listen_sockfd;
-		_pollfd_list[i].events = POLLIN;
+		_pollFds[i].fd = listen_sockfd;
+		_pollFds[i].events = POLLIN;
 		i++;
 	}
 	printPollFds(); // for testing
@@ -122,15 +122,15 @@ void    ServerHandler::pollLoop()
 	setPollList();
 	while (_running)
 	{
-		if ((event_count = poll(_pollfd_list.data(), _pollfd_list.size(), -1)) == -1) {
+		if ((event_count = poll(_pollFds.data(), _pollFds.size(), -1)) == -1) {
 			error_and_exit("Poll");
 		}
-		for(size_t i = 0; i < _pollfd_list.size(); i++)
+		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
-			if (_pollfd_list[i].revents & POLLIN) 
+			if (_pollFds[i].revents & POLLIN) 
 			{
 				addrlen = sizeof(remoteaddr_in);
-				conn_sockfd = accept(_pollfd_list[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
+				conn_sockfd = accept(_pollFds[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
 				if (conn_sockfd == -1) 
 				{
 					error_and_exit("Accept"); // log error
