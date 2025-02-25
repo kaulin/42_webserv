@@ -219,14 +219,3 @@ void	ServerHandler::printPollFds()
 		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
 	}
 }
-
-size_t	ServerHandler::getPortCount()
-{
-	size_t	num_of_ports = 0;
-
-	for (auto& server : _servers) {
-		num_of_ports += server->getNumOfPorts();
-	}
-	std::cout << "Number of ports total: " << num_of_ports << "\n";
-	return (num_of_ports);
-}
