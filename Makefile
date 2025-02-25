@@ -9,8 +9,9 @@ SOURCES				:= main.cpp \
 						LocationParser.cpp \
 						HttpServer.cpp \
 						ServerHandler.cpp \
+						Request.cpp \
 						Response.cpp \
-						Logger.cpp 
+						Logger.cpp  
 						
 VPATH				+= sources/ sources/Config/
 
