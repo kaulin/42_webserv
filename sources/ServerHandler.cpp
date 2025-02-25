@@ -35,10 +35,8 @@ void	ServerHandler::error_and_exit(const char *msg)
 void	ServerHandler::cleanupServers()
 {
 	for (auto& server : _servers) {
-		std::vector<int> listen_sockfds = server->getListenSockfds();
-		for (auto& sockfd : listen_sockfds) {
-			close(sockfd);
-		}
+		int listen_sockfd = server->getListenSockfd();
+		close(listen_sockfd);
 	}
 }
 
@@ -106,12 +104,10 @@ void	ServerHandler::setPollList()
 	std::cout << "Size of pollfd list: " << _pollfd_list.size() << "\n";
 	for (auto& server : _servers)
 	{		
-		std::vector<int> listen_sockfds = server->getListenSockfds();
-		for (size_t j = 0; j < listen_sockfds.size() ; j++) {
-			_pollfd_list[i].fd = listen_sockfds[j];
-			_pollfd_list[i].events = POLLIN;
-			i++;
-		}
+		int listen_sockfd = server->getListenSockfd();
+		_pollfd_list[i].fd = listen_sockfd;
+		_pollfd_list[i].events = POLLIN;
+		i++;
 	}
 	printPollFds(); // for testing
 }
@@ -151,39 +147,33 @@ void	ServerHandler::setupSockets()
 {
 	for (auto& server : _servers)
 	{
-		std::vector<struct addrinfo*> server_addresses = server->getAddrinfoVec();
+		struct addrinfo* ai = server->getAddrinfo();
 		int	sockfd;
+		int yes = 1;
 
-		for (auto& currentAddress : server_addresses)
-		{
-			struct addrinfo *p = currentAddress;
-			int yes = 1;
-			for (p = currentAddress; p != NULL; p = p->ai_next) 
-			{
-				if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-					error_and_exit("Socket");
-					continue;
-				}
-				fcntl(sockfd, F_SETFL, O_NONBLOCK); // sets the socket to non-blocking
-				if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-					error_and_exit("Setsockopt");
-				}
-				if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-					close(sockfd);
-					perror("Bind");
-					continue;
-				}
-				server->addSockfd(sockfd);
-				break;
-			}
-			if (p == NULL) {
-				error_and_exit("Failed to bind");
-			}
-			if (listen(sockfd, BACKLOG) == -1) {
-				error_and_exit("Listen");
-			}
-			freeaddrinfo(currentAddress);
+		if ((sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
+			error_and_exit("Socket");
 		}
+		// sets the socket to non-blocking
+		if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1) {
+			close(sockfd);
+			error_and_exit("fcntl");
+		}
+		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+			error_and_exit("Setsockopt");
+		}
+		if (bind(sockfd, ai->ai_addr, ai->ai_addrlen) == -1) {
+			close(sockfd);
+			perror("Bind");
+		}	
+		if (ai == NULL) {
+			error_and_exit("Failed to bind");
+		}
+		if (listen(sockfd, BACKLOG) == -1) {
+			error_and_exit("Listen");
+		}
+		freeaddrinfo(ai);
+		server->setSocket(sockfd);
 	}
 }
 

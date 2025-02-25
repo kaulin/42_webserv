@@ -170,8 +170,8 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
             tokens.push_back(";");
         previous = token;
     }
-	for (const auto &token : tokens)
-		std::cout << token << std::endl;
+	/* for (const auto &token : tokens)
+		std::cout << token << std::endl; */
 
     return tokens;
 }

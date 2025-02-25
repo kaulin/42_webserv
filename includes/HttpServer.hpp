@@ -4,10 +4,10 @@
 class HttpServer
 {
 private:
-        Config  _settings; // holds the config for each server
-        std::vector<struct addrinfo *>   _addr_info;
-        std::vector<std::string>        _ports;
-        std::vector<int>                _listen_sockfds;
+        Config                          _settings; // holds the config for each server
+        struct addrinfo*                _addr_info;
+        std::string                     _port;
+        int                             _listen_sockfd;
         size_t                          _num_of_ports;
 public:
         HttpServer(Config data);
@@ -16,10 +16,9 @@ public:
         void            setupAddrinfo();
 
         // get methods
-        const std::vector<struct addrinfo*> getAddrinfoVec();
+        struct addrinfo*        getAddrinfo();
         size_t                  getNumOfPorts();
-        std::vector<int>        getListenSockfds();
+        int                     getListenSockfd();
 
-        // class methods
-        void    addSockfd(int listen_sockfd);
+        void                    setSocket(int sockfd);
 };
