@@ -1,16 +1,16 @@
 NAME				:= webserv
 CXX					:= c++
-CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++17 -g
+CXX_FLAGS			:= -Wall -Wextra -Werror -std=c++17
 
 # Sources
 SOURCES				:= main.cpp \
-						Config/ConfigParser.cpp \
-						Config/ServerConfigData.cpp \
-						Config/LocationParser.cpp \
+						ConfigParser.cpp \
+						ServerConfigData.cpp \
+						LocationParser.cpp \
 						HttpServer.cpp \
 						ServerHandler.cpp
 						
-VPATH				+= sources/
+VPATH				+= sources/ sources/Config/
 
 # Objects
 OBJECT_DIRECTORY	:= objects/
@@ -19,14 +19,14 @@ OBJECT_PATHS		:= $(addprefix $(OBJECT_DIRECTORY), $(OBJECTS))
 
 # Includes
 INCLUDE_DIRECTORY	:= includes/
-INCLUDES			:= webserv.hpp
+INCLUDES			:= webserv.hpp Request.hpp HttpServer.hpp ServerHandler.hpp
 
 INCLUDE_PATHS		:= $(addprefix $(INCLUDE_DIRECTORY), $(INCLUDES))
 INCLUDE_FLAGS		:= -I includes/
 
 all: $(NAME)
 
-$(NAME): $(OBJECT_DIRECTORY) $(OBJECT_DIRECTORY)subdirs $(OBJECT_PATHS) $(INCLUDE_PATHS) Makefile
+$(NAME): $(OBJECT_DIRECTORY) $(OBJECT_PATHS) $(INCLUDE_PATHS) Makefile
 	@echo "Linking executable $(NAME)..."
 	@$(CXX) $(CXX_FLAGS) $(INCLUDE_FLAGS) $(OBJECT_PATHS) -o $(NAME)
 	@echo "$(NAME) built with $(CXX) and flags $(CXX_FLAGS)!"
@@ -34,10 +34,7 @@ $(NAME): $(OBJECT_DIRECTORY) $(OBJECT_DIRECTORY)subdirs $(OBJECT_PATHS) $(INCLUD
 $(OBJECT_DIRECTORY):
 	@mkdir -p $(OBJECT_DIRECTORY)
 
-$(OBJECT_DIRECTORY)subdirs:
-	@mkdir -p $(sort $(dir $(OBJECT_PATHS)))
-
-$(OBJECT_DIRECTORY)%.o: %.cpp $(INCLUDE_PATHS) Makefile | $(OBJECT_DIRECTORY)subdirs
+$(OBJECT_DIRECTORY)%.o: %.cpp $(INCLUDE_PATHS) Makefile
 	@echo "Compiling $<"
 	@$(CXX) $(CXX_FLAGS) $(INCLUDE_FLAGS) -c $< -o $@
 
