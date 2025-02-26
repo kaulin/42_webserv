@@ -7,7 +7,7 @@
 #define BACKLOG 10 // how many pending connections queue will hold
 
 ServerHandler::ServerHandler(std::string path) : 
-	_config(ServerConfigData(path))
+	_config(ServerConfigData(path)), _logger("test_log.txt")
 {
 	_serverCount = _config.getServerCount();
 	_servers.reserve(_serverCount);
@@ -105,6 +105,7 @@ void	ServerHandler::addConnection(size_t& i) {
 		_pollFds.emplace_back(new_pollfd);
 		t_client client = {};
 		_clients[clientFd] = client;
+		_logger.log("INFO", "New connection accepted on FD: " + std::to_string(clientFd)); // testin the logger
 	} catch (std::exception& e) {
 		_clients[clientFd].responseCode = 500;
 		_clients[clientFd].responseReady = true;
