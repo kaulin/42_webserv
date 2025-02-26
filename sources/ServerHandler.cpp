@@ -229,11 +229,3 @@ void	ServerHandler::runServers()
 	pollLoop();
 	cleanupServers();
 }
-
-void	ServerHandler::printPollFds()
-{
-	for (auto& poll_obj : _pollFds) 
-	{
-		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
-	}
-}
