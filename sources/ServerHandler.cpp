@@ -117,7 +117,6 @@ void	ServerHandler::closeConnection(size_t& i) {
 	close(clientFd);
 	_pollFds.erase(_pollFds.begin() + i);
 	if (_clients[clientFd].request != nullptr) {
-		delete _clients[clientFd].request;
 		_clients[clientFd].request = nullptr;
 	}
 	_clients.erase(clientFd);
@@ -153,7 +152,7 @@ void	ServerHandler::readRequest(size_t& i)
 
 void	ServerHandler::processRequest(size_t& i) {
 	t_client client = _clients[_pollFds[i].fd];
-	client.request = {};
+	client.request = std::make_unique<HttpRequest>();
 	HttpRequestParser requestParser;
 	
 	try {
