@@ -80,12 +80,6 @@ void	ServerHandler::setupServers()
 		server->setupAddrinfo();
 	}
 	_serverCount = _servers.size();
-
-	// HttpServer  serverInstance(current);
-	// serverInstance.setPorts(current.getPorts());
-	// serverInstance.setNumOfPorts(current.getNumOfPorts());
-	// serverInstance.setupAddrinfo();
-	// _servers.push_back(serverInstance);
 }
 void	ServerHandler::addConnection(size_t& i) {
 	int clientFd;
@@ -174,11 +168,12 @@ void	ServerHandler::setPollList()
 	_pollFds.resize(_serverCount);
 	for (auto& server : _servers)
 	{		
-		int listen_sockfd = server->getListenSockfd();
-		_pollFds[i].fd = listen_sockfd;
+		int listenSockfd = server->getListenSockfd();
+		_pollFds[i].fd = listenSockfd;
 		_pollFds[i].events = POLLIN;
 		i++;
 	}
+	// for testing
 	for (auto& poll_obj : _pollFds) 
 	{
 		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
@@ -229,5 +224,5 @@ void	ServerHandler::runServers()
 
 	_running = true;
 	pollLoop();
-	cleanupServers();
+	// cleanupServers();
 }
