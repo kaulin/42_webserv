@@ -14,9 +14,8 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
 			std::cout << name << " ";
 		std::cout << "\n";
 		
-		std::cout << "Ports: ";
-		for (const auto& port : config.second._ports)
-			std::cout << port << " ";
+		std::cout << "Port: ";
+		std::cout << config.second._port << " ";
 		std::cout << "\n";
 		
 		std::cout << "Number of Ports: " << config.second._num_of_ports << "\n";
