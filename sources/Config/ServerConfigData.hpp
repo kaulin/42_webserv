@@ -1,25 +1,25 @@
 #pragma once
 
-//#include "webserv.hpp"
+#include "webserv.hpp"
 #include <map>
 #include <vector>
 #include <string>
 
 struct Location {
-	std::string _path;
-	std::string _root;
-	std::string _index;
-	std::string _cgi_path;
-	std::string _cgi_param;
-	std::pair<int, std::string> _redirect;
-	std::unordered_map<std::string, bool> _methods = {{"GET", false}, {"POST", false}, {"DELETE", false}};
+	std::string	_path;
+	std::string	_root;
+	std::string	_index;
+	std::string	_cgi_path;
+	std::string	_cgi_param;
+	std::pair<int, std::string>	_redirect;
+	std::unordered_map<std::string, bool>	_methods = {{"GET", false}, {"POST", false}, {"DELETE", false}};
 	bool		_dir_listing;
 };
 
 struct Config {
 	std::string									_host;
 	std::vector<std::string>					_names;
-	std::vector<std::string>					_ports;
+	std::string									_ports;
 	std::unordered_map<std::string, Location>	_location;
 	size_t										_num_of_ports;
 	size_t										_cli_max_bodysize;
@@ -32,7 +32,7 @@ struct Config {
 
 class ServerConfigData {
 private:
-	std::map<std::string, Config>   _serverConfigBlocks;
+	std::map<std::string, Config>	_serverConfigBlocks;
 public:
 	ServerConfigData(std::string path);
 	ServerConfigData();
