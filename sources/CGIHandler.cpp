@@ -2,9 +2,11 @@
 #include "../includes/CGIHandler.hpp"
 #include "../includes/Request.hpp"
 
-CGIHandler::CGIHandler() : _pipefd({-1, -1}) 
+CGIHandler::CGIHandler() : _pipefd({-1, -1}), _output("")
 {
 	_CGIEnv.clear();
+	_argv.clear();
+	_envp.clear();
 }
 
 void	CGIHandler::setCGIEnv(const Request &request) // takes request
@@ -39,8 +41,17 @@ void	CGIHandler::handleChildProcess()
 
 void	CGIHandler::handleParentProcess()
 {
-	close (_pipefd[WRITE]);
-	// read output from CGI sript
+	close(_pipefd[WRITE]);
+	// Read output
+	char buffer[1024];
+	ssize_t bytesRead;
+
+	while ((bytesRead = read(_pipefd[READ], buffer, sizeof(buffer) - 1)) > 0)
+	{
+		buffer[bytesRead] = '\0';
+		_output += buffer;
+	}
+	close(_pipefd[READ]);
 }
 
 std::string	CGIHandler::runCGIScript(const std::string &path, const std::string &body)

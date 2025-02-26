@@ -38,6 +38,7 @@
 #include "../sources/Config/LocationParser.hpp"
 #include "HttpServer.hpp"
 #include "ServerHandler.hpp"
+#include "CGIHandler.hpp"
 
 
 #endif
