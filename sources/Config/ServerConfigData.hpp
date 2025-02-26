@@ -19,7 +19,7 @@ struct Location {
 struct Config {
 	std::string									_host;
 	std::vector<std::string>					_names;
-	std::string									_port;
+	std::string									_ports;
 	std::unordered_map<std::string, Location>	_location;
 	size_t										_num_of_ports;
 	size_t										_cli_max_bodysize;
