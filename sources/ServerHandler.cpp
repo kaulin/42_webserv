@@ -81,6 +81,7 @@ void	ServerHandler::setupServers()
 	}
 	_serverCount = _servers.size();
 }
+
 void	ServerHandler::addConnection(size_t& i) {
 	int clientFd;
 	socklen_t addrlen;
