@@ -19,9 +19,8 @@ struct Location {
 struct Config {
         std::string					_host;
         std::vector<std::string>			_names;
-        std::vector<std::string>			_ports;
+        std::string			                _port;
         std::unordered_map<std::string, Location>	_location;
-        size_t						_num_of_ports;
         size_t						_cli_max_bodysize;
         std::map<int, std::string>			_default_pages;
         std::vector<std::string>			_error_pages;
@@ -40,8 +39,4 @@ public:
 
         std::map<std::string, Config>&   getConfigBlocks();
         size_t  getServerCount();
-        size_t  getPortCount();
-
-        // class member functions
-        void    printConfigs();
 };

@@ -14,12 +14,10 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
             std::cout << name << " ";
         std::cout << "\n";
         
-        std::cout << "Ports: ";
-        for (const auto& port : config.second._ports)
-            std::cout << port << " ";
+        std::cout << "Port: ";
+        std::cout << config.second._port << " ";
         std::cout << "\n";
         
-        std::cout << "Number of Ports: " << config.second._num_of_ports << "\n";
         std::cout << "Client Max Body Size: " << config.second._cli_max_bodysize << "\n";
         
         std::cout << "Default Pages:\n";
@@ -170,8 +168,8 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
             tokens.push_back(";");
         previous = token;
     }
-	for (const auto &token : tokens)
-		std::cout << token << std::endl;
+	/* for (const auto &token : tokens)
+		std::cout << token << std::endl; */
 
     return tokens;
 }
@@ -191,7 +189,6 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 	}
 	++it; // step over bracket
 
-	blockInstance._num_of_ports = 0;
 	// content starts here
 	while (it != end)
 	{
@@ -218,9 +215,8 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				++it; break;
 			case ConfigKey::PORT:
 				++it;
-				while (it != end && *it != ";")
-					{ blockInstance._ports.push_back(*it); blockInstance._num_of_ports++; ++it; }
-				break;
+				blockInstance._port = *it; 
+				++it; break;
 			case ConfigKey::SERVER_NAME:
 				++it;
 				while (it != end && *it != ";")

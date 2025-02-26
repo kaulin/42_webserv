@@ -11,7 +11,8 @@ ServerHandler::ServerHandler(std::string path) :
 {
 	_serverCount = _config.getServerCount();
 	_servers.reserve(_serverCount);
-	_ports.reserve(_config.getPortCount());
+	_ports.reserve(_config.getServerCount());
+	_pollFds.reserve(_config.getServerCount()); // reserves space for ports
 	_running = false;
 	std::cout << "Constructor Size of pollfd list: " << _pollFds.size() << "\n";
 }
@@ -21,7 +22,8 @@ ServerHandler::~ServerHandler()
 	this->cleanupServers();
 	_servers.clear();
 	_pollFds.clear();
-	_clients.clear();
+
+	std::cout << "Servers closed down\n";
 }
 
 void	ServerHandler::error_and_exit(const char *msg)
@@ -35,10 +37,8 @@ void	ServerHandler::error_and_exit(const char *msg)
 void	ServerHandler::cleanupServers()
 {
 	for (auto& server : _servers) {
-		std::vector<int> listen_sockfds = server->getListenSockfds();
-		for (auto& sockfd : listen_sockfds) {
-			close(sockfd);
-		}
+		int listen_sockfd = server->getListenSockfd();
+		close(listen_sockfd);
 	}
 }
 
@@ -152,17 +152,14 @@ void	ServerHandler::readRequest(size_t& i)
 void	ServerHandler::setPollList()
 {
 	size_t	i = 0;
-	size_t	num_of_ports = getPortCount();
 
-	_pollFds.resize(num_of_ports);
+	_pollFds.resize(_serverCount);
 	for (auto& server : _servers)
 	{		
-		std::vector<int> listen_sockfds = server->getListenSockfds();
-		for (size_t j = 0; j < listen_sockfds.size() ; j++) {
-			_pollFds[i].fd = listen_sockfds[j];
-			_pollFds[i].events = POLLIN;
-			i++;
-		}
+		int listen_sockfd = server->getListenSockfd();
+		_pollFds[i].fd = listen_sockfd;
+		_pollFds[i].events = POLLIN;
+		i++;
 	}
 	for (auto& poll_obj : _pollFds) 
 	{
@@ -198,46 +195,6 @@ void	ServerHandler::pollLoop()
 	}
 }
 
-void	ServerHandler::setupSockets()
-{
-	for (auto& server : _servers)
-	{
-		std::vector<struct addrinfo*> server_addresses = server->getAddrinfoVec();
-		int	sockfd;
-
-		for (auto& currentAddress : server_addresses)
-		{
-			struct addrinfo *p = currentAddress;
-			int yes = 1;
-			for (p = currentAddress; p != NULL; p = p->ai_next) 
-			{
-				if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-					error_and_exit("Socket");
-					continue;
-				}
-				fcntl(sockfd, F_SETFL, O_NONBLOCK); // sets the socket to non-blocking
-				if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-					error_and_exit("Setsockopt");
-				}
-				if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-					close(sockfd);
-					perror("Bind");
-					continue;
-				}
-				server->addSockfd(sockfd);
-				break;
-			}
-			if (p == NULL) {
-				error_and_exit("Failed to bind");
-			}
-			if (listen(sockfd, BACKLOG) == -1) {
-				error_and_exit("Listen");
-			}
-			freeaddrinfo(currentAddress);
-		}
-	}
-}
-
 void	ServerHandler::signalHandler(int signal) 
 {
 	// handle shutdown
@@ -251,7 +208,6 @@ void	ServerHandler::runServers()
 	std::signal(SIGPIPE, SIG_IGN);
 
 	_running = true;
-	setupSockets();
 	pollLoop();
 	cleanupServers();
 }
@@ -262,15 +218,4 @@ void	ServerHandler::printPollFds()
 	{
 		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
 	}
-}
-
-size_t	ServerHandler::getPortCount()
-{
-	size_t	num_of_ports = 0;
-
-	for (auto& server : _servers) {
-		num_of_ports += server->getNumOfPorts();
-	}
-	std::cout << "Number of ports total: " << num_of_ports << "\n";
-	return (num_of_ports);
 }
