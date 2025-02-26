@@ -16,6 +16,7 @@ private:
 	int							_pipefd[2];
 	std::vector<char*>			_argv; // args for execve call
 	std::vector<char*>			_envp;
+	std::string					_output;
 
 	// Private class methods
 	void	handleChildProcess();
