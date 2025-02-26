@@ -43,8 +43,6 @@ public:
 	size_t		getPortCount();
 	static void	signalHandler(int);
 
-	void	printPollFds();
-
 	// Helper functions for debugging
 	// void	*get_in_addr(struct sockaddr *sa);
 	// void	printServerData();
