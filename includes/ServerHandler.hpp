@@ -5,15 +5,15 @@
 class HttpServer;
 
 typedef struct s_client {
-	int				fd;
-	std::string		requestString;
-	bool			requestReady;
-	HttpRequest*	request;
-	std::string		responseString;
-	int				responseCode;
-	bool			responseReady;
-	std::time_t		lastRequest;
-	bool			keep_alive;
+	int								fd;
+	std::string						requestString;
+	bool							requestReady;
+	std::shared_ptr<HttpRequest>	request;
+	std::string						responseString;
+	int								responseCode;
+	bool							responseReady;
+	std::time_t						lastRequest;
+	bool							keep_alive;
 } t_client;
 
 class ServerHandler
