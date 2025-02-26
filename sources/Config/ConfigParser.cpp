@@ -6,57 +6,57 @@
 
 void	testPrintConfigs(std::map<std::string, Config> configs)
 {
-    for (const auto &config : configs)
-    {
-        std::cout << "Host: " << config.second._host << "\n"; 
-        std::cout << "Names: ";
-        for (const auto& name : config.second._names)
-            std::cout << name << " ";
-        std::cout << "\n";
-        
-        std::cout << "Ports: ";
-        for (const auto& port : config.second._ports)
-            std::cout << port << " ";
-        std::cout << "\n";
-        
-        std::cout << "Number of Ports: " << config.second._num_of_ports << "\n";
-        std::cout << "Client Max Body Size: " << config.second._cli_max_bodysize << "\n";
-        
-        std::cout << "Default Pages:\n";
-        for (const auto& page : config.second._default_pages)
-            std::cout << "  " << page.first << ": " << page.second << "\n";
-        
-        std::cout << "Error Pages:\n";
-        for (const auto& page : config.second._error_pages)
-            //std::cout << "  " << page.first << ": " << page.second << "\n";
+	for (const auto &config : configs)
+	{
+		std::cout << "Host: " << config.second._host << "\n"; 
+		std::cout << "Names: ";
+		for (const auto& name : config.second._names)
+			std::cout << name << " ";
+		std::cout << "\n";
+		
+		std::cout << "Ports: ";
+		for (const auto& port : config.second._ports)
+			std::cout << port << " ";
+		std::cout << "\n";
+		
+		std::cout << "Number of Ports: " << config.second._num_of_ports << "\n";
+		std::cout << "Client Max Body Size: " << config.second._cli_max_bodysize << "\n";
+		
+		std::cout << "Default Pages:\n";
+		for (const auto& page : config.second._default_pages)
+			std::cout << "  " << page.first << ": " << page.second << "\n";
+		
+		std::cout << "Error Pages:\n";
+		for (const auto& page : config.second._error_pages)
+			//std::cout << "  " << page.first << ": " << page.second << "\n";
 			std::cout << page << " ";
-        
-        std::cout << "Error Codes:\n";
-        for (const auto& code : config.second._error_codes)
-            std::cout << "  " << code.first << ": " << code.second << "\n";
-        
-        std::cout << "CGI Params:\n";
-        for (const auto& param : config.second._cgi_params)
-            std::cout << "  " << param.first << " = " << param.second << "\n";
-        std::cout << "---------------------\n";
-        std::cout << "Locations:\n";
-        for (const auto& loc : config.second._location) {
-            const Location& location = loc.second;
-            std::cout << "  Path: " << location._path << "\n";
-            std::cout << "  Root: " << location._root << "\n";
-            std::cout << "  Index: " << location._index << "\n";
-            std::cout << "  CGI Path: " << location._cgi_path << "\n";
-            std::cout << "  CGI Param: " << location._cgi_param << "\n";
-            std::cout << "  Redirect: " << location._redirect.first << " -> " << location._redirect.second << "\n";
-            std::cout << "  Directory Listing: " << (location._dir_listing ? "Enabled" : "Disabled") << "\n";
-            
-            std::cout << "  Methods:\n";
-            for (const auto& method : location._methods)
-                std::cout << "    " << method.first << ": " << (method.second ? "Allowed" : "Not Allowed") << "\n";
-            
-            std::cout << "\n";
-        }
-    }
+		
+		std::cout << "Error Codes:\n";
+		for (const auto& code : config.second._error_codes)
+			std::cout << "  " << code.first << ": " << code.second << "\n";
+		
+		std::cout << "CGI Params:\n";
+		for (const auto& param : config.second._cgi_params)
+			std::cout << "  " << param.first << " = " << param.second << "\n";
+		std::cout << "---------------------\n";
+		std::cout << "Locations:\n";
+		for (const auto& loc : config.second._location) {
+			const Location& location = loc.second;
+			std::cout << "  Path: " << location._path << "\n";
+			std::cout << "  Root: " << location._root << "\n";
+			std::cout << "  Index: " << location._index << "\n";
+			std::cout << "  CGI Path: " << location._cgi_path << "\n";
+			std::cout << "  CGI Param: " << location._cgi_param << "\n";
+			std::cout << "  Redirect: " << location._redirect.first << " -> " << location._redirect.second << "\n";
+			std::cout << "  Directory Listing: " << (location._dir_listing ? "Enabled" : "Disabled") << "\n";
+			
+			std::cout << "  Methods:\n";
+			for (const auto& method : location._methods)
+				std::cout << "	" << method.first << ": " << (method.second ? "Allowed" : "Not Allowed") << "\n";
+			
+			std::cout << "\n";
+		}
+	}
 	std::cout << "Finished printing configs\n";
 }
 
@@ -97,7 +97,7 @@ std::string ConfigParser::read_file(std::string path)
 
 	if (!filePath.is_absolute()) {
 		fullPath = filePath;
-    }
+	}
 	else {
 		fullPath = std::filesystem::absolute(filePath);
 	}
@@ -134,46 +134,46 @@ std::string ConfigParser::read_file(std::string path)
 // Function to parse the configuration file
 std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 {
-    std::vector<std::string> tokens;
-    std::stringstream ss(file_content);
-    std::string token, previous;
-    bool semicolon = false;
+	std::vector<std::string> tokens;
+	std::stringstream ss(file_content);
+	std::string token, previous;
+	bool semicolon = false;
 
-    while (ss >> token)
-    {
-        semicolon = false;
-        if (!token.empty() && token.back() == ';')
-        {
-            semicolon = true;
-            token.pop_back();
-        }
-        if (token == "{" || token == "}")
-        {
-            tokens.push_back(token);
-            continue;
-        }
-        if (previous == "host")
-        {
+	while (ss >> token)
+	{
+		semicolon = false;
+		if (!token.empty() && token.back() == ';')
+		{
+			semicolon = true;
+			token.pop_back();
+		}
+		if (token == "{" || token == "}")
+		{
+			tokens.push_back(token);
+			continue;
+		}
+		if (previous == "host")
+		{
 			if (!isValidIP(token))
-            {
+			{
 				std::cerr << "Error: Invalid IP format: " << token << std::endl;
-                return {};
-            }
-        }
+				return {};
+			}
+		}
 		if (previous == "error_page")
 		{
 			tokens.pop_back();
 			token = previous + token;
 		}
-        tokens.push_back(token);
-        if (semicolon)
-            tokens.push_back(";");
-        previous = token;
-    }
-	for (const auto &token : tokens)
-		std::cout << token << std::endl;
+		tokens.push_back(token);
+		if (semicolon)
+			tokens.push_back(";");
+		previous = token;
+	}
+	// for (const auto &token : tokens) // Remnant of initial testing? Delete before submission.
+	// 	std::cout << token << std::endl;
 
-    return tokens;
+	return tokens;
 }
 
 
@@ -270,26 +270,26 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 
 std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 {
-    std::map<std::string, Config> configs;
-    size_t server_count = 0;
-    std::string file_content = read_file(path);
-    std::vector<std::string> tokens = tokenize(file_content);
+	std::map<std::string, Config> configs;
+	size_t server_count = 0;
+	std::string file_content = read_file(path);
+	std::vector<std::string> tokens = tokenize(file_content);
 
-    std::vector<std::string>::const_iterator it = tokens.begin();
-    std::vector<std::string>::const_iterator end = tokens.end();
+	std::vector<std::string>::const_iterator it = tokens.begin();
+	std::vector<std::string>::const_iterator end = tokens.end();
 
-    while (it != end)
-    {
-        if (*it == "server")
-        {
-            Config blockInstance; // new server block
-            
-            assignKeyToValue(++it, end, blockInstance);
-            
-            configs.insert({"Server" + std::to_string(server_count++), blockInstance});
-        }
-        ++it;
-    }
-	testPrintConfigs(configs); // for testing
-    return configs;
+	while (it != end)
+	{
+		if (*it == "server")
+		{
+			Config blockInstance; // new server block
+			
+			assignKeyToValue(++it, end, blockInstance);
+			
+			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
+		}
+		++it;
+	}
+	//testPrintConfigs(configs); // Remnant of initial testing? Delete before submission.
+	return configs;
 }

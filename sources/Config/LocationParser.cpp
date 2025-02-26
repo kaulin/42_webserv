@@ -61,19 +61,19 @@ void	LocationParser::set_location_methods(std::vector<std::string>::const_iterat
 }
 
 /* struct Location {
-    bool        _dir_listing;
-    std::string _path;
-    std::string _root;
-    std::string _index;
-    std::string _cgi_path;
-    std::string _cgi_param;
-    std::pair<int, std::string> _redirect;
-    std::unordered_map<std::string, bool> _methods;
+	bool		_dir_listing;
+	std::string _path;
+	std::string _root;
+	std::string _index;
+	std::string _cgi_path;
+	std::string _cgi_param;
+	std::pair<int, std::string> _redirect;
+	std::unordered_map<std::string, bool> _methods;
 }; */
 
 std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<std::string>::const_iterator &it, 
-											std::vector<std::string>::const_iterator &end,
-											const std::unordered_map<std::string, Location> &locations)
+	std::vector<std::string>::const_iterator &end,
+	const std::unordered_map<std::string, Location> &locations)
 {
 	Location location_block;
 
