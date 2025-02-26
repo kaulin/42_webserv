@@ -191,7 +191,6 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 	}
 	++it; // step over bracket
 
-	blockInstance._num_of_ports = 0;
 	// content starts here
 	while (it != end)
 	{
@@ -218,9 +217,8 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				++it; break;
 			case ConfigKey::PORT:
 				++it;
-				while (it != end && *it != ";")
-					{ blockInstance._ports.push_back(*it); blockInstance._num_of_ports++; ++it; }
-				break;
+				blockInstance._port = *it; 
+				++it; break;
 			case ConfigKey::SERVER_NAME:
 				++it;
 				while (it != end && *it != ";")

@@ -31,7 +31,6 @@ public:
 	~ServerHandler();
 
 	void		runServers();
-	void		setupSockets();
 	void		setupServers();
 	void		pollLoop();
 	void		setPollList();

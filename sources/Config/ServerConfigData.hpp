@@ -40,8 +40,4 @@ public:
 
 	std::map<std::string, Config>&   getConfigBlocks();
 	size_t  getServerCount();
-	size_t  getPortCount();
-
-	// class member functions
-	void	printConfigs();
 };

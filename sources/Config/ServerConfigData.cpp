@@ -36,13 +36,3 @@ size_t  ServerConfigData::getServerCount()
 {
 	return _serverConfigBlocks.size();
 }
-
-size_t  ServerConfigData::getPortCount()
-{
-	size_t portCount = 0;
-
-	for (const auto& serverInstance : this->_serverConfigBlocks)
-		portCount += serverInstance.second._num_of_ports;
-	std::cout << "num of ports: " << portCount << "\n";
-	return portCount;
-}
