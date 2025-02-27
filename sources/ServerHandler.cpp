@@ -183,7 +183,10 @@ void	ServerHandler::pollLoop()
 			{
 				if (_pollFds[i].revents & POLLIN) {
 					if (_clients.find(_pollFds[i].fd) == _clients.end())
+					{
 						addConnection(i);
+						_logger.flushToFile(); // testing the logger
+					}
 					else
 						readRequest(i);
 				}
