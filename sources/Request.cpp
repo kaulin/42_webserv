@@ -46,6 +46,7 @@ bool HttpRequestParser::parseRequestLine(const std::string& request_line, HttpRe
 	return true;
 }
 
+
 // Function to parse headers (key: value)
 bool HttpRequestParser::parseHeaders(const std::string& headers_part, HttpRequest& request)
 {
