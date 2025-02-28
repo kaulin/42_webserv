@@ -88,6 +88,33 @@ bool isValidIP(const std::string &ip)
 	return false;
 }
 
+// helper function to convert orders of magnitude if client max body size is presented in kilobytes, megabytes or gigabytes
+int convertMaxClientSize(std::string number)
+{
+	char	magnitude = number.back();
+	size_t	mult = 1024;
+	size_t	limit = 1073741824; // one gigabyte
+	int		pow;
+
+	if (magnitude == 'K' || magnitude == 'k')
+		return mult;
+	else if (magnitude == 'M' || magnitude == 'm')
+	{
+		for (pow = 1; pow > 0; --pow)
+			mult *= mult;
+	}
+	else if (magnitude == 'G' || magnitude == 'g')
+	{
+		for (pow = 2; pow > 0; --pow)
+			mult *= mult;
+	}
+	else
+		mult = 1;
+	if (mult > limit)
+		mult = limit; // I don't know if the limit (whatever it will be) should be handled here. Consider this a placeholder.
+	return mult;
+}
+
 // function to read file, remove comments, return string
 std::string ConfigParser::read_file(std::string path)
 {
@@ -169,9 +196,6 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 			tokens.push_back(";");
 		previous = token;
 	}
-	// for (const auto &token : tokens) // Remnant of initial testing? Delete before submission.
-	// 	std::cout << token << std::endl;
-
 	return tokens;
 }
 
@@ -234,15 +258,12 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 			case ConfigKey::CLIENT_MAX_BODY_SIZE:
 			{
 				++it;
-				unsigned int mult = 1;
+				size_t mult = 1;
 				std::string number = *it;
 				if (!std::isdigit(number.back()))
 				{
-					if (number.back() == 'M')
-					{
-						mult = 1024 * 1024; // takes care of 'M', maybe implement a whole separate method for converting 'K', 'M', and 'G'...
-						number.pop_back();
-					}
+					mult = convertMaxClientSize(number);
+					number.pop_back();
 				}
 				blockInstance._cli_max_bodysize = std::stoul(number) * mult;
 				++it; break;
