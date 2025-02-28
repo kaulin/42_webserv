@@ -26,7 +26,8 @@ private:
 	std::vector<struct pollfd>					_pollFds;
 	bool										_running;
 	ServerConfigData							_config;
-	Logger<std::ofstream>						_logger;
+	Logger										_fileLogger;
+	Logger										_consoleLogger;
 public:
 	ServerHandler(std::string path);
 	~ServerHandler();
