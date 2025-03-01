@@ -8,7 +8,8 @@ SOURCES				:= main.cpp \
 						ServerConfigData.cpp \
 						LocationParser.cpp \
 						HttpServer.cpp \
-						ServerHandler.cpp
+						ServerHandler.cpp \
+						Logger.cpp
 						
 VPATH				+= sources/ sources/Config/
 

@@ -7,7 +7,7 @@
 #define BACKLOG 10 // how many pending connections queue will hold
 
 ServerHandler::ServerHandler(std::string path) : 
-	_config(ServerConfigData(path))
+	_config(ServerConfigData(path)), _fileLogger("test_log.txt"), _consoleLogger(std::cout)
 {
 	_serverCount = _config.getServerCount();
 	_servers.reserve(_serverCount);
@@ -182,7 +182,9 @@ void	ServerHandler::pollLoop()
 			{
 				if (_pollFds[i].revents & POLLIN) {
 					if (_clients.find(_pollFds[i].fd) == _clients.end())
+					{
 						addConnection(i);
+					}
 					else
 						readRequest(i);
 				}
