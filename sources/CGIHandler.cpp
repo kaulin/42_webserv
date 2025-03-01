@@ -1,6 +1,9 @@
 #include "webserv.hpp"
 #include "../includes/CGIHandler.hpp"
 #include "../includes/Request.hpp"
+#include "../includes/Response.hpp"
+
+class Response;
 
 CGIHandler::CGIHandler() : _pipefd({-1, -1}), _output("")
 {
@@ -11,7 +14,7 @@ CGIHandler::CGIHandler() : _pipefd({-1, -1}), _output("")
 
 void	CGIHandler::setCGIEnv(const Request &request) // takes request
 {
-	// Parse request and set _CGIEnv:
+	// Parse request and set _CGIEnv with setenv
 	// Request method
 	// Script name
 	// Query string (if applicable, for GET requests)
@@ -57,6 +60,7 @@ void	CGIHandler::handleParentProcess()
 std::string	CGIHandler::runCGIScript(const std::string &path, const std::string &body)
 {
 	int status;
+//	Response response; The response that should be returned to the client
 
 	if (pipe(_pipefd) < 0){
 		throw::std::runtime_error("Pipe failed"); // handle 500 Internal Server Error
@@ -69,5 +73,4 @@ std::string	CGIHandler::runCGIScript(const std::string &path, const std::string 
 		handleChildProcess();
 	else
 		handleParentProcess();
-	waitpid(pid, &status, 0);
 }
