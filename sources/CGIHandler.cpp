@@ -1,19 +1,17 @@
 #include "webserv.hpp"
 #include "../includes/CGIHandler.hpp"
 #include "../includes/Request.hpp"
-#include "../includes/Response.hpp"
 
-class Response;
-
-CGIHandler::CGIHandler() : _pipefd({-1, -1}), _output("")
+CGIHandler::CGIHandler() : _output("")
 {
 	_CGIEnv.clear();
 	_argv.clear();
 	_envp.clear();
 }
 
-void	CGIHandler::setCGIEnv(const Request &request) // takes request
+void	CGIHandler::setCGIEnv(const HttpRequest &request) // takes request
 {
+	std::cout << "Setting CGI env:" << request.uri << "\n";
 	// Parse request and set _CGIEnv with setenv
 	// Request method
 	// Script name
@@ -33,7 +31,12 @@ void	CGIHandler::handleChildProcess()
 	close(_pipefd[WRITE]); // Closes write end of pipe (already dupped)
 
 	// set path to executable script
-	_argv = {"var/www/cgi-bin/example_cgi.py", nullptr};
+	//std::string path = "var/www/cgi-bin/example_cgi.py";
+	std::string charPath = "var/www/cgi-bin/example_cgi.py";
+
+	_argv.emplace_back(charPath.c_str());
+	_argv.emplace_back(nullptr);
+
 	_envp = {nullptr}; // envp should be set according to CGIEnv (const Char*)
 	execve(_scriptPath.c_str(), _argv.data(), _envp.data());
 
@@ -44,10 +47,10 @@ void	CGIHandler::handleChildProcess()
 
 void	CGIHandler::handleParentProcess()
 {
-	close(_pipefd[WRITE]);
-	// Read output
 	char buffer[1024];
 	ssize_t bytesRead;
+
+	close(_pipefd[WRITE]);
 
 	while ((bytesRead = read(_pipefd[READ], buffer, sizeof(buffer) - 1)) > 0)
 	{
@@ -57,10 +60,10 @@ void	CGIHandler::handleParentProcess()
 	close(_pipefd[READ]);
 }
 
-std::string	CGIHandler::runCGIScript(const std::string &path, const std::string &body)
+void	CGIHandler::runCGIScript(const std::string &path, const std::string &requestBody)
 {
 	int status;
-//	Response response; The response that should be returned to the client
+	//	Response response; The response that should be returned to the client
 
 	if (pipe(_pipefd) < 0){
 		throw::std::runtime_error("Pipe failed"); // handle 500 Internal Server Error
@@ -72,5 +75,21 @@ std::string	CGIHandler::runCGIScript(const std::string &path, const std::string 
 	if (pid == 0)
 		handleChildProcess();
 	else
+	{
+		_childPid = pid;
 		handleParentProcess();
+	}
+	waitpid(_childPid, &status, 0); // is waitpid necessary
+	if (WIFEXITED(status))
+	{
+		// log status and errors
+		std::cout << "Child exited with " << WEXITSTATUS(status) << "\n";
+	}
+	else if (WIFSIGNALED(status))
+	{
+		std::cout << "Child process terminated with " << WTERMSIG(status) << "\n";
+	}
+	// send response to client and close
 }
+
+std::string	CGIHandler::getCGIOutput() { return _output; }

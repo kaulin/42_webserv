@@ -1,6 +1,7 @@
 #pragma once
 #include "webserv.hpp"
 #include "Request.hpp"
+#include "CGIHandler.hpp"
 
 class HttpServer;
 
@@ -14,6 +15,9 @@ typedef struct s_client {
 	bool			responseReady;
 	std::time_t		lastRequest;
 	bool			keep_alive;
+
+	// For CGI handling
+	std::shared_ptr<CGIHandler>	clientCGI;
 } t_client;
 
 class ServerHandler

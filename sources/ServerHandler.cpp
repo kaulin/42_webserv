@@ -46,12 +46,13 @@ void	ServerHandler::sendResponse(size_t& i)
 {
 	int clientFd = _pollFds[i].fd;
 	
-	std::string response =
+/* 	std::string response =
 		"HTTP/1.1 200 OK\r\n"
 		"Content-Type: text/html; charset=UTF-8\r\n"
 		"Content-Length: 13\r\n"
 		"\r\n"
-		"Hello, world!";
+		"Hello, world!"; */
+	std::string response = _clients[i].clientCGI->getCGIOutput(); // added for testing CGI output
 	ssize_t bytes_sent;
 	std::cout << "Sending back response: " << "\n";
 	if ((bytes_sent = send(clientFd, response.c_str(), response.length(), 0)) == -1) {
@@ -181,6 +182,12 @@ void	ServerHandler::pollLoop()
 						addConnection(i);
 					else
 						readRequest(i);
+					if (1) // for testing CGI
+					{
+						std::shared_ptr<CGIHandler> handler(new CGIHandler);
+						_clients[i].clientCGI = handler;
+						_clients[i].clientCGI->runCGIScript("var/www/cgi-bin/example_cgi.py", _clients[i].requestString);
+					}
 				}
 				else if (_pollFds[i].revents & POLLOUT && _clients[_pollFds[i].fd].requestReady == true)
 					sendResponse(i);
