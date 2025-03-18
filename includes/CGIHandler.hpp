@@ -14,7 +14,8 @@ private:
 	std::string					_scriptPath;
 	std::vector<std::string>	_CGIEnv;
 	int							_pipefd[2];
-	std::vector<char*>			_argv; // args for execve call
+	int							_childPid;
+	std::vector<char* const>	_argv; // args for execve call
 	std::vector<char*>			_envp;
 	std::string					_output;
 
@@ -23,6 +24,7 @@ private:
 	void	handleParentProcess();
 public:
 	CGIHandler();
-	void			setCGIEnv(const Request &request);
-	std::string		runCGIScript(const std::string &path, const std::string &body);
+	void			setCGIEnv(const HttpRequest &request);
+	void			runCGIScript(const std::string &path, const std::string &body);
+	std::string		getCGIOutput();
 };
