@@ -81,10 +81,8 @@ void CGIHandler::handleParentProcess(s_CGIrequest request)
 	int pipedf[2] = {request.pipe[0] , request.pipe[1]};
 	char buffer[1024];
 	ssize_t bytesRead;
-
 	close(pipedf[WRITE]);
-
-	while ((bytesRead = read(pipedf[READ], buffer, sizeof(buffer) - 1)) > 0)
+	while ((bytesRead = read(_pipefd[READ], buffer, sizeof(buffer) - 1)) > 0)
 	{
 		buffer[bytesRead] = '\0';
 		request.output += buffer;
