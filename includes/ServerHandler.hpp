@@ -32,6 +32,7 @@ private:
 	ServerConfigData							_config;
 	Logger										_fileLogger;
 	Logger										_consoleLogger;
+	CGIHandler									_CGIHandler;
 public:
 	ServerHandler(std::string path);
 	~ServerHandler();
@@ -47,7 +48,7 @@ public:
 	void		processRequest(size_t& i);
 	void		sendResponse(size_t& i);
 	void		cleanupServers();
-	size_t		getPortCount();
+	
 	static void	signalHandler(int);
 
 	// Helper functions for debugging
