@@ -2,29 +2,41 @@
 
 #include "webserv.hpp"
 #include "Request.hpp"
+#include "ServerHandler.hpp"
 
 #define READ 0
 #define WRITE 1
-#define PIPE_LIMIT 65536;
 
-class Request;
+class 	Request;
+struct	s_client;
+
+enum CGIStatus {
+	READY,
+	CLOSED,
+	ERROR
+};
+
+typedef struct s_CGIrequest {
+	int 						status;
+	int							pipe[2];
+	int							childPid;
+	//std::vector<char* const>	argv; // args for execve call
+	std::vector<char*>			envp;
+	std::string					output;
+	std::vector<std::string>	CGIEnv;
+} t_CGIrequest;
 
 class CGIHandler {
 private:
-	std::string					_scriptPath;
-	std::vector<std::string>	_CGIEnv;
-	int							_pipefd[2];
-	int							_childPid;
-	std::vector<char* const>	_argv; // args for execve call
-	std::vector<char*>			_envp;
-	std::string					_output;
+	std::unordered_map<int, s_CGIrequest>	_requests; // limit to 10
 
 	// Private class methods
-	void	handleChildProcess();
-	void	handleParentProcess();
+	void	handleChildProcess(s_CGIrequest request);
+	void	handleParentProcess(s_CGIrequest request);
+	void	setCGIEnv(const HttpRequest &request);
 public:
 	CGIHandler();
-	void			setCGIEnv(const HttpRequest &request);
-	void			runCGIScript(const std::string &path, const std::string &body);
-	std::string		getCGIOutput();
+
+	void			setupCGI(s_client client);
+	void			runCGIScript(s_client client);
 };

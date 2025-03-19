@@ -2,11 +2,10 @@
 #include "../includes/CGIHandler.hpp"
 #include "../includes/Request.hpp"
 
-CGIHandler::CGIHandler() : _output("")
+CGIHandler::CGIHandler()
 {
-	_CGIEnv.clear();
-	_argv.clear();
-	_envp.clear();
+	_requests.clear();
+	_requests.reserve(10);
 }
 
 void	CGIHandler::setCGIEnv(const HttpRequest &request) // takes request
@@ -23,73 +22,98 @@ void	CGIHandler::setCGIEnv(const HttpRequest &request) // takes request
 	// HTTP_* -> all request headers must be passed as HTTP_HEADER_NAME
 }
 
-void	CGIHandler::handleChildProcess()
+void	CGIHandler::handleChildProcess(s_CGIrequest request)
 {
+	int pipedf[2] = {request.pipe[0] , request.pipe[1]};
+
 	// Handle pipes
-	close(_pipefd[READ]); // Closes parent end of pipe
-	dup2(_pipefd[WRITE], STDOUT_FILENO); // Redirect write end of pipe to STDOUT
-	close(_pipefd[WRITE]); // Closes write end of pipe (already dupped)
+	close(pipedf[READ]); // Closes parent end of pipe
+	dup2(pipedf[WRITE], STDOUT_FILENO); // Redirect write end of pipe to STDOUT
+	close(pipedf[WRITE]); // Closes write end of pipe (already dupped)
 
 	// set path to executable script
-	//std::string path = "var/www/cgi-bin/example_cgi.py";
 	std::string charPath = "var/www/cgi-bin/example_cgi.py";
 
-	_argv.emplace_back(charPath.c_str());
-	_argv.emplace_back(nullptr);
+	const char * path = charPath.c_str();
+	char * const * argv = {nullptr};
+	char * const * envp = {nullptr};
 
-	_envp = {nullptr}; // envp should be set according to CGIEnv (const Char*)
-	execve(_scriptPath.c_str(), _argv.data(), _envp.data());
+	//envp = {nullptr}; // envp should be set according to CGIEnv (const Char*)
+	execve(path, argv, envp);
 
 	// Handle execve fail
 	throw::std::runtime_error("Execve failed");
 	exit(1);
 }
 
-void	CGIHandler::handleParentProcess()
+void	CGIHandler::handleParentProcess(s_CGIrequest request)
 {
+	int pipedf[2] = {request.pipe[0] , request.pipe[1]};
 	char buffer[1024];
 	ssize_t bytesRead;
 
-	close(_pipefd[WRITE]);
+	close(pipedf[WRITE]);
 
-	while ((bytesRead = read(_pipefd[READ], buffer, sizeof(buffer) - 1)) > 0)
+	while ((bytesRead = read(pipedf[READ], buffer, sizeof(buffer) - 1)) > 0)
 	{
 		buffer[bytesRead] = '\0';
-		_output += buffer;
+		request.output += buffer;
 	}
-	close(_pipefd[READ]);
+	close(pipedf[READ]);
 }
 
-void	CGIHandler::runCGIScript(const std::string &path, const std::string &requestBody)
+void	CGIHandler::runCGIScript(s_client client)
 {
-	int status;
-	//	Response response; The response that should be returned to the client
+	t_CGIrequest request = _requests[client.fd];
 
-	if (pipe(_pipefd) < 0){
-		throw::std::runtime_error("Pipe failed"); // handle 500 Internal Server Error
-	}
-	pid_t pid = fork();
-	if (pid < 0){
-		throw::std::runtime_error("Fork"); // handle 500 Internal Server Error
-	}
-	if (pid == 0)
-		handleChildProcess();
-	else
+	if (request.status == READY)
 	{
-		_childPid = pid;
-		handleParentProcess();
+		if (pipe(request.pipe) < 0){
+			throw::std::runtime_error("CGI: Pipe failed"); // handle 500 Internal Server Error
+		}
+		pid_t pid = fork();
+		if (pid < 0){
+			throw::std::runtime_error("CGI: Fork"); // handle 500 Internal Server Error
+		}
+		if (pid == 0)
+			handleChildProcess(request);
+		else
+		{
+			request.childPid = pid;
+			handleParentProcess(request);
+		}
+		waitpid(request.childPid, &request.status, 0); // is waitpid necessary
+		if (WIFEXITED(request.status))
+		{
+			// log status and errors
+			std::cout << "Child exited with " << WEXITSTATUS(request.status) << "\n";
+		}
+		else if (WIFSIGNALED(request.status))
+		{
+			std::cout << "Child process terminated with " << WTERMSIG(request.status) << "\n";
+		}
+
+		// send response to client and close
+		client.responseString = request.output;
 	}
-	waitpid(_childPid, &status, 0); // is waitpid necessary
-	if (WIFEXITED(status))
+	else if (_requests[client.fd].status == ERROR)
 	{
-		// log status and errors
-		std::cout << "Child exited with " << WEXITSTATUS(status) << "\n";
+		throw::std::runtime_error("Execve failed");
 	}
-	else if (WIFSIGNALED(status))
-	{
-		std::cout << "Child process terminated with " << WTERMSIG(status) << "\n";
-	}
-	// send response to client and close
 }
 
-std::string	CGIHandler::getCGIOutput() { return _output; }
+void	CGIHandler::setupCGI(s_client client)
+{
+	// check that the status of the client is correct
+	// add the client to the requests
+	if (client.request->method == "GET" && !client.requestReady)
+	{
+		t_CGIrequest instance;
+		// instance.argv.clear();
+		instance.CGIEnv.clear();
+		instance.status = READY;
+
+		_requests.emplace(client.fd, instance);
+		
+	}
+}

@@ -23,15 +23,16 @@ typedef struct s_client {
 class ServerHandler
 {
 private:
-	std::vector<std::shared_ptr<HttpServer>>			_servers;
-	size_t					 							_serverCount;
-	std::vector<int>									_ports;
-	std::unordered_map<int, std::unique_ptr<t_client>>	_clients;
-	std::vector<struct pollfd>							_pollFds;
-	bool												_running;
-	ServerConfigData									_config;
-	Logger												_fileLogger;
-	Logger												_consoleLogger;
+	std::vector<std::shared_ptr<HttpServer>>	_servers;
+	size_t					 					_serverCount;
+	std::vector<int>							_ports;
+	std::unordered_map<int, t_client>			_clients;
+	std::vector<struct pollfd>					_pollFds;
+	bool										_running;
+	ServerConfigData							_config;
+	Logger										_fileLogger;
+	Logger										_consoleLogger;
+	CGIHandler									_CGIHandler;
 public:
 	ServerHandler(std::string path);
 	~ServerHandler();
@@ -47,6 +48,7 @@ public:
 	void		processRequest(size_t& i);
 	void		sendResponse(size_t& i);
 	void		cleanupServers();
+	
 	static void	signalHandler(int);
 
 	// Helper functions for debugging
