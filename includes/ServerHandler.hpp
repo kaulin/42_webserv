@@ -15,9 +15,6 @@ typedef struct s_client {
 	bool			responseReady;
 	std::time_t		lastRequest;
 	bool			keep_alive;
-
-	// For CGI handling
-	std::shared_ptr<CGIHandler>	clientCGI;
 } t_client;
 
 class ServerHandler
@@ -30,6 +27,7 @@ private:
 	std::vector<struct pollfd>					_pollFds;
 	bool										_running;
 	ServerConfigData							_config;
+	CGIHandler									_CGIHandler;
 public:
 	ServerHandler(std::string path);
 	~ServerHandler();
@@ -44,7 +42,7 @@ public:
 	void		readRequest(size_t& i);
 	void		sendResponse(size_t& i);
 	void		cleanupServers();
-	size_t		getPortCount();
+	
 	static void	signalHandler(int);
 
 	// Helper functions for debugging
