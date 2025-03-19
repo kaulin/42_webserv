@@ -93,7 +93,6 @@ int convertMaxClientSize(std::string number)
 {
 	char	magnitude = number.back();
 	size_t	mult = 1024;
-	size_t	limit = 1073741824; // one gigabyte
 	int		pow;
 
 	if (magnitude == 'K' || magnitude == 'k')
@@ -110,8 +109,6 @@ int convertMaxClientSize(std::string number)
 	}
 	else
 		mult = 1;
-	if (mult > limit)
-		mult = limit; // I don't know if the limit (whatever it will be) should be handled here. Consider this a placeholder.
 	return mult;
 }
 
