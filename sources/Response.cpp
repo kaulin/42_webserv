@@ -1,4 +1,4 @@
-#include "HttpResponse.hpp"
+#include "Response.hpp"
 
 static std::string timeStamp()
 {
@@ -10,57 +10,30 @@ static std::string timeStamp()
 }
 
 // Constructor
-HttpResponse::HttpResponse(HttpRequest& request) : 
+Response::Response(HttpRequest& request) : 
 	_request(request),
 	_resolved(false), 
 	_statusCode(0)
 {
-	checkRequest(); // check request errors (eg POST with no type or transfer encoding)
-	if (!_resolved) checkMethod(); // check method & allowed methods at location
-	if (!_resolved) checkResource(); // check if resource exists
-	if (!_resolved) checkCGI; // check cgi, execute cgi
-	if (!_resolved) handleMethod; // handle method
-	if (!_resolved) _statusCode = STATUS_INTERNAL_ERROR;
+	// checkRequest(); // check request errors (eg POST with no type or transfer encoding)
+	// if (!_resolved) checkMethod(); // check method & allowed methods at location
+	// if (!_resolved) checkResource(); // check if resource exists
+	// if (!_resolved) checkCGI; // check cgi, execute cgi
+	// if (!_resolved) handleMethod; // handle method
+	// if (!_resolved) _statusCode = STATUS_INTERNAL_ERROR;
 	formResponse();
 }
 
 // Deconstructor
-HttpResponse::~HttpResponse() {}
+Response::~Response() {}
 
 // Adds a key-value pair to _header map
-void HttpResponse::addHeader(const std::string& key, const std::string& value)
+void Response::addHeader(const std::string& key, const std::string& value)
 {
-	_headerKeys.push_back(key);
 	_headers.insert(key, value);
 }
 
-void HttpResponse::checkRequest()
-{
-	_statusCode = STATUS_NOT_IMPLEMENTED;
-	_resolved = true;
-}
-
-void HttpResponse::checkMethod()
-{
-
-}
-
-void HttpResponse::checkResource()
-{
-	
-}
-
-void HttpResponse::checkCGI()
-{
-	
-}
-
-void HttpResponse::handleMethod()
-{
-	
-}
-
-void HttpResponse::formResponse()
+void Response::formResponse()
 {
 	std::string status = getStatus();
 
@@ -72,7 +45,7 @@ void HttpResponse::formResponse()
 			status +
 			"</title></head><body><center><h1>" +
 			status +
-			"</h1></center><hr><center>nginx/1.27.3</center></body></html>";
+			"</h1></center><hr><center>webserv</center></body></html>";
 	}
 	addHeader("Server", "Webserv v0.6.6.6");
 	addHeader("Content-Length", std::to_string(_body.size()));
@@ -80,7 +53,7 @@ void HttpResponse::formResponse()
 	addHeader("Connection", "Closed");
 }
 
-const std::string HttpResponse::getStatus() const {
+const std::string Response::getStatus() const {
 	switch (_statusCode)
 	{
 		case 200:
@@ -110,7 +83,7 @@ const std::string HttpResponse::getStatus() const {
 }
 
 // Builds an HTTP response in the form of a single string
-const std::string HttpResponse::toString() const
+const std::string Response::toString() const
 {
 	std::string response;
 	
@@ -124,9 +97,4 @@ const std::string HttpResponse::toString() const
 	return response;
 }
 
-// Stream operator overload, for writing the 
-std::ostream& std::operator<<(std::ostream& os, const HttpResponse& response)
-{
-	os << response.toString();
-	return os;
-}
+// RESPONSE EXCEPTION IMPLEMENTATIONS BELOW HERE
