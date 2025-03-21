@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <ctime>
 #include "Request.hpp"
+#include "HttpServer.hpp"
 
 struct Request;
 
@@ -37,25 +38,26 @@ class Response
 {
 private:
 	HttpRequest& _request;
-	bool _resolved;
 	int _statusCode;
 	std::string _statusLine;
+	std::string _body;
 	std::deque<std::string> _headerKeys;
 	std::unordered_map<std::string, std::string> _headers;
-	std::string _body;
+	static std::string getTimeStamp();
+	void formGET();
+	void formPOST();
+	void formDELETE();
+	void formDirectoryListing();
+	void formErrorPage();
+	void addHeader(const std::string& key, const std::string& value);
+	const std::string getStatus() const;
+	const std::string toString() const;
 public:
 	Response(HttpRequest& request);
 	~Response(); 
-	void addHeader(const std::string& key, const std::string& value);
-	// void checkRequest();
-	// void checkMethod();
-	// void checkResource();
-	// void checkCGI();
-	// void handleMethod();
 	void formResponse();
-	const std::string getStatus() const;
-	const std::string Response::toString() const;
-
+	void sendResponse(int clientFd);
+	
 	// RESPONSE EXCEPTION CLASSES BELOW HERE
 
 

@@ -1,18 +1,8 @@
 #include "Response.hpp"
 
-static std::string timeStamp()
-{
-	auto t = std::time(nullptr);
-	auto tm = *std::localtime(&t);
-	std::ostringstream oss;
-	oss << std::put_time(&tm, "%a, %d %b %Y %H:%M:%S %Z");
-	return oss.str();
-}
-
 // Constructor
 Response::Response(HttpRequest& request) : 
 	_request(request),
-	_resolved(false), 
 	_statusCode(0)
 {
 	// checkRequest(); // check request errors (eg POST with no type or transfer encoding)
@@ -27,26 +17,62 @@ Response::Response(HttpRequest& request) :
 // Deconstructor
 Response::~Response() {}
 
-// Adds a key-value pair to _header map
+void Response::sendResponse(int clientFd) {
+	std::string response = toString();
+	int sendError;
+
+	sendError = send(clientFd, response.c_str(), response.length(), MSG_NOSIGNAL);
+	if (sendError <= 0)
+		throw std::runtime_error("THROW SEND ERROR EXCEPTION");
+	std::cout << "Client " << clientFd << " response:\n" << response << "\n";
+}
+
+/*
+Adds a key-value pair to _header map and _headerKeys deque. If a header is 
+re-inserted, it is only updated in the map.
+*/
 void Response::addHeader(const std::string& key, const std::string& value)
 {
-	_headers.insert(key, value);
+	if (_headers.find(key) == _headers.end())
+		_headerKeys.emplace_front(key);
+	_headers[key] = (value);
 }
 
 void Response::formResponse()
 {
-	std::string status = getStatus();
-
-	_statusLine = _request.http_version + " " + status + "\n";
 	if (_statusCode >= 300)
-	{ 
-		_body = 
-			"<html><head><title>" +
-			status +
-			"</title></head><body><center><h1>" +
-			status +
-			"</h1></center><hr><center>webserv</center></body></html>";
-	}
+		formErrorPage();
+	else if (_request.method == "GET")
+		formGET();
+	else if (_request.method == "POST")
+		formPOST();
+	else if (_request.method == "DELETE")
+		formDELETE();
+	else
+		throw std::runtime_error("Method not implemented exception");
+}
+
+void Response::formGET() {
+	std::cout << "Forming response: GET\n";
+}
+
+void Response::formPOST() {
+	std::cout << "Forming response: POST\n";
+}
+
+void Response::formDELETE() {
+	std::cout << "Forming response: DELETE\n";
+}
+
+void Response::formDirectoryListing() {
+	std::cout << "Forming response: DirectoryListing";
+}
+
+void Response::formErrorPage() {
+	std::cout << "Forming response: Error Page";
+	std::string status = getStatus();
+	_statusLine = _request.http_version + " " + status + "\n";
+	_body = "<html><head><title>" + status + "</title></head><body><center><h1>" + status + "</h1></center><hr><center>webserv</center></body></html>\n";
 	addHeader("Server", "Webserv v0.6.6.6");
 	addHeader("Content-Length", std::to_string(_body.size()));
 	addHeader("Content-Type", "text/html");
@@ -82,17 +108,29 @@ const std::string Response::getStatus() const {
 	}
 }
 
-// Builds an HTTP response in the form of a single string
+/*
+Static helper function for getting a timestamp in string format
+*/
+std::string Response::getTimeStamp()
+{
+	auto t = std::time(nullptr);
+	auto tm = *std::localtime(&t);
+	std::ostringstream oss;
+	oss << std::put_time(&tm, "%a, %d %b %Y %H:%M:%S %Z");
+	return oss.str();
+}
+
+/*
+Builds an HTTP response in the form of a single string
+*/
 const std::string Response::toString() const
 {
 	std::string response;
 	
 	response += _statusLine;
-	response += "Date: " + timeStamp() + "\n";
+	response += "Date: " + getTimeStamp() + "\n";
 	for (std::string key : _headerKeys)
-	{
 		response += key + ": " + _headers.at(key) + "\n";
-	}
 	response += "\n" + _body;
 	return response;
 }
