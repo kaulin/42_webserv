@@ -34,3 +34,6 @@ webserv
 
 # Local config files
 .vscode/*
+
+# Log files
+*log.txt
