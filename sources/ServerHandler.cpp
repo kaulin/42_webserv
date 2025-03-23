@@ -13,11 +13,11 @@ ServerHandler::ServerHandler(std::string path) :
 {
 	_serverCount = _config.getServerCount();
 	_servers.reserve(_serverCount);
-	_ports.reserve(_config.getServerCount());
-	_pollFds.reserve(_config.getServerCount()); // reserves space for ports
+	_ports.reserve(_serverCount);
+	_pollFds.reserve(_serverCount); // reserves space for ports
 	_running = false;
 
-	std::cout << "Constructor Size of pollfd list: " << _pollFds.size() << "\n";
+	std::cout << "Constructor Size of pollfd list: " << _pollFds.capacity() << "\n";
 }
 
 ServerHandler::~ServerHandler() 
