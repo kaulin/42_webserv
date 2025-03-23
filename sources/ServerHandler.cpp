@@ -48,12 +48,12 @@ void	ServerHandler::sendResponse(size_t& i)
 {
 	int clientFd = _pollFds[i].fd;
 	
-	std::string response =
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Content-Length: 13\r\n"
-		"\r\n"
-		"Hello, world!";
+	std::string response = _clients[clientFd].responseString;
+		//"HTTP/1.1 200 OK\r\n"
+		//"Content-Type: text/html; charset=UTF-8\r\n"
+		//"Content-Length: 13\r\n"
+		//"\r\n"
+		//"Hello, world!";
 	ssize_t bytes_sent;
 	std::cout << "Sending back response: " << "\n";
 	if ((bytes_sent = send(clientFd, response.c_str(), response.length(), 0)) == -1) {
