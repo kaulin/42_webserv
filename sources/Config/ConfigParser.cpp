@@ -34,9 +34,6 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
 		for (const auto& code : config.second._error_codes)
 			std::cout << "  " << code.first << ": " << code.second << "\n";
 		
-		std::cout << "CGI Params:\n";
-		for (const auto& param : config.second._cgi_params)
-			std::cout << "  " << param.first << " = " << param.second << "\n";
 		std::cout << "---------------------\n";
 		std::cout << "Locations:\n";
 		for (const auto& loc : config.second._location) {

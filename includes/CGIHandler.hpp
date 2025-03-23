@@ -13,6 +13,7 @@ struct	s_client;
 enum CGIStatus {
 	CGI_UNSET,
 	CGI_READY,
+	CGI_FORKED,
 	CGI_COMPLETE,
 	CGI_ERROR
 };
@@ -20,7 +21,7 @@ enum CGIStatus {
 typedef struct s_CGIrequest {
 	int 						status;
 	int							pipe[2];
-	int							childPid;
+	pid_t						childPid;
 	std::string					output;
 	std::vector<std::string>	CGIEnv;
 	std::string					CGIPath;
@@ -31,9 +32,11 @@ private:
 	std::unordered_map<int, s_CGIrequest>	_requests; // limit to 10
 
 	// Private class methods
-	void	handleChildProcess(s_CGIrequest request, s_client client);
-	void	handleParentProcess(s_CGIrequest request);
-	std::vector<std::string>	setCGIEnv(HttpRequest& request);
+    void 						handleChildProcess(s_CGIrequest request, s_client client);
+    void 						closeFds(const std::vector<int> fdsToclose);
+    void 						setCGIEnv(s_CGIrequest &cgiRequest, std::vector<char *> &envp);
+    void						handleParentProcess(s_CGIrequest request);
+	std::vector<std::string>	initCGIEnv(HttpRequest& request);
 public:
 	CGIHandler();
 
