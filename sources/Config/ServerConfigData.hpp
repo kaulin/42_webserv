@@ -26,7 +26,6 @@ struct Config {
 	std::map<int, std::string>					_default_pages;
 	std::vector<std::string>					_error_pages;
 	std::map<int, std::string>					_error_codes;
-	std::map<std::string, std::string>			_cgi_params;
 };
 
 class ServerConfigData {

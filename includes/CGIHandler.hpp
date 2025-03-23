@@ -11,19 +11,19 @@ class 	Request;
 struct	s_client;
 
 enum CGIStatus {
-	READY,
-	CLOSED,
-	ERROR
+	CGI_UNSET,
+	CGI_READY,
+	CGI_COMPLETE,
+	CGI_ERROR
 };
 
 typedef struct s_CGIrequest {
 	int 						status;
 	int							pipe[2];
 	int							childPid;
-	//std::vector<char* const>	argv; // args for execve call
-	std::vector<char*>			envp;
 	std::string					output;
 	std::vector<std::string>	CGIEnv;
+	std::string					CGIPath;
 } t_CGIrequest;
 
 class CGIHandler {
@@ -31,12 +31,12 @@ private:
 	std::unordered_map<int, s_CGIrequest>	_requests; // limit to 10
 
 	// Private class methods
-	void	handleChildProcess(s_CGIrequest request);
+	void	handleChildProcess(s_CGIrequest request, s_client client);
 	void	handleParentProcess(s_CGIrequest request);
-	void	setCGIEnv(const HttpRequest &request);
+	std::vector<std::string>	setCGIEnv(HttpRequest& request);
 public:
 	CGIHandler();
 
-	void			setupCGI(s_client client);
+	void			setupCGI(s_client &client);
 	void			runCGIScript(s_client client);
 };
