@@ -204,9 +204,10 @@ void	ServerHandler::pollLoop()
 					else
 					{
 						readRequest(i);
-						if (1) // for testing CGI -- here if request is 
+						if (1) // for testing CGI -- if request is to cgi-path
 						{
-							_CGIHandler.runCGIScript(_clients[i]);
+							_CGIHandler.setupCGI(_clients[_pollFds[i].fd]);
+							_CGIHandler.runCGIScript(_clients[_pollFds[i].fd]);
 						}
 					}
 				}
