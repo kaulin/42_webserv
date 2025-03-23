@@ -8,42 +8,69 @@ CGIHandler::CGIHandler()
 	_requests.reserve(10);
 }
 
-void	CGIHandler::setCGIEnv(const HttpRequest &request) // takes request
+std::vector<std::string>	CGIHandler::setCGIEnv(HttpRequest& request) // takes request
 {
-	std::cout << "Setting CGI env:" << request.uri << "\n";
-	// Parse request and set _CGIEnv with setenv
-	// Request method
-	// Script name
-	// Query string (if applicable, for GET requests)
-	// Content length (for post requests)
-	// Content type
-	// Path info
-	// Remote address
-	// HTTP_* -> all request headers must be passed as HTTP_HEADER_NAME
+	std::vector<std::string> env;
+
+	std::cout << "Request headers\n";
+	for (const auto &it : request.headers)
+	{
+		std::cout << it.first << " " << it.second << "\n";
+	}
+
+	// Replace temp data with get methods
+	env.emplace_back("REQUEST_METHOD=" + request.method);
+	if (request.method == "POST")
+	{
+		env.emplace_back("CONTENT_TYPE=application/x-www-form-urlencoded");
+		env.emplace_back("CONTENT_LENGTH="); // needs method to search by header
+	}
+	env.emplace_back("QUERY_STRING="); 	// (if applicable, for GET requests) needs get method
+	env.emplace_back("PATH_INFO=" + request.uri); // needs get method
+	env.emplace_back("SERVER_NAME=" + request.headers["host"]);
+	env.emplace_back("SERVER_PORT=8080"); 	// needs get method
+	env.emplace_back("REMOTE_ADDR=");	// needs get method
+
+	return env;
 }
 
-void	CGIHandler::handleChildProcess(s_CGIrequest request)
+void	CGIHandler::handleChildProcess(s_CGIrequest cgiRequest, s_client client)
 {
-	int pipedf[2] = {request.pipe[0] , request.pipe[1]};
+	int pipedf[2] = {cgiRequest.pipe[0] , cgiRequest.pipe[1]};
 
-	// Handle pipes
+	std::cout << "Dup2 pipe write end to stdout" << "path" << "\n";
+	// Redirect WRITE end of pipe to STDOUT
+	if (dup2(pipedf[WRITE], STDOUT_FILENO) == -1)
+	{
+		close(client.fd);
+		close(pipedf[WRITE]);
+		std::exit(EXIT_FAILURE);
+	}
+	
 	close(pipedf[READ]); // Closes parent end of pipe
-	dup2(pipedf[WRITE], STDOUT_FILENO); // Redirect write end of pipe to STDOUT
-	close(pipedf[WRITE]); // Closes write end of pipe (already dupped)
+	close(pipedf[WRITE]); // Closes (already dupped) write end of pipe
 
-	// set path to executable script
-	std::string charPath = "var/www/cgi-bin/example_cgi.py";
+	// Set path to executable
+	// std::string charPath = "var/www/cgi-bin/example_cgi.py";
+	std::vector<char*> argv;
+	argv.emplace_back(const_cast<char *>(cgiRequest.CGIPath.c_str()));
+	argv.emplace_back(nullptr);
 
-	const char * path = charPath.c_str();
-	char * const * argv = {nullptr};
-	char * const * envp = {nullptr};
+	std::vector<char*> envp;
+	std::cout << "Setting cgi env\n";
+	for (const auto & var : cgiRequest.CGIEnv)
+	{
+		std::cout << var << "\n";
+		envp.emplace_back(var);
+	}
+	envp.emplace_back(nullptr);
 
-	//envp = {nullptr}; // envp should be set according to CGIEnv (const Char*)
-	execve(path, argv, envp);
+	std::cout << "Child executing path: " << cgiRequest.CGIPath << "\n";
+	execve(cgiRequest.CGIPath.c_str(), argv.data(), envp.data());
 
 	// Handle execve fail
-	throw::std::runtime_error("Execve failed");
-	exit(1);
+	throw::std::runtime_error("Child: Execve failed");
+	std::exit(EXIT_FAILURE);
 }
 
 void	CGIHandler::handleParentProcess(s_CGIrequest request)
@@ -58,15 +85,16 @@ void	CGIHandler::handleParentProcess(s_CGIrequest request)
 	{
 		buffer[bytesRead] = '\0';
 		request.output += buffer;
+		std::cout << "CGI read: " << buffer << "\n";
 	}
 	close(pipedf[READ]);
 }
 
 void	CGIHandler::runCGIScript(s_client client)
 {
-	t_CGIrequest request = _requests[client.fd];
+	t_CGIrequest request = _requests[client.fd]; // gets the client request from container
 
-	if (request.status == READY)
+	if (request.status == CGI_READY)
 	{
 		if (pipe(request.pipe) < 0){
 			throw::std::runtime_error("CGI: Pipe failed"); // handle 500 Internal Server Error
@@ -76,7 +104,7 @@ void	CGIHandler::runCGIScript(s_client client)
 			throw::std::runtime_error("CGI: Fork"); // handle 500 Internal Server Error
 		}
 		if (pid == 0)
-			handleChildProcess(request);
+			handleChildProcess(request,client);
 		else
 		{
 			request.childPid = pid;
@@ -96,24 +124,25 @@ void	CGIHandler::runCGIScript(s_client client)
 		// send response to client and close
 		client.responseString = request.output;
 	}
-	else if (_requests[client.fd].status == ERROR)
+	else if (_requests[client.fd].status == CGI_ERROR)
 	{
 		throw::std::runtime_error("Execve failed");
 	}
 }
 
-void	CGIHandler::setupCGI(s_client client)
+void	CGIHandler::setupCGI(s_client &client)
 {
 	// check that the status of the client is correct
 	// add the client to the requests
-	if (client.request->method == "GET" && !client.requestReady)
+	if (client.requestReady)
 	{
-		t_CGIrequest instance;
-		// instance.argv.clear();
-		instance.CGIEnv.clear();
-		instance.status = READY;
+		t_CGIrequest cgiInstance;
+		cgiInstance.CGIEnv.clear();
+		cgiInstance.status = CGI_READY;
+		cgiInstance.CGIPath = client.request->uri;
+		cgiInstance.CGIEnv = setCGIEnv(*client.request);
 
-		_requests.emplace(client.fd, instance);
-		
+		_requests.emplace(client.fd, cgiInstance);
+		//_requests.insert({client.fd, instance});
 	}
 }
