@@ -89,28 +89,23 @@ bool isValidIP(const std::string &ip)
 }
 
 // helper function to convert orders of magnitude if client max body size is presented in kilobytes, megabytes or gigabytes
-int convertMaxClientSize(std::string number)
+size_t convertMaxClientSize(const std::string& number)
 {
-	char	magnitude = number.back();
-	size_t	mult = 1024;
-	int		pow;
+    char magnitude = number.back();
+    size_t mult = 1;
 
-	if (magnitude == 'K' || magnitude == 'k')
-		return mult;
-	else if (magnitude == 'M' || magnitude == 'm')
-	{
-		for (pow = 1; pow > 0; --pow)
-			mult *= mult;
-	}
-	else if (magnitude == 'G' || magnitude == 'g')
-	{
-		for (pow = 2; pow > 0; --pow)
-			mult *= mult;
-	}
-	else
-		mult = 1;
-	return mult;
+    if (magnitude == 'K' || magnitude == 'k')
+        mult = 1024;
+    else if (magnitude == 'M' || magnitude == 'm')
+        mult = 1024 * 1024;
+    else if (magnitude == 'G' || magnitude == 'g')
+        mult = 1024 * 1024 * 1024;
+    else if (!std::isdigit(magnitude))
+        throw std::invalid_argument("Invalid client max body size suffix");
+
+    return mult;
 }
+
 
 // function to read file, remove comments, return string
 std::string ConfigParser::read_file(std::string path)
@@ -178,10 +173,7 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 		if (previous == "host")
 		{
 			if (!isValidIP(token))
-			{
-				std::cerr << "Error: Invalid IP format: " << token << std::endl;
-				return {};
-			}
+				throw InvalidIPException();
 		}
 		if (previous == "error_page")
 		{
@@ -205,10 +197,7 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 	while (it != end && *it != "{")
 	++it;
 	if (it == end)
-	{
-		std::cerr << "Error: Missing '{' in config block.\n";
-		return;
-	}
+		throw MissingBracketException();
 	++it; // step over bracket
 
 	// content starts here
@@ -262,8 +251,19 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 					mult = convertMaxClientSize(number);
 					number.pop_back();
 				}
-				blockInstance._cli_max_bodysize = std::stoul(number) * mult;
-				++it; break;
+				size_t bodySize;
+				try
+				{
+					bodySize = std::stoul(number);
+				}
+				catch (const std::out_of_range&)
+				{
+					throw BodySizeOverflowException();
+				}
+				if (bodySize > SIZE_MAX / mult)
+					throw BodySizeOverflowException();
+				blockInstance._cli_max_bodysize = bodySize * mult;
+				++it; break; 
 			}
 			case ConfigKey::UNKNOWN:
 				break; // default handling
@@ -307,4 +307,18 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 	}
 	//testPrintConfigs(configs); // Remnant of initial testing? Delete before submission.
 	return configs;
+}
+
+// config parser specific exceptions
+const char* ConfigParser::MissingBracketException::what() const throw()
+{
+	return "Error: Missing '{' in config block.";
+}
+const char* ConfigParser::InvalidIPException::what() const throw()
+{
+	return "Error: Invalid host IP address.";
+}
+const char* ConfigParser::BodySizeOverflowException::what() const throw()
+{
+	return "Error: Max client body size overflow.";
 }
