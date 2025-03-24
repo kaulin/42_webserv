@@ -15,7 +15,11 @@ ServerHandler::ServerHandler(std::string path) :
 	_servers.reserve(_serverCount);
 	_ports.reserve(_serverCount);
 	_pollFds.reserve(_serverCount); // reserves space for ports
+	_ports.reserve(_serverCount);
+	_pollFds.reserve(_serverCount); // reserves space for ports
 	_running = false;
+
+	std::cout << "Constructor Size of pollfd list: " << _pollFds.capacity() << "\n";
 
 	std::cout << "Constructor Size of pollfd list: " << _pollFds.capacity() << "\n";
 }
@@ -55,6 +59,12 @@ void	ServerHandler::sendResponse(size_t& i)
 		//"Content-Length: 13\r\n"
 		//"\r\n"
 		//"Hello, world!";
+	std::string response = _clients[clientFd].responseString;
+		//"HTTP/1.1 200 OK\r\n"
+		//"Content-Type: text/html; charset=UTF-8\r\n"
+		//"Content-Length: 13\r\n"
+		//"\r\n"
+		//"Hello, world!";
 	ssize_t bytes_sent;
 	std::cout << "Sending back response: " << "\n";
 	if ((bytes_sent = send(clientFd, response.c_str(), response.length(), 0)) == -1) {
@@ -82,6 +92,8 @@ void	ServerHandler::setupServers()
 		server->setupAddrinfo();
 	}
 	_serverCount = _servers.size();
+}
+
 }
 
 void	ServerHandler::addConnection(size_t& i) {
@@ -182,9 +194,12 @@ void	ServerHandler::setPollList()
 	{		
 		int listenSockfd = server->getListenSockfd();
 		_pollFds[i].fd = listenSockfd;
+		int listenSockfd = server->getListenSockfd();
+		_pollFds[i].fd = listenSockfd;
 		_pollFds[i].events = POLLIN;
 		i++;
 	}
+	// for testing
 	// for testing
 	for (auto& poll_obj : _pollFds) 
 	{
@@ -205,15 +220,14 @@ void	ServerHandler::pollLoop()
 			}
 			for(size_t i = 0; i < _pollFds.size(); i++)
 			{
-				if (_pollFds[i].revents & POLLIN) {
+				if (_pollFds[i].revents & POLLIN) 
+				{
 					if (_clients.find(_pollFds[i].fd) == _clients.end())
 					{
 						addConnection(i);
 					}
 					else
-					{
 						readRequest(i);
-					}
 				}
 				else if (_pollFds[i].revents & POLLOUT && _clients[_pollFds[i].fd].requestReady == true)
 					sendResponse(i);

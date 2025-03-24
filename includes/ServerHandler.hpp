@@ -2,6 +2,7 @@
 #include "webserv.hpp"
 #include "Request.hpp"
 #include "CGIHandler.hpp"
+#include "CGIHandler.hpp"
 
 class HttpServer;
 
@@ -48,6 +49,7 @@ public:
 	void		processRequest(size_t& i);
 	void		sendResponse(size_t& i);
 	void		cleanupServers();
+	
 	
 	static void	signalHandler(int);
 
