@@ -8,7 +8,7 @@
 #define BACKLOG 10 // how many pending connections queue will hold
 
 ServerHandler::ServerHandler(std::string path) : 
-	_config(ServerConfigData(path)), _fileLogger("test_log.txt"), _consoleLogger(std::cout)
+	_config(ServerConfigData(path)), _fileLogger("test_log.txt"), _consoleLogger(std::cout),
 	_CGIHandler(CGIHandler())
 {
 	_serverCount = _config.getServerCount();
@@ -145,21 +145,32 @@ void	ServerHandler::readRequest(size_t& i)
 		closeConnection(i);
 		throw;
 	}
+	if (1) // for testing CGI -- if request is to cgi-path
+	{
+		// For testing
+		std::cout << "Request headers\n";
+		
+		for (const auto &it : _clients[clientFd].request.get()->headers)
+		{
+			std::cout << it.first << " " << it.second << "\n";
+		}
+		_CGIHandler.setupCGI(_clients[clientFd]);
+		_CGIHandler.runCGIScript(_clients[clientFd]);
+	}
 }
 
-void	ServerHandler::processRequest(size_t& i) {
-	t_client client = _clients[_pollFds[i].fd];
-	client.request = std::make_unique<HttpRequest>();
+void	ServerHandler::processRequest(size_t& i) 
+{
+	std::shared_ptr<HttpRequest> newRequest = std::make_shared<HttpRequest>();
+	std::string requestString = _clients[_pollFds[i].fd].requestString;
 	HttpRequestParser requestParser;
-	
+
 	try {
-		requestParser.parseRequest(client.requestString, *client.request);
+		requestParser.parseRequest(requestString, *newRequest);
 	} catch (std::exception& e) {
 		throw;
 	}
-	if (client.request->headers.find("Connection") != client.request->headers.end() 
-		&& (client.request->headers["Connection"] == "keep-alive" || client.request->headers["Connection"] == "Keep-Alive"))
-		client.keep_alive = true;
+	_clients[_pollFds[i].fd].request = newRequest;
 }
 
 void	ServerHandler::setPollList()
@@ -202,11 +213,6 @@ void	ServerHandler::pollLoop()
 					else
 					{
 						readRequest(i);
-						if (1) // for testing CGI -- if request is to cgi-path
-						{
-							_CGIHandler.setupCGI(_clients[_pollFds[i].fd]);
-							_CGIHandler.runCGIScript(_clients[_pollFds[i].fd]);
-						}
 					}
 				}
 				else if (_pollFds[i].revents & POLLOUT && _clients[_pollFds[i].fd].requestReady == true)

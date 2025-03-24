@@ -11,7 +11,7 @@ SOURCES				:= main.cpp \
 						ServerHandler.cpp \
 						Request.cpp \
 						Response.cpp \
-						Logger.cpp \ 
+						Logger.cpp \
 						CGIHandler.cpp
 						
 VPATH				+= sources/ sources/Config/

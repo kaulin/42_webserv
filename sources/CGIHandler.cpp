@@ -21,13 +21,6 @@ std::vector<std::string>	CGIHandler::initCGIEnv(HttpRequest& request) // takes r
 {
 	std::vector<std::string> env;
 
-	// For testing
-	std::cout << "Request headers\n";
-	for (const auto &it : request.headers)
-	{
-		std::cout << it.first << " " << it.second << "\n";
-	}
-
 	// Replace temp data with get methods
 	env.emplace_back("REQUEST_METHOD=" + request.method);
 	if (request.method == "POST")

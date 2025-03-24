@@ -7,7 +7,6 @@
 #define READ 0
 #define WRITE 1
 
-class 	Request;
 struct	s_client;
 
 enum CGIStatus {
