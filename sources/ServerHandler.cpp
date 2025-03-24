@@ -59,12 +59,6 @@ void	ServerHandler::sendResponse(size_t& i)
 		//"Content-Length: 13\r\n"
 		//"\r\n"
 		//"Hello, world!";
-	std::string response = _clients[clientFd].responseString;
-		//"HTTP/1.1 200 OK\r\n"
-		//"Content-Type: text/html; charset=UTF-8\r\n"
-		//"Content-Length: 13\r\n"
-		//"\r\n"
-		//"Hello, world!";
 	ssize_t bytes_sent;
 	std::cout << "Sending back response: " << "\n";
 	if ((bytes_sent = send(clientFd, response.c_str(), response.length(), 0)) == -1) {
@@ -92,8 +86,6 @@ void	ServerHandler::setupServers()
 		server->setupAddrinfo();
 	}
 	_serverCount = _servers.size();
-}
-
 }
 
 void	ServerHandler::addConnection(size_t& i) {
@@ -192,8 +184,6 @@ void	ServerHandler::setPollList()
 	_pollFds.resize(_serverCount);
 	for (auto& server : _servers)
 	{		
-		int listenSockfd = server->getListenSockfd();
-		_pollFds[i].fd = listenSockfd;
 		int listenSockfd = server->getListenSockfd();
 		_pollFds[i].fd = listenSockfd;
 		_pollFds[i].events = POLLIN;
