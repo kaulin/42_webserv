@@ -71,7 +71,7 @@ void Response::formDirectoryListing() {
 void Response::formErrorPage() {
 	std::cout << "Forming response: Error Page";
 	std::string status = getStatus();
-	_statusLine = _request.http_version + " " + status + "\n";
+	_statusLine = _request.httpVersion + " " + status + "\n";
 	_body = "<html><head><title>" + status + "</title></head><body><center><h1>" + status + "</h1></center><hr><center>webserv</center></body></html>\n";
 	addHeader("Server", "Webserv v0.6.6.6");
 	addHeader("Content-Length", std::to_string(_body.size()));

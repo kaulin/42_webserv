@@ -4,7 +4,7 @@
 #include "../includes/Request.hpp"
 
 // Helper function to trim whitespace
-std::string trim(const std::string& str)
+std::string trimWhitespace(const std::string& str)
 {
 	size_t start = str.find_first_not_of(" \t\r\n");
 	size_t end = str.find_last_not_of(" \t\r\n");
@@ -24,27 +24,28 @@ HttpRequestParser::~HttpRequestParser() {}
 // Function to parse the request line (e.g., "GET /index.html HTTP/1.1")
 bool HttpRequestParser::parseRequestLine(const std::string& request_line, HttpRequest& request)
 {
-    std::istringstream stream(request_line);
+	std::istringstream stream(request_line);
 
-    // Extract method, URI, and version
-    stream >> request.method >> request.uri >> request.http_version;
+	// Extract method, URI, and version
+	stream >> request.method >> request.uri >> request.httpVersion;
 
-    // Validate the format: all three parts must be non-empty
-    if (request.method.empty() || request.uri.empty() || request.http_version.empty())
-        return false;  // Invalid request line
+	// Validate the format: all three parts must be non-empty
+	if (request.method.empty() || request.uri.empty() || request.httpVersion.empty())
+		return false;  // Invalid request line
 
 	for (size_t i = 0; i < request.method.length(); ++i)
-        request.method[i] = std::toupper(request.method[i]);
+		request.method[i] = std::toupper(request.method[i]);
 
 	if (request.method != "GET" && request.method != "POST" && request.method != "DELETE")
-        return false;  // Unsupported HTTP method
+		return false;  // Unsupported HTTP method
 
-    // Validate HTTP version (optional, for simplicity let's assume only HTTP/1.1 for now)
-    if (request.http_version != "HTTP/1.1" && request.http_version != "HTTP/1.0")
-        return false;  // Invalid HTTP version
+	// Validate HTTP version (optional, for simplicity let's assume only HTTP/1.1 for now)
+	if (request.httpVersion != "HTTP/1.1" && request.httpVersion != "HTTP/1.0")
+		return false;  // Invalid HTTP version
 		
-    return true;
+	return true;
 }
+
 
 // Function to parse headers (key: value)
 bool HttpRequestParser::parseHeaders(const std::string& headers_part, HttpRequest& request)
@@ -67,8 +68,8 @@ bool HttpRequestParser::parseHeaders(const std::string& headers_part, HttpReques
 		std::string value = line.substr(colon_pos + 1);
 
 		// Trim leading and trailing spaces
-		key = trim(key);
-		value = trim(value);
+		key = trimWhitespace(key);
+		value = trimWhitespace(value);
 
 		// Insert into the headers map
 		request.headers[key] = value;
