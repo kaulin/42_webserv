@@ -150,19 +150,23 @@ void	ServerHandler::readRequest(size_t& i)
 	}
 }
 
-void	ServerHandler::processRequest(size_t& i) {
-	t_client client = _clients[_pollFds[i].fd];
-	client.request = std::make_unique<HttpRequest>();
+void	ServerHandler::processRequest(size_t& i) 
+{
 	HttpRequestParser requestParser;
+	std::shared_ptr<HttpRequest> newRequest(new HttpRequest());
 	
 	try {
-		requestParser.parseRequest(client.requestString, *client.request);
+		requestParser.parseRequest(_clients[_pollFds[i].fd].requestString, *newRequest);
 	} catch (std::exception& e) {
 		throw;
 	}
-	if (client.request->headers.find("Connection") != client.request->headers.end() 
-		&& (client.request->headers["Connection"] == "keep-alive" || client.request->headers["Connection"] == "Keep-Alive"))
-		client.keep_alive = true;
+			
+	_clients[_pollFds[i].fd].request = newRequest;
+	
+	if (_clients[_pollFds[i].fd].request->headers.find("Connection") != _clients[_pollFds[i].fd].request->headers.end() 
+		&& (_clients[_pollFds[i].fd].request->headers["Connection"] == "keep-alive" 
+		|| _clients[_pollFds[i].fd].request->headers["Connection"] == "Keep-Alive"))
+		_clients[_pollFds[i].fd].keep_alive = true;
 }
 
 void	ServerHandler::setPollList()
