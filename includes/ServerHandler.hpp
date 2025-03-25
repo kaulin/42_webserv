@@ -9,6 +9,8 @@ typedef struct s_client {
 	std::string						requestString;
 	bool							requestReady;
 	std::unique_ptr<HttpRequest>	request;
+	int								fileReadFd;
+	int								fileWriteFd;
 	std::string						responseString;
 	int								responseCode;
 	bool							responseReady;
@@ -28,6 +30,9 @@ private:
 	ServerConfigData									_config;
 	Logger												_fileLogger;
 	Logger												_consoleLogger;
+
+	void	readFromFd(size_t& clientFd);
+	void	writeToFd(size_t& clientFd);
 public:
 	ServerHandler(std::string path);
 	~ServerHandler();
