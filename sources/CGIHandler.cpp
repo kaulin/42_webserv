@@ -37,7 +37,7 @@ std::vector<std::string>	CGIHandler::initCGIEnv(HttpRequest& request) // takes r
 	return env;
 }
 
-void CGIHandler::setCGIEnv(s_CGIrequest &cgiRequest, std::vector<char *> &envp)
+void CGIHandler::setCGIEnv(t_CGIrequest &cgiRequest, std::vector<char *> &envp)
 {
     std::cout << "Setting cgi env\n";
     for (const auto &var : cgiRequest.CGIEnv)
@@ -48,7 +48,7 @@ void CGIHandler::setCGIEnv(s_CGIrequest &cgiRequest, std::vector<char *> &envp)
     envp.emplace_back(nullptr);
 }
 
-void	CGIHandler::handleChildProcess(s_CGIrequest cgiRequest, s_client client)
+void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, t_client& client)
 {
 	int pipedf[2] = {cgiRequest.pipe[0], cgiRequest.pipe[1]};
 	std::vector<char*> argv;
@@ -76,13 +76,13 @@ void	CGIHandler::handleChildProcess(s_CGIrequest cgiRequest, s_client client)
 	std::exit(EXIT_FAILURE);
 }
 
-void CGIHandler::handleParentProcess(s_CGIrequest request)
+void CGIHandler::handleParentProcess(t_CGIrequest request)
 {
 	int pipedf[2] = {request.pipe[0] , request.pipe[1]};
 	char buffer[1024];
 	ssize_t bytesRead;
 	close(pipedf[WRITE]);
-	while ((bytesRead = read(_pipefd[READ], buffer, sizeof(buffer) - 1)) > 0)
+	while ((bytesRead = read(pipedf[READ], buffer, sizeof(buffer) - 1)) > 0)
 	{
 		buffer[bytesRead] = '\0';
 		request.output += buffer;
@@ -91,7 +91,7 @@ void CGIHandler::handleParentProcess(s_CGIrequest request)
 	//close(pipedf[READ]);
 }
 
-void	CGIHandler::runCGIScript(s_client client)
+void	CGIHandler::runCGIScript(s_client& client)
 {
 	t_CGIrequest request = _requests[client.fd]; // gets the client request from container
 
@@ -105,7 +105,7 @@ void	CGIHandler::runCGIScript(s_client client)
 			throw::std::runtime_error("CGI: Fork"); // handle 500 Internal Server Error
 		}
 		if (pid == 0)
-			handleChildProcess(request,client);
+			handleChildProcess(request, client);
 		else
 		{
 			

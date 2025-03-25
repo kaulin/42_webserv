@@ -49,7 +49,7 @@ void	ServerHandler::sendResponse(size_t& i)
 {
 	int clientFd = _pollFds[i].fd;
 	
-	std::string response = _clients[clientFd].responseString;
+	std::string response = _clients[clientFd]->responseString;
 		//"HTTP/1.1 200 OK\r\n"
 		//"Content-Type: text/html; charset=UTF-8\r\n"
 		//"Content-Length: 13\r\n"
@@ -149,21 +149,13 @@ void	ServerHandler::readRequest(size_t& i)
 		// For testing
 		std::cout << "Request headers\n";
 		
-		for (const auto &it : _clients[clientFd].request.get()->headers)
+		for (const auto &it : _clients[clientFd]->request->headers)
 		{
 			std::cout << it.first << " " << it.second << "\n";
 		}
-		_CGIHandler.setupCGI(_clients[clientFd]);
-		_CGIHandler.runCGIScript(_clients[clientFd]);
+		_CGIHandler.setupCGI(*_clients[clientFd]);
+		_CGIHandler.runCGIScript(*_clients[clientFd]);
 	}
-}
-
-void	ServerHandler::processRequest(size_t& i) 
-{
-	std::shared_ptr<HttpRequest> newRequest = std::make_shared<HttpRequest>();
-	std::string requestString = _clients[_pollFds[i].fd].requestString;
-	HttpRequestParser requestParser;
-
 }
 
 void	ServerHandler::processRequest(size_t& i) 
@@ -173,11 +165,10 @@ void	ServerHandler::processRequest(size_t& i)
 	client.request = std::make_unique<HttpRequest>();
 	
 	try {
-		requestParser.parseRequest(requestString, *newRequest);
+		requestParser.parseRequest(client.requestString, *client.request.get());
 	} catch (std::exception& e) {
 		throw;
 	}
-	_clients[_pollFds[i].fd].request = newRequest;
 }
 
 void	ServerHandler::setPollList()
