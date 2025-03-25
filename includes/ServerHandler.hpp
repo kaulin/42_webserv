@@ -8,7 +8,7 @@ typedef struct s_client {
 	int								fd;
 	std::string						requestString;
 	bool							requestReady;
-	std::shared_ptr<HttpRequest>	request;
+	std::unique_ptr<HttpRequest>	request;
 	std::string						responseString;
 	int								responseCode;
 	bool							responseReady;
@@ -19,15 +19,15 @@ typedef struct s_client {
 class ServerHandler
 {
 private:
-	std::vector<std::shared_ptr<HttpServer>>	_servers;
-	size_t					 					_serverCount;
-	std::vector<int>							_ports;
-	std::unordered_map<int, t_client>			_clients;
-	std::vector<struct pollfd>					_pollFds;
-	bool										_running;
-	ServerConfigData							_config;
-	Logger										_fileLogger;
-	Logger										_consoleLogger;
+	std::vector<std::shared_ptr<HttpServer>>			_servers;
+	size_t					 							_serverCount;
+	std::vector<int>									_ports;
+	std::unordered_map<int, std::unique_ptr<t_client>>	_clients;
+	std::vector<struct pollfd>							_pollFds;
+	bool												_running;
+	ServerConfigData									_config;
+	Logger												_fileLogger;
+	Logger												_consoleLogger;
 public:
 	ServerHandler(std::string path);
 	~ServerHandler();
@@ -40,8 +40,8 @@ public:
 	void		addConnection(size_t& i);
 	void		closeConnection(size_t& i);
 	void		readRequest(size_t& i);
-    void		processRequest(size_t& i);
-    void		sendResponse(size_t& i);
+	void		processRequest(size_t& i);
+	void		sendResponse(size_t& i);
 	void		cleanupServers();
 	static void	signalHandler(int);
 
