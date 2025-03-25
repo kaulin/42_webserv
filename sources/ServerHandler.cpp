@@ -61,7 +61,7 @@ void	ServerHandler::sendResponse(size_t& i)
 	std::cout << "Response sent successfully!" 
 	<< " (sent " << bytes_sent << " bytes)"
 	<< std::endl;
-	if (_clients[clientFd].keep_alive == false)
+	if (_clients[clientFd]->keep_alive == false)
 		closeConnection(i);
 }
 
@@ -104,11 +104,10 @@ void	ServerHandler::addConnection(size_t& i) {
 		new_pollfd.events = POLLIN | POLLOUT;
 		new_pollfd.revents = 0;
 		_pollFds.emplace_back(new_pollfd);
-		t_client client = {};
-		_clients[clientFd] = client;
+		_clients[clientFd] = std::make_unique<t_client>();
 	} catch (std::exception& e) {
-		_clients[clientFd].responseCode = 500;
-		_clients[clientFd].responseReady = true;
+		_clients[clientFd]->responseCode = 500;
+		_clients[clientFd]->responseReady = true;
 	}
 }
 
@@ -116,8 +115,8 @@ void	ServerHandler::closeConnection(size_t& i) {
 	int clientFd = _pollFds[i].fd;
 	close(clientFd);
 	_pollFds.erase(_pollFds.begin() + i);
-	if (_clients[clientFd].request != nullptr) {
-		_clients[clientFd].request = nullptr;
+	if (_clients[clientFd]->request != nullptr) {
+		_clients[clientFd]->request = nullptr;
 	}
 	_clients.erase(clientFd);
 }
@@ -135,10 +134,10 @@ void	ServerHandler::readRequest(size_t& i)
 		else if (receivedBytes == 0)
 			closeConnection(i);
 		else {
-			_clients[clientFd].requestString.append(buf, receivedBytes);
+			_clients[clientFd]->requestString.append(buf, receivedBytes);
 			if (receivedBytes < 1024) { // whole request read
-				_clients[clientFd].requestReady = true;
-				std::cout << "Client [" << clientFd << "] request ready: " << _clients[clientFd].requestString << "\n";
+				_clients[clientFd]->requestReady = true;
+				std::cout << "Client [" << clientFd << "] request ready: " << _clients[clientFd]->requestString << "\n";
 				processRequest(i);
 			}
 			else // more incoming
@@ -150,19 +149,22 @@ void	ServerHandler::readRequest(size_t& i)
 	}
 }
 
-void	ServerHandler::processRequest(size_t& i) {
-	t_client client = _clients[_pollFds[i].fd];
-	client.request = std::make_unique<HttpRequest>();
+void	ServerHandler::processRequest(size_t& i) 
+{
+	t_client& client = *_clients[_pollFds[i].fd].get();
 	HttpRequestParser requestParser;
+	client.request = std::make_unique<HttpRequest>();
 	
 	try {
-		requestParser.parseRequest(client.requestString, *client.request);
+		requestParser.parseRequest(client.requestString, *client.request.get());
 	} catch (std::exception& e) {
 		throw;
 	}
-	if (client.request->headers.find("Connection") != client.request->headers.end() 
-		&& (client.request->headers["Connection"] == "keep-alive" || client.request->headers["Connection"] == "Keep-Alive"))
-		client.keep_alive = true;
+	
+	// if (client.request->headers.find("Connection") != client.request->headers.end() 
+	// 	&& (client.request->headers["Connection"] == "keep-alive" 
+	// 	|| client.request->headers["Connection"] == "Keep-Alive"))
+	// 	client.keep_alive = true;
 }
 
 void	ServerHandler::setPollList()
@@ -186,7 +188,7 @@ void	ServerHandler::setPollList()
 void	ServerHandler::pollLoop()
 {
 	int			poll_count;
-	
+
 	setPollList();
 	while (_running)
 	{
@@ -204,7 +206,7 @@ void	ServerHandler::pollLoop()
 					else
 						readRequest(i);
 				}
-				else if (_pollFds[i].revents & POLLOUT && _clients[_pollFds[i].fd].requestReady == true)
+				else if (_pollFds[i].revents & POLLOUT && _clients[_pollFds[i].fd]->requestReady == true)
 					sendResponse(i);
 			}
 		} catch (std::exception& e) {
