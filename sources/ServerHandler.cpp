@@ -203,7 +203,8 @@ void	ServerHandler::pollLoop()
 			}
 			for(size_t i = 0; i < _pollFds.size(); i++)
 			{
-				if (_pollFds[i].revents & POLLIN) {
+				if (_pollFds[i].revents & POLLIN) 
+				{
 					if (_clients.find(_pollFds[i].fd) == _clients.end())
 					{
 						addConnection(i);

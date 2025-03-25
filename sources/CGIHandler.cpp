@@ -20,7 +20,6 @@ void CGIHandler::closeFds(const std::vector<int> fdsToclose)
 std::vector<std::string>	CGIHandler::initCGIEnv(HttpRequest& request) // takes request
 {
 	std::vector<std::string> env;
-
 	// Replace temp data with get methods
 	env.emplace_back("REQUEST_METHOD=" + request.method);
 	if (request.method == "POST")
