@@ -31,8 +31,8 @@ private:
 	Logger												_fileLogger;
 	Logger												_consoleLogger;
 
-	void	readFromFd(size_t& clientFd);
-	void	writeToFd(size_t& clientFd);
+	void	readFromFd(size_t& i);
+	void	writeToFd(size_t& i);
 public:
 	ServerHandler(std::string path);
 	~ServerHandler();

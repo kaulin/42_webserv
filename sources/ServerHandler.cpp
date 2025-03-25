@@ -168,6 +168,10 @@ void	ServerHandler::processRequest(size_t& i)
 		throw;
 	}
 	
+	if (client.request->method == "POST")
+	{
+		client.fileWriteFd()
+	}
 	// if (client.request->headers.find("Connection") != client.request->headers.end() 
 	// 	&& (client.request->headers["Connection"] == "keep-alive" 
 	// 	|| client.request->headers["Connection"] == "Keep-Alive"))
@@ -200,21 +204,26 @@ void	ServerHandler::pollLoop()
 	while (_running)
 	{
 		try {
-			if ((poll_count = poll(_pollFds.data(), _pollFds.size(), -1)) == -1) {
+			if ((poll_count = poll(_pollFds.data(), _pollFds.size(), -1)) == -1)
 				error_and_exit("Poll failed");
-			}
 			for(size_t i = 0; i < _pollFds.size(); i++)
 			{
-				if (_pollFds[i].revents & POLLIN) {
+				if (_pollFds[i].revents & POLLIN)
+				{
 					if (_clients.find(_pollFds[i].fd) == _clients.end())
-					{
 						addConnection(i);
-					}
+					else if (_clients[_pollFds[i].fd]->fileReadFd > 0)
+						writeToFd(i);
 					else
 						readRequest(i);
 				}
-				else if (_pollFds[i].revents & POLLOUT && _clients[_pollFds[i].fd]->requestReady == true)
-					sendResponse(i);
+				else if (_pollFds[i].revents & POLLOUT)
+				{
+					if (_clients[_pollFds[i].fd]->fileWriteFd > 0)
+						writeToFd(i);
+					else if (_clients[_pollFds[i].fd]->requestReady == true)
+						sendResponse(i);
+				}
 			}
 		} catch (std::exception& e) {
 // Errors should be handled lower down and rethrown to be caught here.
@@ -222,12 +231,56 @@ void	ServerHandler::pollLoop()
 	}
 }
 
-void	ServerHandler::readFromFd(size_t& clientFd) {
+void	ServerHandler::readFromFd(size_t& i) {
+	t_client& client = *_clients[_pollFds[i].fd].get();
+	int bytesRead;
+	char buf[1024] = {};
+
+	try {
+		bytesRead = read(client.fileReadFd, buf, 1024);
+		if (bytesRead <= 0)
+			throw std::runtime_error("Internal Server Error 500: read failed");
+		else {
+			client.responseString.append(buf, bytesRead);
+			if (bytesRead < 1024)
+			{
+				client.responseReady = true;
+				std::cout << "Client [" << client.fd << "] response body read: " << client.responseString << "\n";
+				close(client.fileReadFd);
+				client.fileReadFd = -1;
+			}
+			else
+				_pollFds[i].events = POLL_IN;
+		}
+	} catch (std::exception &e) {
+		throw;
+	}
 
 }
 
-void	ServerHandler::writeToFd(size_t& clientFd) {
+void	ServerHandler::writeToFd(size_t& i) {
+	t_client& client = *_clients[_pollFds[i].fd].get();
+	int bytesWritten;
+	char buf[1024] = {};
 
+	try {
+		bytesWritten = write(client.fileWriteFd, buf, 1024);
+		if (bytesWritten <= 0)
+			throw std::runtime_error("Internal Server Error 500: write failed");
+		else {
+			if (bytesWritten < 1024)
+			{
+				client.responseReady = true;
+				std::cout << "Client [" << client.fd << "] POST request resource saved to disk\n";
+				close(client.fileWriteFd);
+				client.fileWriteFd = -1;
+			}
+			else
+				_pollFds[i].events = POLL_OUT;
+		}
+	} catch (std::exception &e) {
+		throw;
+	}
 }
 
 void	ServerHandler::signalHandler(int signal) 
