@@ -215,6 +215,14 @@ void	ServerHandler::pollLoop()
 	}
 }
 
+void	ServerHandler::readFromFd(size_t& clientFd) {
+
+}
+
+void	ServerHandler::writeToFd(size_t& clientFd) {
+
+}
+
 void	ServerHandler::signalHandler(int signal) 
 {
 	// handle shutdown
