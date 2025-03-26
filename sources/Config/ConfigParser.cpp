@@ -68,6 +68,24 @@ std::string trim(const std::string &str)
 	return str.substr(first, last - first + 1);
 }
 
+// helper function to validate port
+bool isValidPort(const std::string &port)
+{
+	int num;
+	try
+	{
+		num = std::stoi(port);
+	}
+	catch (const std::out_of_range&)
+	{
+		throw ConfigParser::ConfigParserException("Config: Int overflow in port.");
+	}
+	std::string::const_iterator it = port.begin();
+    while (it != port.end() && std::isdigit(*it))
+		++it;
+    return !port.empty() && it == port.end();
+}
+
 // helper function to validate IP address
 bool isValidIP(const std::string &ip)
 {
@@ -126,8 +144,7 @@ std::string ConfigParser::read_file(std::string path)
 	
 	if (!file.is_open())
 	{
-		std::cerr << "Error: Could not open file " << path << std::endl;
-		exit (1);
+		ConfigParserException("Config: Could not open config file.");
 	}
 	
 	while (std::getline(file, line))
@@ -173,7 +190,12 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 		if (previous == "host")
 		{
 			if (!isValidIP(token))
-				throw InvalidIPException();
+				throw ConfigParserException("Config: Invalid host IP address.");
+		}
+		if (previous == "port")
+		{
+			if (!isValidPort(token))
+				throw ConfigParserException("Config: Invalid port.");
 		}
 		if (previous == "error_page")
 		{
@@ -197,7 +219,7 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 	while (it != end && *it != "{")
 	++it;
 	if (it == end)
-		throw MissingBracketException();
+		throw ConfigParserException("Config: Missing '{' in config block.");
 	++it; // step over bracket
 
 	// content starts here
@@ -258,10 +280,10 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				}
 				catch (const std::out_of_range&)
 				{
-					throw BodySizeOverflowException();
+					throw ConfigParserException("Config: Max client body size overflow.");
 				}
 				if (bodySize > SIZE_MAX / mult)
-					throw BodySizeOverflowException();
+					throw ConfigParserException("Config: Max client body size overflow.");
 				blockInstance._cli_max_bodysize = bodySize * mult;
 				++it; break; 
 			}
@@ -276,49 +298,53 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 void	ConfigParser::checkConfigFilePath(std::string path)
 {
 	if (path.empty()) {
-		throw std::runtime_error("Error: No file path provided");
+		throw ConfigParserException("Config: No file path provided.");
 	}
 	if (path.find(".conf") == std::string::npos) {
-		throw std::runtime_error("Error: Invalid file path");
+		throw ConfigParserException("Config: Invalid file path.");
 	}
 }
 
 std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 {
-	std::map<std::string, Config> configs;
-	size_t server_count = 0;
-	std::string file_content = read_file(path);
-	std::vector<std::string> tokens = tokenize(file_content);
-
-	std::vector<std::string>::const_iterator it = tokens.begin();
-	std::vector<std::string>::const_iterator end = tokens.end();
-
-	while (it != end)
+	try
 	{
-		if (*it == "server")
+		std::map<std::string, Config> configs;
+		size_t server_count = 0;
+		std::string file_content = read_file(path);
+		std::vector<std::string> tokens = tokenize(file_content);
+
+		std::vector<std::string>::const_iterator it = tokens.begin();
+		std::vector<std::string>::const_iterator end = tokens.end();
+
+		while (it != end)
 		{
-			Config blockInstance; // new server block
-			
-			assignKeyToValue(++it, end, blockInstance);
-			
-			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
+			if (*it == "server")
+			{
+				Config blockInstance; // new server block
+				
+				assignKeyToValue(++it, end, blockInstance);
+				
+				configs.insert({"Server" + std::to_string(server_count++), blockInstance});
+			}
+			++it;
 		}
-		++it;
+		return configs;
 	}
-	//testPrintConfigs(configs); // Remnant of initial testing? Delete before submission.
-	return configs;
+	catch (ConfigParserException e)
+	{
+		std::cout << e.what() << std::endl;
+		exit(EXIT_FAILURE);
+	}
 }
 
-// config parser specific exceptions
-const char* ConfigParser::MissingBracketException::what() const throw()
+// config parser specific exception
+ConfigParser::ConfigParserException::ConfigParserException(const char *msg) : _message(msg) {}
+
+const char* ConfigParser::ConfigParserException::what() const throw()
 {
-	return "Error: Missing '{' in config block.";
-}
-const char* ConfigParser::InvalidIPException::what() const throw()
-{
-	return "Error: Invalid host IP address.";
-}
-const char* ConfigParser::BodySizeOverflowException::what() const throw()
-{
-	return "Error: Max client body size overflow.";
+	if (_message)
+		return _message;
+	else
+		return "Error: Config parser exception.";
 }

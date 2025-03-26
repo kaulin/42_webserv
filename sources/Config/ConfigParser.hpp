@@ -57,19 +57,12 @@ public:
 	static std::vector<std::string>			tokenize(std::string &file_content);
 	static void								assignKeyToValue(std::vector<std::string>::const_iterator &it, std::vector<std::string>::const_iterator &end, Config &blockInstance);
 
-	class MissingBracketException : public std::exception
+	class ConfigParserException : public std::exception
 		{
+			private:
+				const char *_message;
 			public:
-				const char* what() const throw();
-		};
-	class InvalidIPException : public std::exception
-		{
-			public:
-				const char* what() const throw();
-		};
-	class BodySizeOverflowException : public std::exception
-		{
-			public:
+				ConfigParserException(const char * msg);
 				const char* what() const throw();
 		};
 };
