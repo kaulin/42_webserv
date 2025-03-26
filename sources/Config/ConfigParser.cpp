@@ -307,35 +307,27 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 
 std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 {
-	try
+	std::map<std::string, Config> configs;
+	size_t server_count = 0;
+	std::string file_content = read_file(path);
+	std::vector<std::string> tokens = tokenize(file_content);
+
+	std::vector<std::string>::const_iterator it = tokens.begin();
+	std::vector<std::string>::const_iterator end = tokens.end();
+
+	while (it != end)
 	{
-		std::map<std::string, Config> configs;
-		size_t server_count = 0;
-		std::string file_content = read_file(path);
-		std::vector<std::string> tokens = tokenize(file_content);
-
-		std::vector<std::string>::const_iterator it = tokens.begin();
-		std::vector<std::string>::const_iterator end = tokens.end();
-
-		while (it != end)
+		if (*it == "server")
 		{
-			if (*it == "server")
-			{
-				Config blockInstance; // new server block
-				
-				assignKeyToValue(++it, end, blockInstance);
-				
-				configs.insert({"Server" + std::to_string(server_count++), blockInstance});
-			}
-			++it;
+			Config blockInstance; // new server block
+			
+			assignKeyToValue(++it, end, blockInstance);
+			
+			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}
-		return configs;
+		++it;
 	}
-	catch (ConfigParserException e)
-	{
-		std::cout << e.what() << std::endl;
-		exit(EXIT_FAILURE);
-	}
+	return configs;
 }
 
 // config parser specific exception

@@ -71,16 +71,23 @@ void	ServerHandler::sendResponse(size_t& i)
 	for each virtual server with the appropriate configurations */
 void	ServerHandler::setupServers()
 {
-	for (const auto& [servName, config] : _config.getConfigBlocks()) 
-	{
-		_servers.emplace_back(std::make_shared<HttpServer>(config));
+	try
+	{	
+		for (const auto& [servName, config] : _config.getConfigBlocks()) 
+		{
+			_servers.emplace_back(std::make_shared<HttpServer>(config));
+		}
+		for (const auto& server : _servers)
+		{
+			server->setupAddrinfo();
+		}
+		_serverCount = _servers.size();
 	}
-	for (const auto& server : _servers)
+	catch (ConfigParser::ConfigParserException e)
 	{
-		server->setupAddrinfo();
+		std::cout << e.what() << std::endl;
+		return;
 	}
-	_serverCount = _servers.size();
-
 	// HttpServer  serverInstance(current);
 	// serverInstance.setPorts(current.getPorts());
 	// serverInstance.setNumOfPorts(current.getNumOfPorts());
