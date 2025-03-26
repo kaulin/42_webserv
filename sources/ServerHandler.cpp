@@ -113,6 +113,7 @@ void	ServerHandler::addConnection(size_t& i) {
 		new_pollfd.revents = 0;
 		_pollFds.emplace_back(new_pollfd);
 		_clients[clientFd] = std::make_unique<t_client>();
+		_clients[clientFd]->fd = clientFd;
 	} catch (std::exception& e) {
 		_clients[clientFd]->responseCode = 500;
 		_clients[clientFd]->responseReady = true;
