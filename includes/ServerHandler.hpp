@@ -4,13 +4,18 @@
 
 class HttpServer;
 
+#define BUFFER_SIZE 1024
+
 typedef struct s_client {
 	int								fd;
 	std::string						requestString;
 	bool							requestReady;
 	std::unique_ptr<HttpRequest>	request;
+	int								fileSize;
 	int								fileReadFd;
+	int								fileTotalBytesRead;
 	int								fileWriteFd;
+	int								fileTotalBytesWritten;
 	std::string						responseString;
 	int								responseCode;
 	bool							responseReady;
