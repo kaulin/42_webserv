@@ -161,9 +161,12 @@ void	ServerHandler::processRequest(size_t& i)
 		throw;
 	}
 	
+	std::cout << "Client " << client.fd << " request method " << client.request->method << " and URI: " << client.request->uri << "\n";
+
 	if (client.request->method == "POST")
 	{
-		client.fileWriteFd()
+		std::string path = "/home/jajuntti/42/webserv/file-handling/var/www/uploads" + client.request->uri;
+		client.fileWriteFd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
 	}
 	// if (client.request->headers.find("Connection") != client.request->headers.end() 
 	// 	&& (client.request->headers["Connection"] == "keep-alive" 
