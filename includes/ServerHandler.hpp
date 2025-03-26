@@ -16,7 +16,7 @@ typedef struct s_client {
 	int								fileTotalBytesRead;
 	int								fileWriteFd;
 	int								fileTotalBytesWritten;
-	std::string						responseString;
+	std::string						responseBodyString;
 	int								responseCode;
 	bool							responseReady;
 	std::time_t						lastRequest;
