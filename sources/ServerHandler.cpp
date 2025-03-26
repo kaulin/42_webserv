@@ -4,6 +4,7 @@
 #include "Request.hpp"
 #include <memory>
 #include <csignal>
+#include <filesystem>
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -50,9 +51,9 @@ void	ServerHandler::sendResponse(size_t& i)
 	std::string response =
 		"HTTP/1.1 200 OK\r\n"
 		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Content-Length: 13\r\n"
-		"\r\n"
-		"Hello, world!";
+		"Content-Length: " + std::to_string(_clients[clientFd]->responseBodyString.length()) + "\r\n"
+		"\r\n";
+	response +=_clients[clientFd]->responseBodyString;
 	ssize_t bytes_sent;
 	std::cout << "Sending back response: " << "\n";
 	if ((bytes_sent = send(clientFd, response.c_str(), response.length(), 0)) == -1) {
@@ -163,11 +164,20 @@ void	ServerHandler::processRequest(size_t& i)
 	
 	std::cout << "Client " << client.fd << " request method " << client.request->method << " and URI: " << client.request->uri << "\n";
 
+	if (client.request->method == "GET")
+	{
+		std::string path = "var/www/html" + client.request->uri;
+		client.fileSize = std::filesystem::file_size(path);
+		client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+		std::cout << "Requested file path: " << path << ", and size of file: " << client.fileSize << "\n";
+	}
+
 	if (client.request->method == "POST")
 	{
-		std::string path = "/home/jajuntti/42/webserv/file-handling/var/www/uploads" + client.request->uri;
+		std::string path = "var/www/html" + client.request->uri;
 		client.fileSize = client.request->body.size();
 		client.fileWriteFd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
+		std::cout << "Requested file path: " << path << ", and size of file: " << client.fileSize << "\n";
 	}
 	// if (client.request->headers.find("Connection") != client.request->headers.end() 
 	// 	&& (client.request->headers["Connection"] == "keep-alive" 
@@ -209,14 +219,14 @@ void	ServerHandler::pollLoop()
 				{
 					if (_clients.find(_pollFds[i].fd) == _clients.end())
 						addConnection(i);
-					else if (_clients[_pollFds[i].fd]->fileReadFd > 0)
-						writeToFd(i);
 					else
 						readRequest(i);
 				}
 				else if (_pollFds[i].revents & POLLOUT)
 				{
-					if (_clients[_pollFds[i].fd]->fileWriteFd > 0)
+					if (_clients[_pollFds[i].fd]->fileReadFd > 0)
+						readFromFd(i);
+					else if (_clients[_pollFds[i].fd]->fileWriteFd > 0)
 						writeToFd(i);
 					else if (_clients[_pollFds[i].fd]->requestReady == true)
 						sendResponse(i);
@@ -238,19 +248,26 @@ void	ServerHandler::readFromFd(size_t& i) {
 		if (bytesRead <= 0)
 			throw std::runtime_error("Internal Server Error 500: read failed");
 		else {
-			client.responseString.append(buf, bytesRead);
+			client.responseBodyString.append(buf, bytesRead);
+			client.fileTotalBytesRead += bytesRead;
+			std::cout << "Total bytes read/file size: " << client.fileTotalBytesRead << "/" << client.fileSize << "\n";
 			if (bytesRead < BUFFER_SIZE)
 			{
+				if (client.fileTotalBytesRead != client.fileSize)
+					throw std::runtime_error("Internal Server Error 500: read failed");
 				client.responseReady = true;
-				std::cout << "Client [" << client.fd << "] response body read: " << client.responseString << "\n";
+				std::cout << "Client [" << client.fd << "] response body read: " << client.responseBodyString << "\n";
 				close(client.fileReadFd);
 				client.fileReadFd = -1;
 			}
 			else
-				_pollFds[i].events = POLL_IN;
+			{
+				std::cout << "Client [" << client.fd << "] read " << bytesRead << " bytes from disk, continuing...\n";
+				_pollFds[i].revents = POLL_OUT;
+			}
 		}
 	} catch (std::exception &e) {
-		throw;
+		throw e;
 	}
 
 }
@@ -258,16 +275,22 @@ void	ServerHandler::readFromFd(size_t& i) {
 void	ServerHandler::writeToFd(size_t& i) {
 	t_client& client = *_clients[_pollFds[i].fd].get();
 	int bytesWritten;
+	size_t leftToWrite = client.fileSize -client.fileTotalBytesWritten;
+	size_t bytesToWrite = leftToWrite > BUFFER_SIZE ? BUFFER_SIZE : leftToWrite;
 	char buf[BUFFER_SIZE] = {};
-	client.request->body.copy(buf, client.fileSize);
+	client.request->body.copy(buf, BUFFER_SIZE, client.fileTotalBytesWritten);
 
 	try {
-		bytesWritten = write(client.fileWriteFd, buf, client.fileSize);
+		bytesWritten = write(client.fileWriteFd, buf, bytesToWrite);
 		if (bytesWritten <= 0)
 			throw std::runtime_error("Internal Server Error 500: write failed");
 		else {
+			client.fileTotalBytesWritten += bytesWritten;
+			std::cout << "Total bytes written/file size: " << client.fileTotalBytesWritten << "/" << client.fileSize << "\n";
 			if (bytesWritten < BUFFER_SIZE)
 			{
+				if (client.fileTotalBytesWritten != client.fileSize)
+					throw std::runtime_error("Internal Server Error 500: write failed");
 				client.responseReady = true;
 				std::cout << "Client [" << client.fd << "] POST request resource saved to disk\n";
 				close(client.fileWriteFd);
@@ -276,7 +299,7 @@ void	ServerHandler::writeToFd(size_t& i) {
 			else
 			{
 				std::cout << "Client [" << client.fd << "] wrote " << bytesWritten << " bytes to disk, continuing...\n";
-				_pollFds[i].events = POLL_OUT;
+				_pollFds[i].revents = POLL_OUT;
 			}
 		}
 	} catch (std::exception &e) {
