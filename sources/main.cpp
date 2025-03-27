@@ -2,28 +2,28 @@
 
 int main(int argc, char **argv) 
 {
-	std::string configFilePath;
-	
-	if (argc > 2) {
-		std::cerr << "Error: Too many arguments\n";
+	if (argc > 2)
+	{
+		std::cerr << "Usage: " << std::string(argv[0]) << "[config file path]\n";
 		return 2;
 	}
 	try
 	{
+		std::string configFilePath;
 		configFilePath = (argc < 2) ? DEFAULT_CONFIG_FILE : argv[1];
 		ConfigParser::checkConfigFilePath(configFilePath);
 		ServerHandler serverHandler(configFilePath);
-			serverHandler.setupServers();
+		serverHandler.setupServers();
 		serverHandler.runServers(); // comment out when only testing config
 	}
 	catch (const ConfigParser::ConfigParserException& e)
 	{
-		std::cout << e.what() << '\n';
+		std::cout << "Error: " << e.what() << '\n';
 		return 1;
 	}
 	catch(const std::exception& e)
 	{
-		std::cerr << e.what() << '\n';
+		std::cerr << "Caught unexpected exception: " << e.what() << '\n';
 	}
 	return 0;
 }
