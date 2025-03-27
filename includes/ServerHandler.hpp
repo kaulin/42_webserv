@@ -3,6 +3,7 @@
 #include <memory>
 #include <poll.h>
 #include "ServerConfigData.hpp"
+#include "Client.hpp"
 #include "Request.hpp"
 #include "CGIHandler.hpp"
 #include "Logger.hpp"
@@ -14,30 +15,13 @@ class HttpServer;
 #define DEFAULT_CONFIG_FILE "config/default.conf"
 #define BACKLOG 10 // how many pending connections queue will hold
 
-typedef struct s_client {
-	int								fd;
-	std::string						requestString;
-	bool							requestReady;
-	std::unique_ptr<HttpRequest>	request;
-	int								fileSize;
-	int								fileReadFd;
-	int								fileTotalBytesRead;
-	int								fileWriteFd;
-	int								fileTotalBytesWritten;
-	std::string						responseBodyString;
-	int								responseCode;
-	bool							responseReady;
-	std::time_t						lastRequest;
-	bool							keep_alive;
-} t_client;
-
 class ServerHandler
 {
 private:
 	std::vector<std::shared_ptr<HttpServer>>			_servers;
 	size_t					 							_serverCount;
 	std::vector<int>									_ports;
-	std::unordered_map<int, std::unique_ptr<t_client>>	_clients;
+	std::unordered_map<int, std::unique_ptr<Client>>	_clients;
 	std::vector<struct pollfd>							_pollFds;
 	bool												_running;
 	ServerConfigData									_config;

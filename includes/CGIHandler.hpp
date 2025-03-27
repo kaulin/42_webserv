@@ -2,11 +2,10 @@
 
 #include <vector>
 #include "Request.hpp"
+#include "Client.hpp"
 
 #define READ 0
 #define WRITE 1
-
-struct	s_client;
 
 enum CGIStatus {
 	CGI_UNSET,
@@ -32,12 +31,12 @@ private:
 	// Private class methods
 	void 						closeFds(const std::vector<int> fdsToclose);
 	void 						setCGIEnv(t_CGIrequest &cgiRequest, std::vector<char *> &envp);
-	void 						handleChildProcess(t_CGIrequest request, s_client& client);
+	void 						handleChildProcess(t_CGIrequest request, Client& client);
 	void						handleParentProcess(t_CGIrequest request);
 	std::vector<std::string>	initCGIEnv(HttpRequest& request);
 public:
 	CGIHandler();
 
-	void			setupCGI(s_client& client);
-	void			runCGIScript(s_client& client);
+	void			setupCGI(Client& client);
+	void			runCGIScript(Client& client);
 };

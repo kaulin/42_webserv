@@ -49,7 +49,7 @@ void CGIHandler::setCGIEnv(t_CGIrequest &cgiRequest, std::vector<char *> &envp)
 	envp.emplace_back(nullptr);
 }
 
-void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, t_client& client)
+void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, Client& client)
 {
 	int pipedf[2] = {cgiRequest.pipe[0], cgiRequest.pipe[1]};
 	std::vector<char*> argv;
@@ -92,7 +92,7 @@ void CGIHandler::handleParentProcess(t_CGIrequest request)
 	//close(pipedf[READ]);
 }
 
-void	CGIHandler::runCGIScript(s_client& client)
+void	CGIHandler::runCGIScript(Client& client)
 {
 	t_CGIrequest request = _requests[client.fd]; // gets the client request from container
 
@@ -134,7 +134,7 @@ void	CGIHandler::runCGIScript(s_client& client)
 	}
 }
 
-void	CGIHandler::setupCGI(s_client &client)
+void	CGIHandler::setupCGI(Client &client)
 {
 	// check that the status of the client is correct
 	// add the client to the requests

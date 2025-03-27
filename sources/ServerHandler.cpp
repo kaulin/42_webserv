@@ -102,7 +102,7 @@ void	ServerHandler::addConnection(size_t& i) {
 		new_pollfd.events = POLLIN | POLLOUT;
 		new_pollfd.revents = 0;
 		_pollFds.emplace_back(new_pollfd);
-		_clients[clientFd] = std::make_unique<t_client>();
+		_clients[clientFd] = std::make_unique<Client>();
 		_clients[clientFd]->fd = clientFd;
 	} catch (std::exception& e) {
 		_clients[clientFd]->responseCode = 500;
@@ -150,7 +150,7 @@ void	ServerHandler::readRequest(size_t& i)
 
 void	ServerHandler::processRequest(size_t& i) 
 {
-	t_client& client = *_clients[_pollFds[i].fd].get();
+	Client& client = *_clients[_pollFds[i].fd].get();
 	HttpRequestParser requestParser;
 	client.request = std::make_unique<HttpRequest>();
 	
@@ -253,7 +253,7 @@ void	ServerHandler::pollLoop()
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
-	t_client& client = *_clients[_pollFds[i].fd].get();
+	Client& client = *_clients[_pollFds[i].fd].get();
 	int bytesRead;
 	char buf[BUFFER_SIZE] = {};
 
@@ -287,7 +287,7 @@ void	ServerHandler::readFromFd(size_t& i) {
 }
 
 void	ServerHandler::writeToFd(size_t& i) {
-	t_client& client = *_clients[_pollFds[i].fd].get();
+	Client& client = *_clients[_pollFds[i].fd].get();
 	int bytesWritten;
 	size_t leftToWrite = client.fileSize -client.fileTotalBytesWritten;
 	size_t bytesToWrite = leftToWrite > BUFFER_SIZE ? BUFFER_SIZE : leftToWrite;
