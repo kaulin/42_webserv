@@ -119,8 +119,5 @@ bool HttpRequestParser::parseRequest(const std::string& raw_request, HttpRequest
 		std::string body_part = raw_request.substr(body_start);
 		parseBody(body_part, request);
 	}
-	std::cout << "request uri: " << request.uri << std::endl;
-	std::cout << "request uriQuery: " << request.uriQuery << std::endl;
-	std::cout << "request uriPath: " << request.uriPath << std::endl;
 	return true;
 }
