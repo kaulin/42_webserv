@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <unordered_map> // is this ok? Webserv subject didn't say anything about containers.
+#include <unordered_map>
 
 // Struct to hold the request lines
 struct HttpRequest
@@ -10,7 +10,7 @@ struct HttpRequest
 	std::string uri;										// e.g. "/index.html"
 	std::string httpVersion;								// e.g. "HTTP/1.1"
 	std::unordered_map<std::string, std::string> headers;	// Header fields
-	std::string body;										// Request body for POST (or PUT) requests
+	std::string body;									// Request body for POST (or PUT) requests
 };
 
 // The http request parser class

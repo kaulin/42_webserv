@@ -9,14 +9,16 @@
 #define BACKLOG 10 // how many pending connections queue will hold
 
 ServerHandler::ServerHandler(std::string path) : 
-	_config(ServerConfigData(path)), _fileLogger("test_log.txt"), _consoleLogger(std::cout)
+	_config(ServerConfigData(path)), _fileLogger("test_log.txt"), _consoleLogger(std::cout),
+	_CGIHandler(CGIHandler())
 {
 	_serverCount = _config.getServerCount();
 	_servers.reserve(_serverCount);
-	_ports.reserve(_config.getServerCount());
-	_pollFds.reserve(_config.getServerCount()); // reserves space for ports
+	_ports.reserve(_serverCount);
+	_pollFds.reserve(_serverCount); // reserves space for ports
 	_running = false;
-	std::cout << "Constructor Size of pollfd list: " << _pollFds.size() << "\n";
+
+	std::cout << "Constructor Size of pollfd list: " << _pollFds.capacity() << "\n";
 }
 
 ServerHandler::~ServerHandler() 
@@ -81,11 +83,6 @@ void	ServerHandler::setupServers()
 		server->setupAddrinfo();
 	}
 	_serverCount = _servers.size();
-	// HttpServer  serverInstance(current);
-	// serverInstance.setPorts(current.getPorts());
-	// serverInstance.setNumOfPorts(current.getNumOfPorts());
-	// serverInstance.setupAddrinfo();
-	// _servers.push_back(serverInstance);
 }
 
 void	ServerHandler::addConnection(size_t& i) {
@@ -149,6 +146,18 @@ void	ServerHandler::readRequest(size_t& i)
 		closeConnection(i);
 		throw;
 	}
+	if (1) // for testing CGI -- if request is to cgi-path
+	{
+		// For testing
+		std::cout << "Request headers\n";
+		
+		for (const auto &it : _clients[clientFd]->request->headers)
+		{
+			std::cout << it.first << " " << it.second << "\n";
+		}
+		_CGIHandler.setupCGI(*_clients[clientFd]);
+		_CGIHandler.runCGIScript(*_clients[clientFd]);
+	}
 }
 
 void	ServerHandler::processRequest(size_t& i) 
@@ -193,11 +202,12 @@ void	ServerHandler::setPollList()
 	_pollFds.resize(_serverCount);
 	for (auto& server : _servers)
 	{		
-		int listen_sockfd = server->getListenSockfd();
-		_pollFds[i].fd = listen_sockfd;
+		int listenSockfd = server->getListenSockfd();
+		_pollFds[i].fd = listenSockfd;
 		_pollFds[i].events = POLLIN;
 		i++;
 	}
+	// for testing
 	for (auto& poll_obj : _pollFds) 
 	{
 		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
@@ -216,12 +226,14 @@ void	ServerHandler::pollLoop()
 				error_and_exit("Poll failed");
 			for(size_t i = 0; i < _pollFds.size(); i++)
 			{
-				if (_pollFds[i].revents & POLLIN)
+				if (_pollFds[i].revents & POLLIN) 
 				{
 					if (_clients.find(_pollFds[i].fd) == _clients.end())
 						addConnection(i);
 					else
+					{
 						readRequest(i);
+					}
 				}
 				else if (_pollFds[i].revents & POLLOUT)
 				{
@@ -322,13 +334,5 @@ void	ServerHandler::runServers()
 
 	_running = true;
 	pollLoop();
-	cleanupServers();
-}
-
-void	ServerHandler::printPollFds()
-{
-	for (auto& poll_obj : _pollFds) 
-	{
-		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
-	}
+	// cleanupServers();
 }

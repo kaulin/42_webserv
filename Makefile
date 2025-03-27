@@ -11,7 +11,8 @@ SOURCES				:= main.cpp \
 						ServerHandler.cpp \
 						Request.cpp \
 						Response.cpp \
-						Logger.cpp  
+						Logger.cpp \
+						CGIHandler.cpp
 						
 VPATH				+= sources/ sources/Config/
 
@@ -22,7 +23,7 @@ OBJECT_PATHS		:= $(addprefix $(OBJECT_DIRECTORY), $(OBJECTS))
 
 # Includes
 INCLUDE_DIRECTORY	:= includes/
-INCLUDES			:= webserv.hpp Request.hpp Response.hpp HttpServer.hpp ServerHandler.hpp
+INCLUDES			:= webserv.hpp Request.hpp Response.hpp HttpServer.hpp ServerHandler.hpp CGIHandler.hpp
 
 INCLUDE_PATHS		:= $(addprefix $(INCLUDE_DIRECTORY), $(INCLUDES))
 INCLUDE_FLAGS		:= -I includes/

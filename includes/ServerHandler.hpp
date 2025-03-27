@@ -1,6 +1,7 @@
 #pragma once
 #include "webserv.hpp"
 #include "Request.hpp"
+#include "CGIHandler.hpp"
 
 class HttpServer;
 
@@ -21,6 +22,9 @@ typedef struct s_client {
 	bool							responseReady;
 	std::time_t						lastRequest;
 	bool							keep_alive;
+
+	// For CGI handling
+	std::shared_ptr<CGIHandler>	clientCGI;
 } t_client;
 
 class ServerHandler
@@ -35,7 +39,7 @@ private:
 	ServerConfigData									_config;
 	Logger												_fileLogger;
 	Logger												_consoleLogger;
-
+	CGIHandler											_CGIHandler;
 	void	readFromFd(size_t& i);
 	void	writeToFd(size_t& i);
 public:
@@ -53,9 +57,8 @@ public:
 	void		processRequest(size_t& i);
 	void		sendResponse(size_t& i);
 	void		cleanupServers();
+	
 	static void	signalHandler(int);
-
-	void	printPollFds();
 
 	// Helper functions for debugging
 	// void	*get_in_addr(struct sockaddr *sa);
