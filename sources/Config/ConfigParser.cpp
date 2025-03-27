@@ -68,6 +68,24 @@ std::string trim(const std::string &str)
 	return str.substr(first, last - first + 1);
 }
 
+// helper function to validate port
+bool isValidPort(const std::string &port)
+{
+	int num;
+	try
+	{
+		num = std::stoi(port);
+	}
+	catch (const std::out_of_range&)
+	{
+		throw ConfigParser::ConfigParserException("Config: Int overflow in port.");
+	}
+	std::string::const_iterator it = port.begin();
+    while (it != port.end() && std::isdigit(*it))
+		++it;
+    return !port.empty() && it == port.end();
+}
+
 // helper function to validate IP address
 bool isValidIP(const std::string &ip)
 {
@@ -89,28 +107,23 @@ bool isValidIP(const std::string &ip)
 }
 
 // helper function to convert orders of magnitude if client max body size is presented in kilobytes, megabytes or gigabytes
-int convertMaxClientSize(std::string number)
+size_t convertMaxClientSize(const std::string& number)
 {
-	char	magnitude = number.back();
-	size_t	mult = 1024;
-	int		pow;
+    char magnitude = number.back();
+    size_t mult = 1;
 
-	if (magnitude == 'K' || magnitude == 'k')
-		return mult;
-	else if (magnitude == 'M' || magnitude == 'm')
-	{
-		for (pow = 1; pow > 0; --pow)
-			mult *= mult;
-	}
-	else if (magnitude == 'G' || magnitude == 'g')
-	{
-		for (pow = 2; pow > 0; --pow)
-			mult *= mult;
-	}
-	else
-		mult = 1;
-	return mult;
+    if (magnitude == 'K' || magnitude == 'k')
+        mult = 1024;
+    else if (magnitude == 'M' || magnitude == 'm')
+        mult = 1024 * 1024;
+    else if (magnitude == 'G' || magnitude == 'g')
+        mult = 1024 * 1024 * 1024;
+    else if (!std::isdigit(magnitude))
+        throw std::invalid_argument("Invalid client max body size suffix");
+
+    return mult;
 }
+
 
 // function to read file, remove comments, return string
 std::string ConfigParser::read_file(std::string path)
@@ -131,8 +144,7 @@ std::string ConfigParser::read_file(std::string path)
 	
 	if (!file.is_open())
 	{
-		std::cerr << "Error: Could not open file " << path << std::endl;
-		exit (1);
+		ConfigParserException("Config: Could not open config file.");
 	}
 	
 	while (std::getline(file, line))
@@ -178,10 +190,12 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 		if (previous == "host")
 		{
 			if (!isValidIP(token))
-			{
-				std::cerr << "Error: Invalid IP format: " << token << std::endl;
-				return {};
-			}
+				throw ConfigParserException("Config: Invalid host IP address.");
+		}
+		if (previous == "port")
+		{
+			if (!isValidPort(token))
+				throw ConfigParserException("Config: Invalid port.");
 		}
 		if (previous == "error_page")
 		{
@@ -205,10 +219,7 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 	while (it != end && *it != "{")
 	++it;
 	if (it == end)
-	{
-		std::cerr << "Error: Missing '{' in config block.\n";
-		return;
-	}
+		throw ConfigParserException("Config: Missing '{' in config block.");
 	++it; // step over bracket
 
 	// content starts here
@@ -262,8 +273,19 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 					mult = convertMaxClientSize(number);
 					number.pop_back();
 				}
-				blockInstance._cli_max_bodysize = std::stoul(number) * mult;
-				++it; break;
+				size_t bodySize;
+				try
+				{
+					bodySize = std::stoul(number);
+				}
+				catch (const std::out_of_range&)
+				{
+					throw ConfigParserException("Config: Max client body size overflow.");
+				}
+				if (bodySize > SIZE_MAX / mult)
+					throw ConfigParserException("Config: Max client body size overflow.");
+				blockInstance._cli_max_bodysize = bodySize * mult;
+				++it; break; 
 			}
 			case ConfigKey::UNKNOWN:
 				break; // default handling
@@ -276,10 +298,10 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 void	ConfigParser::checkConfigFilePath(std::string path)
 {
 	if (path.empty()) {
-		throw std::runtime_error("Error: No file path provided");
+		throw ConfigParserException("Config: No file path provided.");
 	}
 	if (path.find(".conf") == std::string::npos) {
-		throw std::runtime_error("Error: Invalid file path");
+		throw ConfigParserException("Config: Invalid file path.");
 	}
 }
 
@@ -305,6 +327,16 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 		}
 		++it;
 	}
-	//testPrintConfigs(configs); // Remnant of initial testing? Delete before submission.
 	return configs;
+}
+
+// config parser specific exception
+ConfigParser::ConfigParserException::ConfigParserException(const char *msg) : _message(msg) {}
+
+const char* ConfigParser::ConfigParserException::what() const throw()
+{
+	if (_message)
+		return _message;
+	else
+		return "Error: Config parser exception.";
 }

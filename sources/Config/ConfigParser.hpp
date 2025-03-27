@@ -56,4 +56,13 @@ public:
 	static std::string						read_file(std::string path);
 	static std::vector<std::string>			tokenize(std::string &file_content);
 	static void								assignKeyToValue(std::vector<std::string>::const_iterator &it, std::vector<std::string>::const_iterator &end, Config &blockInstance);
+
+	class ConfigParserException : public std::exception
+		{
+			private:
+				const char *_message;
+			public:
+				ConfigParserException(const char * msg);
+				const char* what() const throw();
+		};
 };
