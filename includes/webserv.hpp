@@ -21,25 +21,21 @@
 # include <memory>
 #include <utility>
 
-# define DEFAULT_CONFIG_FILE "config/default.conf"
-
-# define BACKLOG 10 // how many pending connections queue will hold
-
 // #include "HttpServer.hpp"
 // #include "ConfigParser.hpp"
 // #include "ServerConfigData.hpp"
 // #include "ServerHandler.hpp"
 
-// ------------ testing with relative paths ---------------
-#include "Logger.hpp"
-#include "../sources/Config/ConfigParser.hpp"
-#include "../sources/Config/ServerConfigData.hpp"
-// #include "ServerConfigData.hpp"
+// // ------------ testing with relative paths ---------------
+// #include "Logger.hpp"
 // #include "ConfigParser.hpp"
-#include "../sources/Config/LocationParser.hpp"
-#include "HttpServer.hpp"
-#include "ServerHandler.hpp"
-#include "CGIHandler.hpp"
+// #include "ServerConfigData.hpp"
+// // #include "ServerConfigData.hpp"
+// // #include "ConfigParser.hpp"
+// #include "LocationParser.hpp"
+// #include "HttpServer.hpp"
+// #include "ServerHandler.hpp"
+// #include "CGIHandler.hpp"
 
 
 #endif

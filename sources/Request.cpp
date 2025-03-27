@@ -1,7 +1,7 @@
 #include <sstream>
 #include <iostream>
 #include <cctype>
-#include "../includes/Request.hpp"
+#include "Request.hpp"
 
 // Helper function to trim whitespace
 std::string trimWhitespace(const std::string& str)
@@ -42,7 +42,7 @@ bool HttpRequestParser::parseRequestLine(const std::string& request_line, HttpRe
 	// Validate HTTP version (optional, for simplicity let's assume only HTTP/1.1 for now)
 	if (request.httpVersion != "HTTP/1.1" && request.httpVersion != "HTTP/1.0")
 		return false;  // Invalid HTTP version
-		
+
 	return true;
 }
 

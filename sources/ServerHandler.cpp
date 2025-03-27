@@ -1,10 +1,10 @@
-#include "webserv.hpp"
-#include "ServerHandler.hpp"
-#include "HttpServer.hpp"
-#include "Request.hpp"
 #include <memory>
 #include <csignal>
 #include <filesystem>
+#include <sys/socket.h>
+#include "ServerHandler.hpp"
+#include "HttpServer.hpp"
+#include "Request.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -146,18 +146,6 @@ void	ServerHandler::readRequest(size_t& i)
 		closeConnection(i);
 		throw;
 	}
-	if (1) // for testing CGI -- if request is to cgi-path
-	{
-		// For testing
-		std::cout << "Request headers\n";
-		
-		for (const auto &it : _clients[clientFd]->request->headers)
-		{
-			std::cout << it.first << " " << it.second << "\n";
-		}
-		_CGIHandler.setupCGI(*_clients[clientFd]);
-		_CGIHandler.runCGIScript(*_clients[clientFd]);
-	}
 }
 
 void	ServerHandler::processRequest(size_t& i) 
@@ -193,6 +181,19 @@ void	ServerHandler::processRequest(size_t& i)
 	// 	&& (client.request->headers["Connection"] == "keep-alive" 
 	// 	|| client.request->headers["Connection"] == "Keep-Alive"))
 	// 	client.keep_alive = true;
+
+	if (client.request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
+	{
+		// For testing
+		std::cout << "Request headers\n";
+		
+		for (const auto &it : client.request->headers)
+		{
+			std::cout << it.first << " " << it.second << "\n";
+		}
+		_CGIHandler.setupCGI(client);
+		_CGIHandler.runCGIScript(client);
+	}
 }
 
 void	ServerHandler::setPollList()
