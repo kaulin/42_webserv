@@ -4,6 +4,7 @@
 #include "Request.hpp"
 #include <memory>
 #include <csignal>
+#include <filesystem>
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -50,9 +51,9 @@ void	ServerHandler::sendResponse(size_t& i)
 	std::string response =
 		"HTTP/1.1 200 OK\r\n"
 		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Content-Length: 13\r\n"
-		"\r\n"
-		"Hello, world!";
+		"Content-Length: " + std::to_string(_clients[clientFd]->responseBodyString.length()) + "\r\n"
+		"\r\n";
+	response +=_clients[clientFd]->responseBodyString;
 	ssize_t bytes_sent;
 	std::cout << "Sending back response: " << "\n";
 	if ((bytes_sent = send(clientFd, response.c_str(), response.length(), 0)) == -1) {
@@ -71,29 +72,22 @@ void	ServerHandler::sendResponse(size_t& i)
 	for each virtual server with the appropriate configurations */
 void	ServerHandler::setupServers()
 {
-	try
-	{	
-		for (const auto& [servName, config] : _config.getConfigBlocks()) 
-		{
-			_servers.emplace_back(std::make_shared<HttpServer>(config));
-		}
-		for (const auto& server : _servers)
-		{
-			server->setupAddrinfo();
-		}
-		_serverCount = _servers.size();
-	}
-	catch (ConfigParser::ConfigParserException e)
+	for (const auto& [servName, config] : _config.getConfigBlocks()) 
 	{
-		std::cout << e.what() << std::endl;
-		return;
+		_servers.emplace_back(std::make_shared<HttpServer>(config));
 	}
+	for (const auto& server : _servers)
+	{
+		server->setupAddrinfo();
+	}
+	_serverCount = _servers.size();
 	// HttpServer  serverInstance(current);
 	// serverInstance.setPorts(current.getPorts());
 	// serverInstance.setNumOfPorts(current.getNumOfPorts());
 	// serverInstance.setupAddrinfo();
 	// _servers.push_back(serverInstance);
 }
+
 void	ServerHandler::addConnection(size_t& i) {
 	int clientFd;
 	socklen_t addrlen;
@@ -112,6 +106,7 @@ void	ServerHandler::addConnection(size_t& i) {
 		new_pollfd.revents = 0;
 		_pollFds.emplace_back(new_pollfd);
 		_clients[clientFd] = std::make_unique<t_client>();
+		_clients[clientFd]->fd = clientFd;
 	} catch (std::exception& e) {
 		_clients[clientFd]->responseCode = 500;
 		_clients[clientFd]->responseReady = true;
@@ -132,17 +127,17 @@ void	ServerHandler::readRequest(size_t& i)
 {
 	int clientFd = _pollFds[i].fd;
 	int receivedBytes;
-	char buf[1024] = {};
+	char buf[BUFFER_SIZE] = {};
 
 	try {
-		receivedBytes = recv(clientFd, buf, 1024, 0);
+		receivedBytes = recv(clientFd, buf, BUFFER_SIZE, 0);
 		if (receivedBytes < 0)
 			throw std::runtime_error("Internal Server Error 500: recv failed");
 		else if (receivedBytes == 0)
 			closeConnection(i);
 		else {
 			_clients[clientFd]->requestString.append(buf, receivedBytes);
-			if (receivedBytes < 1024) { // whole request read
+			if (receivedBytes < BUFFER_SIZE) { // whole request read
 				_clients[clientFd]->requestReady = true;
 				std::cout << "Client [" << clientFd << "] request ready: " << _clients[clientFd]->requestString << "\n";
 				processRequest(i);
@@ -168,6 +163,23 @@ void	ServerHandler::processRequest(size_t& i)
 		throw;
 	}
 	
+	std::cout << "Client " << client.fd << " request method " << client.request->method << " and URI: " << client.request->uri << "\n";
+
+	if (client.request->method == "GET")
+	{
+		std::string path = "var/www/html" + client.request->uri;
+		client.fileSize = std::filesystem::file_size(path);
+		client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+		std::cout << "Requested file path: " << path << ", and size of file: " << client.fileSize << "\n";
+	}
+
+	if (client.request->method == "POST")
+	{
+		std::string path = "var/www/html" + client.request->uri;
+		client.fileSize = client.request->body.size();
+		client.fileWriteFd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
+		std::cout << "Requested file path: " << path << ", and size of file: " << client.fileSize << "\n";
+	}
 	// if (client.request->headers.find("Connection") != client.request->headers.end() 
 	// 	&& (client.request->headers["Connection"] == "keep-alive" 
 	// 	|| client.request->headers["Connection"] == "Keep-Alive"))
@@ -200,25 +212,99 @@ void	ServerHandler::pollLoop()
 	while (_running)
 	{
 		try {
-			if ((poll_count = poll(_pollFds.data(), _pollFds.size(), -1)) == -1) {
+			if ((poll_count = poll(_pollFds.data(), _pollFds.size(), -1)) == -1)
 				error_and_exit("Poll failed");
-			}
 			for(size_t i = 0; i < _pollFds.size(); i++)
 			{
-				if (_pollFds[i].revents & POLLIN) {
+				if (_pollFds[i].revents & POLLIN)
+				{
 					if (_clients.find(_pollFds[i].fd) == _clients.end())
-					{
 						addConnection(i);
-					}
 					else
 						readRequest(i);
 				}
-				else if (_pollFds[i].revents & POLLOUT && _clients[_pollFds[i].fd]->requestReady == true)
-					sendResponse(i);
+				else if (_pollFds[i].revents & POLLOUT)
+				{
+					if (_clients[_pollFds[i].fd]->fileReadFd > 0)
+						readFromFd(i);
+					else if (_clients[_pollFds[i].fd]->fileWriteFd > 0)
+						writeToFd(i);
+					else if (_clients[_pollFds[i].fd]->requestReady == true)
+						sendResponse(i);
+				}
 			}
 		} catch (std::exception& e) {
 // Errors should be handled lower down and rethrown to be caught here.
 		}
+	}
+}
+
+void	ServerHandler::readFromFd(size_t& i) {
+	t_client& client = *_clients[_pollFds[i].fd].get();
+	int bytesRead;
+	char buf[BUFFER_SIZE] = {};
+
+	try {
+		bytesRead = read(client.fileReadFd, buf, BUFFER_SIZE);
+		if (bytesRead <= 0)
+			throw std::runtime_error("Internal Server Error 500: read failed");
+		else {
+			client.responseBodyString.append(buf, bytesRead);
+			client.fileTotalBytesRead += bytesRead;
+			std::cout << "Total bytes read/file size: " << client.fileTotalBytesRead << "/" << client.fileSize << "\n";
+			if (bytesRead < BUFFER_SIZE)
+			{
+				if (client.fileTotalBytesRead != client.fileSize)
+					throw std::runtime_error("Internal Server Error 500: read failed");
+				client.responseReady = true;
+				std::cout << "Client [" << client.fd << "] response body read: " << client.responseBodyString << "\n";
+				close(client.fileReadFd);
+				client.fileReadFd = -1;
+			}
+			else
+			{
+				std::cout << "Client [" << client.fd << "] read " << bytesRead << " bytes from disk, continuing...\n";
+				_pollFds[i].revents = POLL_OUT;
+			}
+		}
+	} catch (std::exception &e) {
+		throw e;
+	}
+
+}
+
+void	ServerHandler::writeToFd(size_t& i) {
+	t_client& client = *_clients[_pollFds[i].fd].get();
+	int bytesWritten;
+	size_t leftToWrite = client.fileSize -client.fileTotalBytesWritten;
+	size_t bytesToWrite = leftToWrite > BUFFER_SIZE ? BUFFER_SIZE : leftToWrite;
+	char buf[BUFFER_SIZE] = {};
+	client.request->body.copy(buf, BUFFER_SIZE, client.fileTotalBytesWritten);
+
+	try {
+		bytesWritten = write(client.fileWriteFd, buf, bytesToWrite);
+		if (bytesWritten <= 0)
+			throw std::runtime_error("Internal Server Error 500: write failed");
+		else {
+			client.fileTotalBytesWritten += bytesWritten;
+			std::cout << "Total bytes written/file size: " << client.fileTotalBytesWritten << "/" << client.fileSize << "\n";
+			if (bytesWritten < BUFFER_SIZE)
+			{
+				if (client.fileTotalBytesWritten != client.fileSize)
+					throw std::runtime_error("Internal Server Error 500: write failed");
+				client.responseReady = true;
+				std::cout << "Client [" << client.fd << "] POST request resource saved to disk\n";
+				close(client.fileWriteFd);
+				client.fileWriteFd = -1;
+			}
+			else
+			{
+				std::cout << "Client [" << client.fd << "] wrote " << bytesWritten << " bytes to disk, continuing...\n";
+				_pollFds[i].revents = POLL_OUT;
+			}
+		}
+	} catch (std::exception &e) {
+		throw e;
 	}
 }
 
