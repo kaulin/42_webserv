@@ -72,29 +72,22 @@ void	ServerHandler::sendResponse(size_t& i)
 	for each virtual server with the appropriate configurations */
 void	ServerHandler::setupServers()
 {
-	try
-	{	
-		for (const auto& [servName, config] : _config.getConfigBlocks()) 
-		{
-			_servers.emplace_back(std::make_shared<HttpServer>(config));
-		}
-		for (const auto& server : _servers)
-		{
-			server->setupAddrinfo();
-		}
-		_serverCount = _servers.size();
-	}
-	catch (ConfigParser::ConfigParserException e)
+	for (const auto& [servName, config] : _config.getConfigBlocks()) 
 	{
-		std::cout << e.what() << std::endl;
-		return;
+		_servers.emplace_back(std::make_shared<HttpServer>(config));
 	}
+	for (const auto& server : _servers)
+	{
+		server->setupAddrinfo();
+	}
+	_serverCount = _servers.size();
 	// HttpServer  serverInstance(current);
 	// serverInstance.setPorts(current.getPorts());
 	// serverInstance.setNumOfPorts(current.getNumOfPorts());
 	// serverInstance.setupAddrinfo();
 	// _servers.push_back(serverInstance);
 }
+
 void	ServerHandler::addConnection(size_t& i) {
 	int clientFd;
 	socklen_t addrlen;
