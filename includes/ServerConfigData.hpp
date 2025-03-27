@@ -1,6 +1,6 @@
 #pragma once
 
-#include "webserv.hpp"
+#include <unordered_map>
 #include <map>
 #include <vector>
 #include <string>
@@ -21,7 +21,6 @@ struct Config {
 	std::vector<std::string>					_names;
 	std::string									_port;
 	std::unordered_map<std::string, Location>	_location;
-	size_t										_num_of_ports;
 	size_t										_cli_max_bodysize;
 	std::map<int, std::string>					_default_pages;
 	std::vector<std::string>					_error_pages;

@@ -1,10 +1,8 @@
 #pragma once
 
-#include "webserv.hpp"
-#include "ServerConfigData.hpp"
 #include <vector>
 #include <unordered_map>
-#include <unordered_map>
+#include "ServerConfigData.hpp"
 
 enum LocationConfigKey {
 	METHODS,

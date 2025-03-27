@@ -1,7 +1,9 @@
-#include "webserv.hpp"
-#include "../includes/CGIHandler.hpp"
-#include "../includes/Request.hpp"
+#include <sys/wait.h>
+#include <exception>
+#include <iostream>
+#include "ServerHandler.hpp"
 #include "CGIHandler.hpp"
+#include "Request.hpp"
 
 CGIHandler::CGIHandler()
 {
@@ -11,7 +13,7 @@ CGIHandler::CGIHandler()
 
 void CGIHandler::closeFds(const std::vector<int> fdsToclose)
 {
-    for (const auto & fd : fdsToclose)
+	for (const auto & fd : fdsToclose)
 	{
 		close(fd);
 	}
@@ -38,13 +40,13 @@ std::vector<std::string>	CGIHandler::initCGIEnv(HttpRequest& request) // takes r
 
 void CGIHandler::setCGIEnv(t_CGIrequest &cgiRequest, std::vector<char *> &envp)
 {
-    std::cout << "Setting cgi env\n";
-    for (const auto &var : cgiRequest.CGIEnv)
-    {
-        std::cout << var << "\n";
-        envp.emplace_back(const_cast<char *>(var.c_str()));
-    }
-    envp.emplace_back(nullptr);
+	std::cout << "Setting cgi env\n";
+	for (const auto &var : cgiRequest.CGIEnv)
+	{
+		std::cout << var << "\n";
+		envp.emplace_back(const_cast<char *>(var.c_str()));
+	}
+	envp.emplace_back(nullptr);
 }
 
 void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, t_client& client)
@@ -58,17 +60,17 @@ void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, t_client& client)
 	if (dup2(pipedf[WRITE], STDOUT_FILENO) == -1)
 	{
 		closeFds({client.fd, pipedf[WRITE]});
-        std::exit(EXIT_FAILURE);
+		std::exit(EXIT_FAILURE);
 	}
 	
 	close(pipedf[READ]); // Closes parent end of pipe
 	close(pipedf[WRITE]); // Closes (already dupped) write end of pipe
 
-    setCGIEnv(cgiRequest, envp);
+	setCGIEnv(cgiRequest, envp);
 	argv.emplace_back(const_cast<char *>(cgiRequest.CGIPath.c_str()));
 	argv.emplace_back(nullptr);
 
-    std::cout << "Child executing path: " << cgiRequest.CGIPath << "\n";
+	std::cout << "Child executing path: " << cgiRequest.CGIPath << "\n";
 	execve(cgiRequest.CGIPath.c_str(), argv.data(), envp.data());
 
 	throw::std::runtime_error("Child: Execve failed");
@@ -124,7 +126,7 @@ void	CGIHandler::runCGIScript(s_client& client)
 		}
 
 		// send response to client and close
-		client.responseString = request.output;
+		client.responseBodyString = request.output;
 	}
 	else if (_requests[client.fd].status == CGI_ERROR)
 	{

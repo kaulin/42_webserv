@@ -1,8 +1,8 @@
-#include "webserv.hpp"
 #include "LocationParser.hpp"
 #include <tuple>
 #include <regex>
 #include <utility>
+#include <iostream>
 
 std::string	LocationParser::set_location_path(std::vector<std::string>::const_iterator &it)
 {

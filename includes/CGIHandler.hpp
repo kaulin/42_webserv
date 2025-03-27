@@ -1,8 +1,7 @@
 #pragma once
 
-#include "webserv.hpp"
+#include <vector>
 #include "Request.hpp"
-#include "ServerHandler.hpp"
 
 #define READ 0
 #define WRITE 1
@@ -31,10 +30,10 @@ private:
 	std::unordered_map<int, t_CGIrequest>	_requests; // limit to 10
 
 	// Private class methods
-    void 						closeFds(const std::vector<int> fdsToclose);
-    void 						setCGIEnv(t_CGIrequest &cgiRequest, std::vector<char *> &envp);
-    void 						handleChildProcess(t_CGIrequest request, s_client& client);
-    void						handleParentProcess(t_CGIrequest request);
+	void 						closeFds(const std::vector<int> fdsToclose);
+	void 						setCGIEnv(t_CGIrequest &cgiRequest, std::vector<char *> &envp);
+	void 						handleChildProcess(t_CGIrequest request, s_client& client);
+	void						handleParentProcess(t_CGIrequest request);
 	std::vector<std::string>	initCGIEnv(HttpRequest& request);
 public:
 	CGIHandler();

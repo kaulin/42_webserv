@@ -7,11 +7,9 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include "webserv.hpp"
 #include "ServerConfigData.hpp"
 #include <algorithm>
 #include <regex>
-#include "../../includes/webserv.hpp" //testing with relative path
 
 class ServerConfigData;
 

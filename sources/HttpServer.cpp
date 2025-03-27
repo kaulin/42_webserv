@@ -1,5 +1,15 @@
-#include "webserv.hpp"
 #include "HttpServer.hpp"
+#include <sys/wait.h>
+#include <sys/select.h>
+#include <iostream>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <cstring>
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -9,7 +19,7 @@ HttpServer::HttpServer(Config serverData)
 	_sockFd = -1;
 	_settings = serverData;
 	std::cout << "Created new virtual server instance\n";
-} 
+}
 
 HttpServer::~HttpServer()
 {

@@ -1,4 +1,3 @@
-#include "webserv.hpp"
 #include "LocationParser.hpp"
 #include "ConfigParser.hpp"
 #include <filesystem>
@@ -18,7 +17,6 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
 		std::cout << config.second._port << " ";
 		std::cout << "\n";
 		
-		std::cout << "Number of Ports: " << config.second._num_of_ports << "\n";
 		std::cout << "Client Max Body Size: " << config.second._cli_max_bodysize << "\n";
 		
 		std::cout << "Default Pages:\n";
@@ -78,9 +76,9 @@ bool isValidPort(const std::string &port)
 		throw ConfigParser::ConfigParserException("Config: Int overflow in port.");
 	}
 	std::string::const_iterator it = port.begin();
-    while (it != port.end() && std::isdigit(*it))
+	while (it != port.end() && std::isdigit(*it))
 		++it;
-    return !port.empty() && it == port.end();
+	return !port.empty() && it == port.end();
 }
 
 // helper function to validate IP address
@@ -106,19 +104,19 @@ bool isValidIP(const std::string &ip)
 // helper function to convert orders of magnitude if client max body size is presented in kilobytes, megabytes or gigabytes
 size_t convertMaxClientSize(const std::string& number)
 {
-    char magnitude = number.back();
-    size_t mult = 1;
+	char magnitude = number.back();
+	size_t mult = 1;
 
-    if (magnitude == 'K' || magnitude == 'k')
-        mult = 1024;
-    else if (magnitude == 'M' || magnitude == 'm')
-        mult = 1024 * 1024;
-    else if (magnitude == 'G' || magnitude == 'g')
-        mult = 1024 * 1024 * 1024;
-    else if (!std::isdigit(magnitude))
-        throw std::invalid_argument("Invalid client max body size suffix");
+	if (magnitude == 'K' || magnitude == 'k')
+		mult = 1024;
+	else if (magnitude == 'M' || magnitude == 'm')
+		mult = 1024 * 1024;
+	else if (magnitude == 'G' || magnitude == 'g')
+		mult = 1024 * 1024 * 1024;
+	else if (!std::isdigit(magnitude))
+		throw std::invalid_argument("Invalid client max body size suffix");
 
-    return mult;
+	return mult;
 }
 
 

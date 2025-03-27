@@ -1,11 +1,18 @@
 #pragma once
-#include "webserv.hpp"
+#include <ctime>
+#include <memory>
+#include <poll.h>
+#include "ServerConfigData.hpp"
 #include "Request.hpp"
 #include "CGIHandler.hpp"
+#include "Logger.hpp"
 
 class HttpServer;
+// class CGIHandler;
 
 #define BUFFER_SIZE 1024
+#define DEFAULT_CONFIG_FILE "config/default.conf"
+#define BACKLOG 10 // how many pending connections queue will hold
 
 typedef struct s_client {
 	int								fd;
@@ -22,9 +29,6 @@ typedef struct s_client {
 	bool							responseReady;
 	std::time_t						lastRequest;
 	bool							keep_alive;
-
-	// For CGI handling
-	std::shared_ptr<CGIHandler>	clientCGI;
 } t_client;
 
 class ServerHandler
