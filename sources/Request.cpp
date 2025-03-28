@@ -39,6 +39,14 @@ bool HttpRequestParser::parseRequestLine(const std::string& request_line, HttpRe
 	if (request.method != "GET" && request.method != "POST" && request.method != "DELETE")
 		return false;  // Unsupported HTTP method
 
+	request.uriPath = request.uri;
+	size_t delimiter = request.uri.find("?");
+	if (delimiter != std::string::npos)
+	{
+		request.uriPath = request.uri.substr(0, delimiter);
+		request.uriQuery = request.uri.substr(delimiter + 1);
+	}
+
 	// Validate HTTP version (optional, for simplicity let's assume only HTTP/1.1 for now)
 	if (request.httpVersion != "HTTP/1.1" && request.httpVersion != "HTTP/1.0")
 		return false;  // Invalid HTTP version
