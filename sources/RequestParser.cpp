@@ -1,7 +1,7 @@
 #include <sstream>
 #include <iostream>
 #include <cctype>
-#include "Request.hpp"
+#include "RequestParser.hpp"
 
 // Helper function to trim whitespace
 std::string trimWhitespace(const std::string& str)
@@ -15,14 +15,8 @@ std::string trimWhitespace(const std::string& str)
 	return str.substr(start, end - start + 1);
 }
 
-// Default constructor
-HttpRequestParser::HttpRequestParser() {}
-
-// Default destructor
-HttpRequestParser::~HttpRequestParser() {}
-
 // Function to parse the request line (e.g., "GET /index.html HTTP/1.1")
-bool HttpRequestParser::parseRequestLine(const std::string& request_line, HttpRequest& request)
+bool RequestParser::parseRequestLine(const std::string& request_line, HttpRequest& request)
 {
 	std::istringstream stream(request_line);
 
@@ -56,7 +50,7 @@ bool HttpRequestParser::parseRequestLine(const std::string& request_line, HttpRe
 
 
 // Function to parse headers (key: value)
-bool HttpRequestParser::parseHeaders(const std::string& headers_part, HttpRequest& request)
+bool RequestParser::parseHeaders(const std::string& headers_part, HttpRequest& request)
 {
 	std::istringstream stream(headers_part);
 	std::string line;
@@ -86,14 +80,14 @@ bool HttpRequestParser::parseHeaders(const std::string& headers_part, HttpReques
 }
 
 // Function to parse the body (if any)
-void HttpRequestParser::parseBody(const std::string& body_part, HttpRequest& request)
+void RequestParser::parseBody(const std::string& body_part, HttpRequest& request)
 {
 	// Currently just storing the body as is
 	request.body = body_part;
 }
 
 // Parses the entire HTTP request string into the HttpRequest object
-bool HttpRequestParser::parseRequest(const std::string& raw_request, HttpRequest& request)
+bool RequestParser::parseRequest(const std::string& raw_request, HttpRequest& request)
 {
 	// Split the raw request into request line, headers, and body
 	size_t pos = raw_request.find("\r\n");  // Find the first line break (request line)
