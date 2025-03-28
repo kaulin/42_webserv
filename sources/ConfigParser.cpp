@@ -67,6 +67,7 @@ std::string trim(const std::string &str)
 bool isValidPort(const std::string &port)
 {
 	int num;
+	(void)num;
 	try
 	{
 		num = std::stoi(port);

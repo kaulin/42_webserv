@@ -39,6 +39,7 @@ bool HttpRequestParser::parseRequestLine(const std::string& request_line, HttpRe
 	if (request.method != "GET" && request.method != "POST" && request.method != "DELETE")
 		return false;  // Unsupported HTTP method
 
+	request.uriPath = request.uri;
 	size_t delimiter = request.uri.find("?");
 	if (delimiter != std::string::npos)
 	{
