@@ -1,10 +1,11 @@
 #include <sys/socket.h>
 #include "Response.hpp"
+#include "ResponseHandler.hpp"
 
 // Constructor
-Response::Response(HttpRequest& request) : 
-	_request(request),
-	_statusCode(0)
+ResponseHandler::ResponseHandler(const Client& client, const HttpRequest& request) : 
+	_client(client),
+	_request(request)
 {
 	// checkRequest(); // check request errors (eg POST with no type or transfer encoding)
 	// if (!_resolved) checkMethod(); // check method & allowed methods at location
@@ -12,36 +13,49 @@ Response::Response(HttpRequest& request) :
 	// if (!_resolved) checkCGI; // check cgi, execute cgi
 	// if (!_resolved) handleMethod; // handle method
 	// if (!_resolved) _statusCode = STATUS_INTERNAL_ERROR;
-	formResponse();
 }
 
 // Deconstructor
-Response::~Response() {}
+ResponseHandler::~ResponseHandler() {}
 
-void Response::sendResponse(int clientFd) {
-	std::string response = toString();
-	int sendError;
+void ResponseHandler::sendResponse(int clientFd) {
+	char buf[BUFFER_SIZE] = {};
+	int bytesSent;
+	size_t leftToSend = _response->responseString.size() - _response->totalBytesSent;
+	size_t bytesToSend = leftToSend > BUFFER_SIZE ? BUFFER_SIZE : leftToSend;
+	_response->body.copy(buf, BUFFER_SIZE, _response->totalBytesSent);
 
-	sendError = send(clientFd, response.c_str(), response.length(), MSG_NOSIGNAL);
-	if (sendError <= 0)
-		throw std::runtime_error("THROW SEND ERROR EXCEPTION");
-	std::cout << "Client " << clientFd << " response:\n" << response << "\n";
+	try {
+		bytesSent= send(clientFd, buf, bytesToSend, MSG_NOSIGNAL);
+		if (bytesSent <= 0)
+			throw std::runtime_error("SEND ERROR EXCEPTION: send failed");
+		if (bytesSent < BUFFER_SIZE)
+		{
+			if (_response->totalBytesSent != _response->responseString.size())
+				throw std::runtime_error("SEND ERROR EXCEPTION: send failed");
+			std::cout << "Client " << clientFd << " response sent:\n" << _response->responseString << "\n";
+		}
+		else
+		{
+			std::cout << "Client [" << clientFd << "] sent " << bytesSent << " bytes socket, continuing...\n";
+		}
+	} catch (const std::runtime_error& e) {
+		// handle send error exception
+	}
 }
 
 /*
 Adds a key-value pair to _header map and _headerKeys deque. If a header is 
 re-inserted, it is only updated in the map.
 */
-void Response::addHeader(const std::string& key, const std::string& value)
+void ResponseHandler::addHeader(const std::string& key, const std::string& value)
 {
-	if (_headers.find(key) == _headers.end())
-		_headerKeys.emplace_front(key);
-	_headers[key] = (value);
+	_response->headers += key + ": " + value + "\n";
 }
 
-void Response::formResponse()
+void ResponseHandler::formResponse()
 {
-	if (_statusCode >= 300)
+	if (_response->statusCode >= 300)
 		formErrorPage();
 	else if (_request.method == "GET")
 		formGET();
@@ -53,35 +67,35 @@ void Response::formResponse()
 		throw std::runtime_error("Method not implemented exception");
 }
 
-void Response::formGET() {
+void ResponseHandler::formGET() {
 	std::cout << "Forming response: GET\n";
 }
 
-void Response::formPOST() {
+void ResponseHandler::formPOST() {
 	std::cout << "Forming response: POST\n";
 }
 
-void Response::formDELETE() {
+void ResponseHandler::formDELETE() {
 	std::cout << "Forming response: DELETE\n";
 }
 
-void Response::formDirectoryListing() {
+void ResponseHandler::formDirectoryListing() {
 	std::cout << "Forming response: DirectoryListing";
 }
 
-void Response::formErrorPage() {
+void ResponseHandler::formErrorPage() {
 	std::cout << "Forming response: Error Page";
 	std::string status = getStatus();
-	_statusLine = _request.httpVersion + " " + status + "\n";
-	_body = "<html><head><title>" + status + "</title></head><body><center><h1>" + status + "</h1></center><hr><center>webserv</center></body></html>\n";
+	_response->statusLine = _request.httpVersion + " " + status + "\n";
+	_response->body = "<html><head><title>" + status + "</title></head><body><center><h1>" + status + "</h1></center><hr><center>webserv</center></body></html>\n";
 	addHeader("Server", "Webserv v0.6.6.6");
-	addHeader("Content-Length", std::to_string(_body.size()));
+	addHeader("Content-Length", std::to_string(_response->body.size()));
 	addHeader("Content-Type", "text/html");
 	addHeader("Connection", "Closed");
 }
 
-const std::string Response::getStatus() const {
-	switch (_statusCode)
+const std::string ResponseHandler::getStatus() const {
+	switch (_response->statusCode)
 	{
 		case 200:
 			return ("200 OK");
@@ -105,14 +119,13 @@ const std::string Response::getStatus() const {
 			return ("500 Internal Server Error");
 		default :
 			return ("501 Not Implemented");
-
 	}
 }
 
 /*
 Static helper function for getting a timestamp in string format
 */
-std::string Response::getTimeStamp()
+std::string ResponseHandler::getTimeStamp()
 {
 	auto t = std::time(nullptr);
 	auto tm = *std::localtime(&t);
@@ -124,15 +137,13 @@ std::string Response::getTimeStamp()
 /*
 Builds an HTTP response in the form of a single string
 */
-const std::string Response::toString() const
+const std::string ResponseHandler::toString() const
 {
 	std::string response;
 	
-	response += _statusLine;
-	response += "Date: " + getTimeStamp() + "\n";
-	for (std::string key : _headerKeys)
-		response += key + ": " + _headers.at(key) + "\n";
-	response += "\n" + _body;
+	response += _response->statusLine;
+	response += _response->headers;
+	response += _response->body;
 	return response;
 }
 

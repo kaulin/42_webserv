@@ -5,7 +5,7 @@ int main(int argc, char **argv)
 {
 	if (argc > 2)
 	{
-		std::cerr << "Usage: " << std::string(argv[0]) << "[config file path]\n";
+		std::cerr << "Usage: " << std::string(argv[0]) << " [config file path]\n";
 		return 2;
 	}
 	try
