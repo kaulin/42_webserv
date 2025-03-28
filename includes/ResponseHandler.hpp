@@ -10,6 +10,7 @@
 #include <memory>
 #include "Request.hpp"
 #include "Response.hpp"
+#include "Client.hpp"
 #include "HttpServer.hpp"
 
 struct Request;
@@ -33,6 +34,7 @@ enum e_status_code
 class ResponseHandler
 {
 private:
+	const Client& _client;
 	const HttpRequest& _request;
 	std::unique_ptr<Response> _response;
 	static std::string getTimeStamp();
@@ -45,7 +47,7 @@ private:
 	const std::string getStatus() const;
 	const std::string toString() const;
 public:
-	ResponseHandler(const HttpRequest& request);
+	ResponseHandler(const Client& client, const HttpRequest& request);
 	~ResponseHandler(); 
 	void formResponse();
 	void sendResponse(int clientFd);

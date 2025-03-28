@@ -257,67 +257,58 @@ void	ServerHandler::readFromFd(size_t& i) {
 	int bytesRead;
 	char buf[BUFFER_SIZE] = {};
 
-	try {
-		bytesRead = read(client.fileReadFd, buf, BUFFER_SIZE);
-		if (bytesRead <= 0)
-			throw std::runtime_error("Internal Server Error 500: read failed");
-		else {
-			client.responseBodyString.append(buf, bytesRead);
-			client.fileTotalBytesRead += bytesRead;
-			std::cout << "Total bytes read/file size: " << client.fileTotalBytesRead << "/" << client.fileSize << "\n";
-			if (bytesRead < BUFFER_SIZE)
-			{
-				if (client.fileTotalBytesRead != client.fileSize)
-					throw std::runtime_error("Internal Server Error 500: read failed");
-				client.responseReady = true;
-				std::cout << "Client [" << client.fd << "] response body read: " << client.responseBodyString << "\n";
-				close(client.fileReadFd);
-				client.fileReadFd = -1;
-			}
-			else
-			{
-				std::cout << "Client [" << client.fd << "] read " << bytesRead << " bytes from disk, continuing...\n";
-				_pollFds[i].revents = POLL_OUT;
-			}
+	bytesRead = read(client.fileReadFd, buf, BUFFER_SIZE);
+	if (bytesRead <= 0)
+		throw std::runtime_error("Internal Server Error 500: read failed");
+	else {
+		client.responseBodyString.append(buf, bytesRead);
+		client.fileTotalBytesRead += bytesRead;
+		std::cout << "Total bytes read/file size: " << client.fileTotalBytesRead << "/" << client.fileSize << "\n";
+		if (bytesRead < BUFFER_SIZE)
+		{
+			if (client.fileTotalBytesRead != client.fileSize)
+				throw std::runtime_error("Internal Server Error 500: read failed");
+			client.responseReady = true;
+			std::cout << "Client [" << client.fd << "] response body read: " << client.responseBodyString << "\n";
+			close(client.fileReadFd);
+			client.fileReadFd = -1;
 		}
-	} catch (std::exception &e) {
-		throw e;
+		else
+		{
+			std::cout << "Client [" << client.fd << "] read " << bytesRead << " bytes from disk, continuing...\n";
+			_pollFds[i].revents = POLL_OUT;
+		}
 	}
-
 }
 
 void	ServerHandler::writeToFd(size_t& i) {
 	Client& client = *_clients[_pollFds[i].fd].get();
 	int bytesWritten;
-	size_t leftToWrite = client.fileSize -client.fileTotalBytesWritten;
+	size_t leftToWrite = client.fileSize - client.fileTotalBytesWritten;
 	size_t bytesToWrite = leftToWrite > BUFFER_SIZE ? BUFFER_SIZE : leftToWrite;
 	char buf[BUFFER_SIZE] = {};
 	client.request->body.copy(buf, BUFFER_SIZE, client.fileTotalBytesWritten);
 
-	try {
-		bytesWritten = write(client.fileWriteFd, buf, bytesToWrite);
-		if (bytesWritten <= 0)
-			throw std::runtime_error("Internal Server Error 500: write failed");
-		else {
-			client.fileTotalBytesWritten += bytesWritten;
-			std::cout << "Total bytes written/file size: " << client.fileTotalBytesWritten << "/" << client.fileSize << "\n";
-			if (bytesWritten < BUFFER_SIZE)
-			{
-				if (client.fileTotalBytesWritten != client.fileSize)
-					throw std::runtime_error("Internal Server Error 500: write failed");
-				client.responseReady = true;
-				std::cout << "Client [" << client.fd << "] POST request resource saved to disk\n";
-				close(client.fileWriteFd);
-				client.fileWriteFd = -1;
-			}
-			else
-			{
-				std::cout << "Client [" << client.fd << "] wrote " << bytesWritten << " bytes to disk, continuing...\n";
-				_pollFds[i].revents = POLL_OUT;
-			}
+	bytesWritten = write(client.fileWriteFd, buf, bytesToWrite);
+	if (bytesWritten <= 0)
+		throw std::runtime_error("Internal Server Error 500: write failed");
+	else {
+		client.fileTotalBytesWritten += bytesWritten;
+		std::cout << "Total bytes written/file size: " << client.fileTotalBytesWritten << "/" << client.fileSize << "\n";
+		if (bytesWritten < BUFFER_SIZE)
+		{
+			if (client.fileTotalBytesWritten != client.fileSize)
+				throw std::runtime_error("Internal Server Error 500: write failed");
+			client.responseReady = true;
+			std::cout << "Client [" << client.fd << "] POST request resource saved to disk\n";
+			close(client.fileWriteFd);
+			client.fileWriteFd = -1;
 		}
-	} catch (std::exception &e) {
-		throw e;
+		else
+		{
+			std::cout << "Client [" << client.fd << "] wrote " << bytesWritten << " bytes to disk, continuing...\n";
+			_pollFds[i].revents = POLL_OUT;
+		}
 	}
 }
 
