@@ -4,8 +4,7 @@
 
 // Constructor
 ResponseHandler::ResponseHandler(const HttpRequest& request) : 
-	_request(request),
-	_totalBytesSent(0)
+	_request(request)
 {
 	// checkRequest(); // check request errors (eg POST with no type or transfer encoding)
 	// if (!_resolved) checkMethod(); // check method & allowed methods at location
@@ -20,10 +19,11 @@ ResponseHandler::~ResponseHandler() {}
 
 void ResponseHandler::sendResponse(int clientFd) {
 	std::string response = toString();
-	int sendError;
+	char[BUF]
+	int bytesSent;
 
-	sendError = send(clientFd, response.c_str(), response.length(), MSG_NOSIGNAL);
-	if (sendError <= 0)
+	bytesSent= send(clientFd, response.c_str(), response.length(), MSG_NOSIGNAL);
+	if (bytesSent<= 0)
 		throw std::runtime_error("THROW SEND ERROR EXCEPTION");
 	std::cout << "Client " << clientFd << " response:\n" << response << "\n";
 }
@@ -34,14 +34,12 @@ re-inserted, it is only updated in the map.
 */
 void ResponseHandler::addHeader(const std::string& key, const std::string& value)
 {
-	if (_headers.find(key) == _headers.end())
-		_headerKeys.emplace_front(key);
-	_headers[key] = (value);
+	_response->headers += key + ": " + value + "\n";
 }
 
 void ResponseHandler::formResponse()
 {
-	if (_response.statusCode >= 300)
+	if (_response->statusCode >= 300)
 		formErrorPage();
 	else if (_request.method == "GET")
 		formGET();
@@ -72,16 +70,16 @@ void ResponseHandler::formDirectoryListing() {
 void ResponseHandler::formErrorPage() {
 	std::cout << "Forming response: Error Page";
 	std::string status = getStatus();
-	_response.statusLine = _request.httpVersion + " " + status + "\n";
-	_response.body = "<html><head><title>" + status + "</title></head><body><center><h1>" + status + "</h1></center><hr><center>webserv</center></body></html>\n";
+	_response->statusLine = _request.httpVersion + " " + status + "\n";
+	_response->body = "<html><head><title>" + status + "</title></head><body><center><h1>" + status + "</h1></center><hr><center>webserv</center></body></html>\n";
 	addHeader("Server", "Webserv v0.6.6.6");
-	addHeader("Content-Length", std::to_string(_response.body.size()));
+	addHeader("Content-Length", std::to_string(_response->body.size()));
 	addHeader("Content-Type", "text/html");
 	addHeader("Connection", "Closed");
 }
 
 const std::string ResponseHandler::getStatus() const {
-	switch (_response.statusCode)
+	switch (_response->statusCode)
 	{
 		case 200:
 			return ("200 OK");
@@ -127,11 +125,9 @@ const std::string ResponseHandler::toString() const
 {
 	std::string response;
 	
-	response += _response.statusLine;
-	response += "Date: " + getTimeStamp() + "\n";
-	for (std::string key : _headerKeys)
-		response += key + ": " + _headers.at(key) + "\n";
-	response += "\n" + _response.body;
+	response += _response->statusLine;
+	response += _response->headers;
+	response += _response->body;
 	return response;
 }
 

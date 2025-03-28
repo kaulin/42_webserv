@@ -1,9 +1,11 @@
+#pragma once
+
 #include <memory>
 #include <ctime>
 #include "Request.hpp"
 #include "Response.hpp"
 
-typedef struct Client {
+struct Client {
 	int								fd;
 	std::string						requestString;
 	bool							requestReady;
@@ -16,7 +18,6 @@ typedef struct Client {
 	int								fileTotalBytesWritten;
 	std::string						responseBodyString;
 	int								responseCode;
-	bool							requestReady;
 	bool							responseReady;
 	std::time_t						lastRequest;
 	bool							keep_alive;

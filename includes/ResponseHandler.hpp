@@ -6,9 +6,8 @@
 #include <ctime>
 #include <sstream>
 #include <string>
-#include <deque>
-#include <unordered_map>
 #include <ctime>
+#include <memory>
 #include "Request.hpp"
 #include "Response.hpp"
 #include "HttpServer.hpp"
@@ -35,10 +34,7 @@ class ResponseHandler
 {
 private:
 	const HttpRequest& _request;
-	Response& _response;
-	int _totalBytesSent;
-	std::deque<std::string> _headerKeys;
-	std::unordered_map<std::string, std::string> _headers;
+	std::unique_ptr<Response> _response;
 	static std::string getTimeStamp();
 	void formGET();
 	void formPOST();
