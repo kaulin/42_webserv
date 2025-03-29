@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include "Request.hpp"
 #include "Client.hpp"
 
 #define READ 0

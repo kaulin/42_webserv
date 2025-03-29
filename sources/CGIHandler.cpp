@@ -3,7 +3,7 @@
 #include <iostream>
 #include "ServerHandler.hpp"
 #include "CGIHandler.hpp"
-#include "Request.hpp"
+//#include "Request.hpp"
 
 CGIHandler::CGIHandler()
 {

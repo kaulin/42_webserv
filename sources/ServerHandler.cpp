@@ -4,7 +4,7 @@
 #include <sys/socket.h>
 #include "ServerHandler.hpp"
 #include "HttpServer.hpp"
-#include "Request.hpp"
+#include "RequestParser.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -151,11 +151,10 @@ void	ServerHandler::readRequest(size_t& i)
 void	ServerHandler::processRequest(size_t& i) 
 {
 	Client& client = *_clients[_pollFds[i].fd].get();
-	HttpRequestParser requestParser;
 	client.request = std::make_unique<HttpRequest>();
 	
 	try {
-		requestParser.parseRequest(client.requestString, *client.request.get());
+		RequestParser::parseRequest(client.requestString, *client.request.get());
 	} catch (std::exception& e) {
 		throw;
 	}

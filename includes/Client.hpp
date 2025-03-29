@@ -2,10 +2,11 @@
 
 #include <memory>
 #include <ctime>
-#include "Request.hpp"
+#include "RequestHandler.hpp"
 #include "Response.hpp"
-// #include "RequestHandler.hpp"
 #include "ResponseHandler.hpp"
+
+class ResponseHandler;
 
 struct Client {
 	int									fd;
@@ -13,8 +14,8 @@ struct Client {
 	bool								requestReady;
 	std::unique_ptr<HttpRequest>		request;
 	std::unique_ptr<Response>			response;
-	// std::unique_ptr<RequestHandler>		requestHandler;
 	std::unique_ptr<ResponseHandler>	responseHandler;
+	// std::unique_ptr<RequestHandler>		requestHandler;
 	int									fileSize;
 	int									fileReadFd;
 	int									fileTotalBytesRead;

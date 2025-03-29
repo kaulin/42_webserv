@@ -8,12 +8,13 @@
 #include <string>
 #include <ctime>
 #include <memory>
-#include "Request.hpp"
+// #include "Request.hpp"
 #include "Response.hpp"
 #include "Client.hpp"
 #include "HttpServer.hpp"
 
 struct Request;
+struct Client;
 
 enum e_status_code
 {
