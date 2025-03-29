@@ -32,6 +32,7 @@ private:
 	void 						setCGIEnv(t_CGIrequest &cgiRequest, std::vector<char *> &envp);
 	void 						handleChildProcess(t_CGIrequest request, Client& client);
 	void						handleParentProcess(t_CGIrequest request);
+	std::string					setCGIPath(std::string uri);
 	std::vector<std::string>	initCGIEnv(HttpRequest& request);
 public:
 	CGIHandler();

@@ -161,7 +161,19 @@ void	ServerHandler::processRequest(size_t& i)
 	
 	std::cout << "Client " << client.fd << " request method " << client.request->method << " and URI: " << client.request->uri << "\n";
 
-	if (client.request->method == "GET")
+	if (client.request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
+	{
+		// For testing
+		std::cout << "Request headers\n";
+		
+		for (const auto &it : client.request->headers)
+		{
+			std::cout << it.first << " " << it.second << "\n";
+		}
+		_CGIHandler.setupCGI(client);
+		_CGIHandler.runCGIScript(client);
+	}
+	else if (client.request->method == "GET")
 	{
 		std::string path = "var/www/html" + client.request->uri;
 		client.fileSize = std::filesystem::file_size(path);
@@ -181,18 +193,6 @@ void	ServerHandler::processRequest(size_t& i)
 	// 	|| client.request->headers["Connection"] == "Keep-Alive"))
 	// 	client.keep_alive = true;
 
-	if (client.request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
-	{
-		// For testing
-		std::cout << "Request headers\n";
-		
-		for (const auto &it : client.request->headers)
-		{
-			std::cout << it.first << " " << it.second << "\n";
-		}
-		_CGIHandler.setupCGI(client);
-		_CGIHandler.runCGIScript(client);
-	}
 }
 
 void	ServerHandler::setPollList()
