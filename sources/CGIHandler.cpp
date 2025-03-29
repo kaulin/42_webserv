@@ -1,9 +1,10 @@
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <exception>
 #include <iostream>
 #include "ServerHandler.hpp"
 #include "CGIHandler.hpp"
-//#include "Request.hpp"
+#include <filesystem>
 
 CGIHandler::CGIHandler()
 {
@@ -40,10 +41,8 @@ std::vector<std::string>	CGIHandler::initCGIEnv(HttpRequest& request) // takes r
 
 void CGIHandler::setCGIEnv(t_CGIrequest &cgiRequest, std::vector<char *> &envp)
 {
-	std::cout << "Setting cgi env\n";
 	for (const auto &var : cgiRequest.CGIEnv)
 	{
-		std::cout << var << "\n";
 		envp.emplace_back(const_cast<char *>(var.c_str()));
 	}
 	envp.emplace_back(nullptr);
@@ -55,7 +54,6 @@ void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, Client& client)
 	std::vector<char*> argv;
 	std::vector<char*> envp;
 
-	std::cout << "Dup2 pipe write end to stdout" << "path" << "\n";
 	// Redirect WRITE end of pipe to STDOUT
 	if (dup2(pipedf[WRITE], STDOUT_FILENO) == -1)
 	{
@@ -70,9 +68,22 @@ void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, Client& client)
 	argv.emplace_back(const_cast<char *>(cgiRequest.CGIPath.c_str()));
 	argv.emplace_back(nullptr);
 
-	std::cout << "Child executing path: " << cgiRequest.CGIPath << "\n";
+	struct stat buff;
+	// Checks that file in CGIPath exists
+	if (stat(cgiRequest.CGIPath.c_str(), &buff) != 0)
+	{
+		perror("File not found");
+		std::exit(EXIT_FAILURE);
+	}
+	if (!(buff.st_mode & S_IXUSR))
+	{
+		perror("File is not executable");
+		std::exit(EXIT_FAILURE);
+	}
+
 	execve(cgiRequest.CGIPath.c_str(), argv.data(), envp.data());
 
+	perror("execve failed");
 	throw::std::runtime_error("Child: Execve failed");
 	std::exit(EXIT_FAILURE);
 }
@@ -125,13 +136,20 @@ void	CGIHandler::runCGIScript(Client& client)
 			std::cout << "Child process terminated with " << WTERMSIG(request.status) << "\n";
 		}
 
-		// send response to client and close
+		// send response to client and close -- > write to the client
 		client.responseBodyString = request.output;
 	}
 	else if (_requests[client.fd].status == CGI_ERROR)
 	{
 		throw::std::runtime_error("Execve failed");
 	}
+}
+
+std::string	CGIHandler::setCGIPath(std::string uri)
+{
+	std::string path = std::filesystem::current_path().string() + uri;
+	std::cout << "CGI path " << path << "\n";
+	return path;
 }
 
 void	CGIHandler::setupCGI(Client &client)
@@ -143,11 +161,8 @@ void	CGIHandler::setupCGI(Client &client)
 		t_CGIrequest cgiInstance;
 		cgiInstance.CGIEnv.clear();
 		cgiInstance.status = CGI_READY;
-		//cgiInstance.CGIPath = client.request->uri;
-		cgiInstance.CGIPath = "var/www/cgi-bin/example_cgi.py";
+		cgiInstance.CGIPath = setCGIPath(client.request->uri);
 		cgiInstance.CGIEnv = initCGIEnv(*client.request);
-
 		_requests.emplace(client.fd, cgiInstance);
-		//_requests.insert({client.fd, instance});
 	}
 }
