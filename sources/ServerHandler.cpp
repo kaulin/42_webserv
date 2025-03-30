@@ -163,15 +163,9 @@ void	ServerHandler::processRequest(size_t& i)
 
 	if (client.request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
 	{
-		// For testing
-		std::cout << "Request headers\n";
-		
-		for (const auto &it : client.request->headers)
-		{
-			std::cout << it.first << " " << it.second << "\n";
-		}
 		_CGIHandler.setupCGI(client);
 		_CGIHandler.runCGIScript(client);
+		client.requestReady = true;
 	}
 	else if (client.request->method == "GET")
 	{

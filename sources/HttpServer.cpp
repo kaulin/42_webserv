@@ -87,3 +87,5 @@ void HttpServer::setupAddrinfo()
 }
 
 int HttpServer::getListenSockfd() { return _sockFd; }
+
+const Config &HttpServer::getServerSettings() { return _settings; }

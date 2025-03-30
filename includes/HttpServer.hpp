@@ -15,5 +15,6 @@ public:
 		void			setupSocket(struct addrinfo *ai);
 
 		// get methods
-		int					getListenSockfd();
+		int				getListenSockfd();
+		const Config	&getServerSettings();
 };
