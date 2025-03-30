@@ -24,6 +24,7 @@ HttpServer::HttpServer(Config serverData)
 HttpServer::~HttpServer()
 {
 	close(_sockFd);
+	std::cout << "Server instance deleted and socket closed\n";
 }
 
 void HttpServer::setupSocket(struct addrinfo *ai)

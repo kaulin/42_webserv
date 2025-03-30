@@ -8,6 +8,8 @@
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
+std::vector<std::shared_ptr<HttpServer>> ServerHandler::_servers;
+
 ServerHandler::ServerHandler(std::string path) : 
 	_config(ServerConfigData(path)), _fileLogger("test_log.txt"), _consoleLogger(std::cout),
 	_CGIHandler(CGIHandler())
@@ -23,7 +25,6 @@ ServerHandler::ServerHandler(std::string path) :
 
 ServerHandler::~ServerHandler() 
 {
-	this->cleanupServers();
 	_servers.clear();
 	_pollFds.clear();
 
@@ -35,15 +36,6 @@ void	ServerHandler::error_and_exit(const char *msg)
 	std::string errmsg = "Webserver: " + std::string(msg);
 	perror(errmsg.c_str());
 	exit(errno);
-}
-
-	/* Handles clean up of all servers */
-void	ServerHandler::cleanupServers()
-{
-	for (auto& server : _servers) {
-		int listen_sockfd = server->getListenSockfd();
-		close(listen_sockfd);
-	}
 }
 
 void	ServerHandler::sendResponse(size_t& i)
@@ -309,6 +301,7 @@ void	ServerHandler::signalHandler(int signal)
 {
 	// handle shutdown
 	std::cout << " Ctrl + C signal received, shutting down\n";
+	_servers.clear();
 	exit(signal);
 }
 
