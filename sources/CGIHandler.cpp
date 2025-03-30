@@ -22,21 +22,28 @@ void CGIHandler::closeFds(const std::vector<int> fdsToclose)
 
 std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request) // takes request
 {
-	std::vector<char*> env;
+	std::vector<std::string> strEnv;
 
-	env.emplace_back(const_cast<char*>(("REQUEST_METHOD=" + request.method).c_str()));
+	strEnv.emplace_back("REQUEST_METHOD=" + request.method);
 	if (request.headers.find("Host") != request.headers.end())
-		env.emplace_back(const_cast<char*>(("SERVER_NAME=" + request.headers.at("Host")).c_str()));
+		strEnv.emplace_back("SERVER_NAME=" + request.headers.at("Host"));
 	if (request.method == "POST")
 	{
-		env.emplace_back(const_cast<char*>("CONTENT_TYPE=application/x-www-form-urlencoded"));
-		env.emplace_back(const_cast<char*>("CONTENT_LENGTH=")); // needs method to search by header
+		strEnv.emplace_back("CONTENT_TYPE=application/x-www-form-urlencoded");
+		strEnv.emplace_back("CONTENT_LENGTH="); // needs method to search by header
 	}
-	env.emplace_back(const_cast<char*>(("QUERY_STRING=" + request.uriQuery).c_str())); 	// (if applicable, for GET requests) needs get method
-	env.emplace_back(const_cast<char*>(("PATH_INFO=" + request.uri).c_str()));
-	env.emplace_back(const_cast<char*>(("SERVER_PORT=8080"))); 	// needs get method
-	env.emplace_back(const_cast<char*>("REMOTE_ADDR="));	// not necessarily needed
+	strEnv.emplace_back("QUERY_STRING=" + request.uriQuery); 	// (if applicable, for GET requests) needs get method
+	strEnv.emplace_back("PATH_INFO=" + request.uri);
+	strEnv.emplace_back("SERVER_PORT=8080"); 	// needs get method
+	strEnv.emplace_back("REMOTE_ADDR=");	// not necessarily needed
 
+	// cast strings to char *
+	std::vector<char*> env;
+	for (const auto &var : strEnv)
+	{
+		env.emplace_back(const_cast<char *>(var.c_str()));
+	}
+	env.emplace_back(nullptr);
 	return env;
 }
 
