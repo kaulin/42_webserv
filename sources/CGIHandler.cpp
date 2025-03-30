@@ -60,16 +60,16 @@ void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, int clientFd)
 	close(pipedf[READ]); // Closes parent end of pipe
 	close(pipedf[WRITE]); // Closes (already dupped) write end of pipe
 
-	// Checks that file in CGIPath exists
+	// Checks that file in CGIPath exists and is executable
 	struct stat buff;
 	if (stat(cgiRequest.CGIPath.c_str(), &buff) != 0)
 	{
-		perror("File not found");
+		throw::std::runtime_error("Child: File not found");
 		std::exit(EXIT_FAILURE);
 	}
 	if (!(buff.st_mode & S_IXUSR))
 	{
-		perror("File is not executable");
+		throw::std::runtime_error("Child: File is not executable");
 		std::exit(EXIT_FAILURE);
 	}
 
@@ -97,7 +97,8 @@ void CGIHandler::handleParentProcess(t_CGIrequest request)
 
 void	CGIHandler::runCGIScript(const Client& client)
 {
-	t_CGIrequest request = _requests[client.fd]; // gets the client request from container
+	int	requestKey = client.fd;
+	t_CGIrequest request = _requests[requestKey]; // gets the client request from container
 
 	if (request.status == CGI_READY)
 	{
@@ -127,12 +128,12 @@ void	CGIHandler::runCGIScript(const Client& client)
 		}
 
 		// send response to client and close -- > write to the client
-		// delete the client
 	}
 	else if (_requests[client.fd].status == CGI_ERROR)
 	{
-		throw::std::runtime_error("Execve failed");
+		throw::std::runtime_error("CGI error");
 	}
+	_requests.erase(requestKey);
 }
 
 void	CGIHandler::setupCGI(const Client &client)
