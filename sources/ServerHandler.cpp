@@ -8,7 +8,7 @@
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
-std::vector<std::shared_ptr<HttpServer>> ServerHandler::_servers;
+std::vector<std::unique_ptr<HttpServer>> ServerHandler::_servers;
 
 ServerHandler::ServerHandler(std::string path) : 
 	_config(ServerConfigData(path)), _fileLogger("test_log.txt"), _consoleLogger(std::cout),
@@ -68,7 +68,7 @@ void	ServerHandler::setupServers()
 {
 	for (const auto& [servName, config] : _config.getConfigBlocks()) 
 	{
-		_servers.emplace_back(std::make_shared<HttpServer>(config));
+		_servers.emplace_back(std::make_unique<HttpServer>(config));
 	}
 	for (const auto& server : _servers)
 	{
