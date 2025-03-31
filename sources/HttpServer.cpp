@@ -24,6 +24,7 @@ HttpServer::HttpServer(Config serverData)
 HttpServer::~HttpServer()
 {
 	close(_sockFd);
+	std::cout << "Server instance deleted and socket closed\n";
 }
 
 void HttpServer::setupSocket(struct addrinfo *ai)
@@ -87,3 +88,5 @@ void HttpServer::setupAddrinfo()
 }
 
 int HttpServer::getListenSockfd() { return _sockFd; }
+
+const Config &HttpServer::getServerSettings() { return _settings; }

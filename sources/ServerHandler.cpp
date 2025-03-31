@@ -8,6 +8,8 @@
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
+std::vector<std::unique_ptr<HttpServer>> ServerHandler::_servers;
+
 ServerHandler::ServerHandler(std::string path) : 
 	_config(ServerConfigData(path)), _fileLogger("test_log.txt"), _consoleLogger(std::cout),
 	_CGIHandler(CGIHandler())
@@ -23,7 +25,6 @@ ServerHandler::ServerHandler(std::string path) :
 
 ServerHandler::~ServerHandler() 
 {
-	this->cleanupServers();
 	_servers.clear();
 	_pollFds.clear();
 
@@ -35,15 +36,6 @@ void	ServerHandler::error_and_exit(const char *msg)
 	std::string errmsg = "Webserver: " + std::string(msg);
 	perror(errmsg.c_str());
 	exit(errno);
-}
-
-	/* Handles clean up of all servers */
-void	ServerHandler::cleanupServers()
-{
-	for (auto& server : _servers) {
-		int listen_sockfd = server->getListenSockfd();
-		close(listen_sockfd);
-	}
 }
 
 void	ServerHandler::sendResponse(size_t& i)
@@ -76,7 +68,7 @@ void	ServerHandler::setupServers()
 {
 	for (const auto& [servName, config] : _config.getConfigBlocks()) 
 	{
-		_servers.emplace_back(std::make_shared<HttpServer>(config));
+		_servers.emplace_back(std::make_unique<HttpServer>(config));
 	}
 	for (const auto& server : _servers)
 	{
@@ -161,7 +153,13 @@ void	ServerHandler::processRequest(size_t& i)
 	
 	std::cout << "Client " << client.fd << " request method " << client.request->method << " and URI: " << client.request->uri << "\n";
 
-	if (client.request->method == "GET")
+	if (client.request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
+	{
+		_CGIHandler.setupCGI(client);
+		_CGIHandler.runCGIScript(client);
+		client.requestReady = true;
+	}
+	else if (client.request->method == "GET")
 	{
 		std::string path = "var/www/html" + client.request->uri;
 		client.fileSize = std::filesystem::file_size(path);
@@ -181,18 +179,6 @@ void	ServerHandler::processRequest(size_t& i)
 	// 	|| client.request->headers["Connection"] == "Keep-Alive"))
 	// 	client.keep_alive = true;
 
-	if (client.request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
-	{
-		// For testing
-		std::cout << "Request headers\n";
-		
-		for (const auto &it : client.request->headers)
-		{
-			std::cout << it.first << " " << it.second << "\n";
-		}
-		_CGIHandler.setupCGI(client);
-		_CGIHandler.runCGIScript(client);
-	}
 }
 
 void	ServerHandler::setPollList()
@@ -315,6 +301,7 @@ void	ServerHandler::signalHandler(int signal)
 {
 	// handle shutdown
 	std::cout << " Ctrl + C signal received, shutting down\n";
+	_servers.clear();
 	exit(signal);
 }
 

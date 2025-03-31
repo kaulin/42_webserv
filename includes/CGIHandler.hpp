@@ -19,23 +19,23 @@ typedef struct s_CGIrequest {
 	int							pipe[2];
 	pid_t						childPid;
 	std::string					output;
-	std::vector<std::string>	CGIEnv;
+	std::vector<char*>			argv;
+	std::vector<char*>			envp;
 	std::string					CGIPath;
 } t_CGIrequest;
 
 class CGIHandler {
 private:
-	std::unordered_map<int, t_CGIrequest>	_requests; // limit to 10
+	std::unordered_map<int, t_CGIrequest>	_requests;
 
 	// Private class methods
-	void 						closeFds(const std::vector<int> fdsToclose);
-	void 						setCGIEnv(t_CGIrequest &cgiRequest, std::vector<char *> &envp);
-	void 						handleChildProcess(t_CGIrequest request, Client& client);
-	void						handleParentProcess(t_CGIrequest request);
-	std::vector<std::string>	initCGIEnv(HttpRequest& request);
+	void 				closeFds(const std::vector<int> fdsToclose);
+	void 				handleChildProcess(t_CGIrequest request, int clientFd);
+	void				handleParentProcess(t_CGIrequest request);
+	std::vector<char*>	setCGIEnv(const HttpRequest& request);
 public:
 	CGIHandler();
 
-	void			setupCGI(Client& client);
-	void			runCGIScript(Client& client);
+	void			setupCGI(const Client& client);
+	void			runCGIScript(const Client& client);
 };

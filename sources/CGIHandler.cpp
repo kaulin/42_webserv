@@ -1,9 +1,10 @@
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <exception>
 #include <iostream>
 #include "ServerHandler.hpp"
 #include "CGIHandler.hpp"
-//#include "Request.hpp"
+#include <filesystem>
 
 CGIHandler::CGIHandler()
 {
@@ -19,60 +20,62 @@ void CGIHandler::closeFds(const std::vector<int> fdsToclose)
 	}
 }
 
-std::vector<std::string>	CGIHandler::initCGIEnv(HttpRequest& request) // takes request
+std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request) // takes request
 {
-	std::vector<std::string> env;
-	// Replace temp data with get methods
-	env.emplace_back("REQUEST_METHOD=" + request.method);
+	std::vector<std::string> strEnv;
+
+	strEnv.emplace_back("REQUEST_METHOD=" + request.method);
+	if (request.headers.find("Host") != request.headers.end())
+		strEnv.emplace_back("SERVER_NAME=" + request.headers.at("Host"));
 	if (request.method == "POST")
 	{
-		env.emplace_back("CONTENT_TYPE=application/x-www-form-urlencoded");
-		env.emplace_back("CONTENT_LENGTH="); // needs method to search by header
+		strEnv.emplace_back("CONTENT_TYPE=application/x-www-form-urlencoded");
+		strEnv.emplace_back("CONTENT_LENGTH="); // needs method to search by header
 	}
-	env.emplace_back("QUERY_STRING="); 	// (if applicable, for GET requests) needs get method
-	env.emplace_back("PATH_INFO=" + request.uri); // needs get method
-	env.emplace_back("SERVER_NAME=" + request.headers["host"]);
-	env.emplace_back("SERVER_PORT=8080"); 	// needs get method
-	env.emplace_back("REMOTE_ADDR=");	// needs get method
+	strEnv.emplace_back("QUERY_STRING=" + request.uriQuery); 	// (if applicable, for GET requests) needs get method
+	strEnv.emplace_back("PATH_INFO=" + request.uri);
+	strEnv.emplace_back("SERVER_PORT=8080"); 	// needs get method
+	strEnv.emplace_back("REMOTE_ADDR=");	// not necessarily needed
 
+	// cast strings to char *
+	std::vector<char*> env;
+	for (const auto &var : strEnv)
+	{
+		env.emplace_back(const_cast<char *>(var.c_str()));
+	}
+	env.emplace_back(nullptr);
 	return env;
 }
 
-void CGIHandler::setCGIEnv(t_CGIrequest &cgiRequest, std::vector<char *> &envp)
-{
-	std::cout << "Setting cgi env\n";
-	for (const auto &var : cgiRequest.CGIEnv)
-	{
-		std::cout << var << "\n";
-		envp.emplace_back(const_cast<char *>(var.c_str()));
-	}
-	envp.emplace_back(nullptr);
-}
-
-void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, Client& client)
+void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, int clientFd)
 {
 	int pipedf[2] = {cgiRequest.pipe[0], cgiRequest.pipe[1]};
-	std::vector<char*> argv;
-	std::vector<char*> envp;
-
-	std::cout << "Dup2 pipe write end to stdout" << "path" << "\n";
+	
 	// Redirect WRITE end of pipe to STDOUT
 	if (dup2(pipedf[WRITE], STDOUT_FILENO) == -1)
 	{
-		closeFds({client.fd, pipedf[WRITE]});
+		closeFds({clientFd, pipedf[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
-	
 	close(pipedf[READ]); // Closes parent end of pipe
 	close(pipedf[WRITE]); // Closes (already dupped) write end of pipe
 
-	setCGIEnv(cgiRequest, envp);
-	argv.emplace_back(const_cast<char *>(cgiRequest.CGIPath.c_str()));
-	argv.emplace_back(nullptr);
+	// Checks that file in CGIPath exists and is executable
+	struct stat buff;
+	if (stat(cgiRequest.CGIPath.c_str(), &buff) != 0)
+	{
+		throw::std::runtime_error("Child: File not found");
+		std::exit(EXIT_FAILURE);
+	}
+	if (!(buff.st_mode & S_IXUSR))
+	{
+		throw::std::runtime_error("Child: File is not executable");
+		std::exit(EXIT_FAILURE);
+	}
 
-	std::cout << "Child executing path: " << cgiRequest.CGIPath << "\n";
-	execve(cgiRequest.CGIPath.c_str(), argv.data(), envp.data());
+	execve(cgiRequest.CGIPath.c_str(), cgiRequest.argv.data(), cgiRequest.envp.data());
 
+	perror("execve failed");
 	throw::std::runtime_error("Child: Execve failed");
 	std::exit(EXIT_FAILURE);
 }
@@ -92,9 +95,10 @@ void CGIHandler::handleParentProcess(t_CGIrequest request)
 	//close(pipedf[READ]);
 }
 
-void	CGIHandler::runCGIScript(Client& client)
+void	CGIHandler::runCGIScript(const Client& client)
 {
-	t_CGIrequest request = _requests[client.fd]; // gets the client request from container
+	int	requestKey = client.fd;
+	t_CGIrequest request = _requests[requestKey]; // gets the client request from container
 
 	if (request.status == CGI_READY)
 	{
@@ -106,10 +110,9 @@ void	CGIHandler::runCGIScript(Client& client)
 			throw::std::runtime_error("CGI: Fork"); // handle 500 Internal Server Error
 		}
 		if (pid == 0)
-			handleChildProcess(request, client);
+			handleChildProcess(request, client.fd);
 		else
 		{
-			
 			request.status = CGI_FORKED;
 			request.childPid = pid;
 			handleParentProcess(request);
@@ -117,7 +120,6 @@ void	CGIHandler::runCGIScript(Client& client)
 		waitpid(request.childPid, &request.status, 0); // is waitpid necessary
 		if (WIFEXITED(request.status))
 		{
-			// log status and errors
 			std::cout << "Child exited with " << WEXITSTATUS(request.status) << "\n";
 		}
 		else if (WIFSIGNALED(request.status))
@@ -125,29 +127,32 @@ void	CGIHandler::runCGIScript(Client& client)
 			std::cout << "Child process terminated with " << WTERMSIG(request.status) << "\n";
 		}
 
-		// send response to client and close
-		client.responseBodyString = request.output;
+		// send response to client and close -- > write to the client
 	}
 	else if (_requests[client.fd].status == CGI_ERROR)
 	{
-		throw::std::runtime_error("Execve failed");
+		throw::std::runtime_error("CGI error");
 	}
+	_requests.erase(requestKey);
 }
 
-void	CGIHandler::setupCGI(Client &client)
+void	CGIHandler::setupCGI(const Client &client)
 {
-	// check that the status of the client is correct
-	// add the client to the requests
-	if (client.requestReady)
+	// checks that the status of the client is correct
+	// add the client to the requests if 
+	if (client.requestReady && this->_requests.size() < 10)
 	{
-		t_CGIrequest cgiInstance;
-		cgiInstance.CGIEnv.clear();
-		cgiInstance.status = CGI_READY;
-		//cgiInstance.CGIPath = client.request->uri;
-		cgiInstance.CGIPath = "var/www/cgi-bin/example_cgi.py";
-		cgiInstance.CGIEnv = initCGIEnv(*client.request);
-
-		_requests.emplace(client.fd, cgiInstance);
-		//_requests.insert({client.fd, instance});
+		t_CGIrequest cgiInst;
+		cgiInst.CGIPath = std::filesystem::current_path().string() + client.request->uri;
+		cgiInst.argv.emplace_back(const_cast<char *>(cgiInst.CGIPath.c_str()));
+		cgiInst.argv.emplace_back(nullptr);
+		cgiInst.status = CGI_READY;
+		cgiInst.envp.clear();
+		cgiInst.envp = setCGIEnv(*client.request);
+		_requests.emplace(client.fd, cgiInst);
+	}
+	else
+	{
+		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
 	}
 }

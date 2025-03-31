@@ -18,7 +18,7 @@ class HttpServer;
 class ServerHandler
 {
 private:
-	std::vector<std::shared_ptr<HttpServer>>			_servers;
+	static std::vector<std::unique_ptr<HttpServer>>		_servers;
 	size_t					 							_serverCount;
 	std::vector<int>									_ports;
 	std::unordered_map<int, std::unique_ptr<Client>>	_clients;
