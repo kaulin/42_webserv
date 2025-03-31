@@ -4,7 +4,7 @@
 #include <poll.h>
 #include "ServerConfigData.hpp"
 #include "Client.hpp"
-#include "Request.hpp"
+#include "RequestHandler.hpp"
 #include "CGIHandler.hpp"
 #include "Logger.hpp"
 

@@ -31,7 +31,7 @@ void ResponseHandler::sendResponse(int clientFd) {
 			throw std::runtime_error("SEND ERROR EXCEPTION: send failed");
 		if (bytesSent < BUFFER_SIZE)
 		{
-			if (_response->totalBytesSent != _response->responseString.size())
+			if (static_cast<std::string::size_type>(_response->totalBytesSent) != _response->responseString.size())
 				throw std::runtime_error("SEND ERROR EXCEPTION: send failed");
 			std::cout << "Client " << clientFd << " response sent:\n" << _response->responseString << "\n";
 		}
