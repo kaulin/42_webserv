@@ -8,8 +8,8 @@
 #include <string>
 #include <ctime>
 #include <memory>
-// #include "Request.hpp"
-#include "Response.hpp"
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 #include "Client.hpp"
 #include "HttpServer.hpp"
 
@@ -37,7 +37,7 @@ class ResponseHandler
 private:
 	const Client& _client;
 	const HttpRequest& _request;
-	std::unique_ptr<Response> _response;
+	std::unique_ptr<HttpResponse> _response;
 	static std::string getTimeStamp();
 	void formGET();
 	void formPOST();

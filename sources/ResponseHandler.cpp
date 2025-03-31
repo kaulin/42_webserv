@@ -1,5 +1,4 @@
 #include <sys/socket.h>
-#include "Response.hpp"
 #include "ResponseHandler.hpp"
 
 // Constructor

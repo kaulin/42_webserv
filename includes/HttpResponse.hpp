@@ -4,7 +4,7 @@
 
 #define BUFFER_SIZE 1024
 
-struct Response
+struct HttpResponse
 {
 	int			statusCode;
 	int			totalBytesSent;
