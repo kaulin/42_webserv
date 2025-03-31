@@ -2,9 +2,9 @@
 #include <sys/stat.h>
 #include <exception>
 #include <iostream>
-#include "ServerHandler.hpp"
-#include "CGIHandler.hpp"
 #include <filesystem>
+#include "CGIHandler.hpp"
+#include "HttpRequest.hpp"
 
 CGIHandler::CGIHandler()
 {

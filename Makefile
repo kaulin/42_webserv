@@ -24,7 +24,7 @@ OBJECT_PATHS		:= $(addprefix $(OBJECT_DIRECTORY), $(OBJECTS))
 
 # Includes
 INCLUDE_DIRECTORY	:= includes/
-INCLUDES			:= webserv.hpp RequestHandler.hpp RequestParser.hpp Response.hpp HttpServer.hpp ServerHandler.hpp CGIHandler.hpp ResponseHandler.hpp
+INCLUDES			:= webserv.hpp RequestHandler.hpp RequestParser.hpp HttpResponse.hpp HttpServer.hpp ServerHandler.hpp CGIHandler.hpp ResponseHandler.hpp
 
 INCLUDE_PATHS		:= $(addprefix $(INCLUDE_DIRECTORY), $(INCLUDES))
 INCLUDE_FLAGS		:= -I includes/
