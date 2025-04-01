@@ -146,4 +146,6 @@ const std::string ResponseHandler::toString() const
 	return response;
 }
 
-// RESPONSE EXCEPTION IMPLEMENTATIONS BELOW HERE
+const char* ResponseHandler::SendError::what() const noexcept {
+	return "Send Failed";
+}

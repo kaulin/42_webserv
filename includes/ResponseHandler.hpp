@@ -16,22 +16,6 @@
 struct Request;
 struct Client;
 
-enum e_status_code
-{
-	STATUS_SUCCESS = 200,
-	STATUS_CREATED = 201,
-	STATUS_NO_CONTENT = 204,
-	STATUS_BAD_REQUEST = 400,
-	STATUS_FORBIDDEN = 403,
-	STATUS_NOT_FOUND = 404,
-	STATUS_NOT_ALLOWED = 405,
-	STATUS_LENGTH_REQUIRED = 411,
-	STATUS_TOO_LARGE = 413,
-	STATUS_URI_TOO_LONG = 414,
-	STATUS_INTERNAL_ERROR = 500,
-	STATUS_NOT_IMPLEMENTED = 501
-};
-
 class ResponseHandler
 {
 private:
@@ -53,6 +37,9 @@ public:
 	void formResponse();
 	void sendResponse(int clientFd);
 	
-	// RESPONSE EXCEPTION CLASSES BELOW HERE
+	class SendError : public std::exception {
+		public:
+			const char* what() const noexcept;
+	};
 };
 
