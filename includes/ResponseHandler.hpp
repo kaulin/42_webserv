@@ -35,7 +35,7 @@ public:
 	ResponseHandler(const Client& client, const HttpRequest& request);
 	~ResponseHandler(); 
 	void formResponse();
-	void sendResponse(int clientFd);
+	void sendResponse();
 	
 	class SendError : public std::exception {
 		public:
