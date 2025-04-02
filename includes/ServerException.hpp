@@ -33,6 +33,6 @@ class ServerException : public std::exception
 	public:
 		ServerException(const eStatusCode& statusCode);
 		const char* what() const noexcept;
-		const int statusCode() const;
+		int statusCode() const;
 		static const char* statusMessage(int statusCode);
 };
