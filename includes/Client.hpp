@@ -6,7 +6,9 @@
 #include "RequestHandler.hpp"
 #include "HttpResponse.hpp"
 #include "ResponseHandler.hpp"
+#include "ServerConfigData.hpp"
 
+struct Config;
 class RequestHandler;
 class ResponseHandler;
 
@@ -14,6 +16,7 @@ struct Client {
 	int									fd;
 	std::string							requestString;
 	bool								requestReady;
+	const Config*								serverConfig;
 	std::unique_ptr<HttpRequest>		request;
 	std::unique_ptr<HttpResponse>		response;
 	std::unique_ptr<ResponseHandler>	responseHandler;

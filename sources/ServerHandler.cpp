@@ -34,6 +34,42 @@ ServerHandler::~ServerHandler()
 	std::cout << "Servers closed down\n";
 }
 
+/* 	One server config data instance is created. The config file is parsed in 
+	the constructor and the appropriate values in the class instance is set. 
+	Going through all serverBlock instances, a new shared pointer is made 
+	for each virtual server with the appropriate configurations */
+void	ServerHandler::setupServers()
+{
+	for (const auto& [servName, config] : _config.getConfigBlocks()) 
+	{
+		_servers.emplace_back(std::make_unique<HttpServer>(config));
+	}
+	for (const auto& server : _servers)
+	{
+		server->setupAddrinfo();
+	}
+	_serverCount = _servers.size();
+}
+
+void	ServerHandler::setPollList()
+{
+	size_t	i = 0;
+
+	_pollFds.resize(_serverCount);
+	for (auto& server : _servers)
+	{		
+		int listenSockfd = server->getListenSockfd();
+		_pollFds[i].fd = listenSockfd;
+		_pollFds[i].events = POLLIN;
+		i++;
+	}
+	// for testing
+	for (auto& poll_obj : _pollFds) 
+	{
+		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
+	}
+}
+
 void	ServerHandler::error_and_exit(const char *msg)
 {
 	std::string errmsg = "Webserver: " + std::string(msg);
@@ -63,23 +99,6 @@ void	ServerHandler::sendResponse(size_t& i)
 		closeConnection(i);
 }
 
-/* 	One server config data instance is created. The config file is parsed in 
-	the constructor and the appropriate values in the class instance is set. 
-	Going through all serverBlock instances, a new shared pointer is made 
-	for each virtual server with the appropriate configurations */
-void	ServerHandler::setupServers()
-{
-	for (const auto& [servName, config] : _config.getConfigBlocks()) 
-	{
-		_servers.emplace_back(std::make_unique<HttpServer>(config));
-	}
-	for (const auto& server : _servers)
-	{
-		server->setupAddrinfo();
-	}
-	_serverCount = _servers.size();
-}
-
 void	ServerHandler::addConnection(size_t& i) {
 	int clientFd;
 	socklen_t addrlen;
@@ -99,6 +118,7 @@ void	ServerHandler::addConnection(size_t& i) {
 		_pollFds.emplace_back(new_pollfd);
 		_clients[clientFd] = std::make_unique<Client>();
 		_clients[clientFd]->requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
+		_clients[clientFd]->serverConfig = _servers.at(i)->getServerConfig();
 		_clients[clientFd]->fd = clientFd;
 	} catch (std::exception& e) {
 		_clients[clientFd]->responseCode = 500;
@@ -183,25 +203,6 @@ void	ServerHandler::processRequest(size_t& i)
 	// 	|| client.request->headers["Connection"] == "Keep-Alive"))
 	// 	client.keep_alive = true;
 
-}
-
-void	ServerHandler::setPollList()
-{
-	size_t	i = 0;
-
-	_pollFds.resize(_serverCount);
-	for (auto& server : _servers)
-	{		
-		int listenSockfd = server->getListenSockfd();
-		_pollFds[i].fd = listenSockfd;
-		_pollFds[i].events = POLLIN;
-		i++;
-	}
-	// for testing
-	for (auto& poll_obj : _pollFds) 
-	{
-		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
-	}
 }
 
 void	ServerHandler::pollLoop()
