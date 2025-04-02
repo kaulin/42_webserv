@@ -79,14 +79,24 @@ void	ServerHandler::error_and_exit(const char *msg)
 
 void	ServerHandler::sendResponse(size_t& i)
 {
+	std::string response;
+
 	int clientFd = _pollFds[i].fd;
 	
-	std::string response =
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Content-Length: " + std::to_string(_clients[clientFd]->responseBodyString.length()) + "\r\n"
-		"\r\n";
-	response +=_clients[clientFd]->responseBodyString;
+	if (_clients[clientFd]->CGIrequest)
+	{
+		response = _clients[clientFd]->responseBodyString;
+	}
+	else
+	{
+		response =
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Type: text/html; charset=UTF-8\r\n"
+			"Content-Length: " + std::to_string(_clients[clientFd]->responseBodyString.length()) + "\r\n"
+			"\r\n";
+		response +=_clients[clientFd]->responseBodyString;
+	}
+	
 	ssize_t bytes_sent;
 	std::cout << "Sending back response: " << "\n";
 	if ((bytes_sent = send(clientFd, response.c_str(), response.length(), 0)) == -1) {
@@ -120,6 +130,7 @@ void	ServerHandler::addConnection(size_t& i) {
 		_clients[clientFd]->requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
 		_clients[clientFd]->serverConfig = _servers.at(i)->getServerConfig();
 		_clients[clientFd]->fd = clientFd;
+		_clients[clientFd]->CGIrequest = false;
 	} catch (std::exception& e) {
 		_clients[clientFd]->responseCode = 500;
 		_clients[clientFd]->responseReady = true;
@@ -179,9 +190,7 @@ void	ServerHandler::processRequest(size_t& i)
 
 	if (client.request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
 	{
-		_CGIHandler.setupCGI(client);
-		_CGIHandler.runCGIScript(client);
-		client.requestReady = true;
+		client.CGIrequest = true;
 	}
 	else if (client.request->method == "GET")
 	{
@@ -233,6 +242,11 @@ void	ServerHandler::pollLoop()
 				}
 				else if (_pollFds[i].revents & POLLOUT)
 				{
+					if (_clients[_pollFds[i].fd]->CGIrequest)
+					{
+						_CGIHandler.setupCGI(*_clients[_pollFds[i].fd]);
+						_CGIHandler.runCGIScript(*_clients[_pollFds[i].fd]);
+					}
 					if (_clients[_pollFds[i].fd]->fileReadFd > 0)
 						readFromFd(i);
 					else if (_clients[_pollFds[i].fd]->fileWriteFd > 0)

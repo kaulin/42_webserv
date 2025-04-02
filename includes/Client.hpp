@@ -16,7 +16,7 @@ struct Client {
 	int									fd;
 	std::string							requestString;
 	bool								requestReady;
-	const Config*								serverConfig;
+	const Config*						serverConfig;
 	std::unique_ptr<HttpRequest>		request;
 	std::unique_ptr<HttpResponse>		response;
 	std::unique_ptr<ResponseHandler>	responseHandler;
@@ -31,4 +31,5 @@ struct Client {
 	bool								responseReady;
 	std::time_t							lastRequest;
 	bool								keep_alive;
+	bool								CGIrequest;
 };
