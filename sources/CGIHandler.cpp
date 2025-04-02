@@ -20,24 +20,23 @@ void CGIHandler::closeFds(const std::vector<int> fdsToclose)
 	}
 }
 
-std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request) // takes request
+std::vector<char*>	CGIHandler::setCGIEnv(const Client& client) // takes request
 {
 	std::vector<std::string> strEnv;
 
-	strEnv.emplace_back("REQUEST_METHOD=" + request.method);
-	if (request.headers.find("Host") != request.headers.end())
-		strEnv.emplace_back("SERVER_NAME=" + request.headers.at("Host"));
-	if (request.method == "POST")
+	strEnv.emplace_back("REQUEST_METHOD=" + client.request->method);
+	strEnv.emplace_back("SERVER_NAME=" + client.request->headers.at("Host"));
+	if (client.request->method == "POST")
 	{
 		strEnv.emplace_back("CONTENT_TYPE=application/x-www-form-urlencoded");
 		strEnv.emplace_back("CONTENT_LENGTH="); // needs method to search by header
 	}
-	strEnv.emplace_back("QUERY_STRING=" + request.uriQuery); 	// (if applicable, for GET requests) needs get method
-	strEnv.emplace_back("PATH_INFO=" + request.uri);
-	strEnv.emplace_back("SERVER_PORT=8080"); 	// needs get method
+	strEnv.emplace_back("QUERY_STRING=" + client.request->uriQuery);
+	strEnv.emplace_back("PATH_INFO=" + client.request->uri);
+	strEnv.emplace_back("SERVER_PORT=" + client.serverConfig->_port);
 	strEnv.emplace_back("REMOTE_ADDR=");	// not necessarily needed
 
-	// cast strings to char *
+	// cast strings to <char *> for correct datatype
 	std::vector<char*> env;
 	for (const auto &var : strEnv)
 	{
@@ -47,8 +46,9 @@ std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request) // takes re
 	return env;
 }
 
-void	CGIHandler::handleChildProcess(t_CGIrequest cgiRequest, int clientFd)
+void	CGIHandler::handleChildProcess(int clientFd)
 {
+	t_CGIrequest cgiRequest = _requests[clientFd];
 	int pipedf[2] = {cgiRequest.pipe[0], cgiRequest.pipe[1]};
 	
 	// Redirect WRITE end of pipe to STDOUT
@@ -95,14 +95,11 @@ void CGIHandler::handleParentProcess(t_CGIrequest request)
 	//close(pipedf[READ]);
 }
 
-void	CGIHandler::runCGIScript(const Client& client)
+void	CGIHandler::runCGIScript(Client& client)
 {
-	int	requestKey = client.fd;
-	t_CGIrequest request = _requests[requestKey]; // gets the client request from container
-
-	if (request.status == CGI_READY)
+	if (_requests[client.fd].status == CGI_READY)
 	{
-		if (pipe(request.pipe) < 0){
+		if (pipe(_requests[client.fd].pipe) < 0){
 			throw::std::runtime_error("CGI: Pipe failed"); // handle 500 Internal Server Error
 		}
 		pid_t pid = fork();
@@ -110,36 +107,43 @@ void	CGIHandler::runCGIScript(const Client& client)
 			throw::std::runtime_error("CGI: Fork"); // handle 500 Internal Server Error
 		}
 		if (pid == 0)
-			handleChildProcess(request, client.fd);
+			handleChildProcess(client.fd);
 		else
 		{
-			request.status = CGI_FORKED;
-			request.childPid = pid;
-			handleParentProcess(request);
-		}
-		waitpid(request.childPid, &request.status, 0); // is waitpid necessary
-		if (WIFEXITED(request.status))
-		{
-			std::cout << "Child exited with " << WEXITSTATUS(request.status) << "\n";
-		}
-		else if (WIFSIGNALED(request.status))
-		{
-			std::cout << "Child process terminated with " << WTERMSIG(request.status) << "\n";
-		}
+			// check that child has exited correctly
+			_requests[client.fd].status = CGI_FORKED;
+			_requests[client.fd].childPid = pid;
+			// client.fileReadFd = _requests[client.fd].pipe[READ];
+			// close(_requests[client.fd].pipe[WRITE]);
 
+			handleParentProcess(_requests[client.fd]);
+		}
+		waitpid(_requests[client.fd].childPid, &_requests[client.fd].status, 0); // is waitpid necessary
+		if (WIFEXITED(_requests[client.fd].status))
+		{
+			std::cout << "Child exited with " << WEXITSTATUS(_requests[client.fd].status) << "\n";
+		}
+		else if (WIFSIGNALED(_requests[client.fd].status))
+		{
+			std::cout << "Child process terminated with " << WTERMSIG(_requests[client.fd].status) << "\n";
+		}
+		client.requestReady = true;
 		// send response to client and close -- > write to the client
 	}
 	else if (_requests[client.fd].status == CGI_ERROR)
 	{
 		throw::std::runtime_error("CGI error");
 	}
-	_requests.erase(requestKey);
+	_requests.erase(client.fd);
 }
 
 void	CGIHandler::setupCGI(Client &client)
 {
 	// checks that the status of the client is correct
-	// add the client to the requests if 
+	// needs to check if child is already executing and if it is do nothing
+	// add the client to the requests if
+	if (_requests.find(client.fd) != _requests.end())
+		return;
 	if (client.requestReady && this->_requests.size() < 10)
 	{
 		const HttpRequest&  request = client.requestHandler->getRequest();
