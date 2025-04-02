@@ -109,9 +109,9 @@ void	ServerHandler::addConnection(size_t& i) {
 		addrlen = sizeof(remoteaddr_in);
 		clientFd = accept(_pollFds[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
 		if (clientFd == -1)
-			throw std::runtime_error("Internal Server Error 500: accept failed");
+			throw std::runtime_error("Error: accept failed");
 		if (fcntl(clientFd, F_SETFL, O_NONBLOCK))
-			throw std::runtime_error("Internal Server Error 500: fcntl failed");
+			throw std::runtime_error("Error: fcntl failed");
 		new_pollfd.fd = clientFd;
 		new_pollfd.events = POLLIN | POLLOUT;
 		new_pollfd.revents = 0;
@@ -121,8 +121,7 @@ void	ServerHandler::addConnection(size_t& i) {
 		_clients[clientFd]->serverConfig = _servers.at(i)->getServerConfig();
 		_clients[clientFd]->fd = clientFd;
 	} catch (std::exception& e) {
-		_clients[clientFd]->responseCode = 500;
-		_clients[clientFd]->responseReady = true;
+		// these should be logged, no response can be made, as there is no connection
 	}
 }
 
@@ -207,7 +206,7 @@ void	ServerHandler::processRequest(size_t& i)
 
 void	ServerHandler::pollLoop()
 {
-	int			poll_count;
+	int	poll_count;
 
 	setPollList();
 	while (_running)
