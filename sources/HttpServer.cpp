@@ -17,7 +17,7 @@ HttpServer::HttpServer(Config serverData)
 {
 	_port = serverData._port;
 	_sockFd = -1;
-	_settings = serverData;
+	_config = serverData;
 	std::cout << "Created new virtual server instance\n";
 }
 
@@ -89,4 +89,4 @@ void HttpServer::setupAddrinfo()
 
 int HttpServer::getListenSockfd() { return _sockFd; }
 
-const Config &HttpServer::getServerSettings() { return _settings; }
+const Config* HttpServer::getServerConfig() { return &_config; }

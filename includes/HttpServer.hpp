@@ -4,7 +4,7 @@
 class HttpServer
 {
 private:
-		Config						_settings; // holds the config for each server
+		Config						_config; // holds the config for each server
 		std::string					_port;
 		int							_sockFd;
 public:
@@ -16,5 +16,5 @@ public:
 
 		// get methods
 		int				getListenSockfd();
-		const Config	&getServerSettings();
+		const Config*	getServerConfig();
 };
