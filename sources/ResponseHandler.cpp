@@ -17,7 +17,7 @@ ResponseHandler::ResponseHandler(const Client& client, const HttpRequest& reques
 // Deconstructor
 ResponseHandler::~ResponseHandler() {}
 
-void ResponseHandler::sendResponse(int clientFd) {
+void ResponseHandler::sendResponse() {
 	char buf[BUFFER_SIZE] = {};
 	int bytesSent;
 	size_t leftToSend = _response->responseString.size() - _response->totalBytesSent;
@@ -25,18 +25,18 @@ void ResponseHandler::sendResponse(int clientFd) {
 	_response->body.copy(buf, BUFFER_SIZE, _response->totalBytesSent);
 
 	try {
-		bytesSent= send(clientFd, buf, bytesToSend, MSG_NOSIGNAL);
+		bytesSent= send(_client.fd, buf, bytesToSend, MSG_NOSIGNAL);
 		if (bytesSent <= 0)
 			throw std::runtime_error("SEND ERROR EXCEPTION: send failed");
 		if (bytesSent < BUFFER_SIZE)
 		{
 			if (static_cast<std::string::size_type>(_response->totalBytesSent) != _response->responseString.size())
 				throw std::runtime_error("SEND ERROR EXCEPTION: send failed");
-			std::cout << "Client " << clientFd << " response sent:\n" << _response->responseString << "\n";
+			std::cout << "Client " << _client.fd << " response sent:\n" << _response->responseString << "\n";
 		}
 		else
 		{
-			std::cout << "Client [" << clientFd << "] sent " << bytesSent << " bytes socket, continuing...\n";
+			std::cout << "Client [" << _client.fd << "] sent " << bytesSent << " bytes socket, continuing...\n";
 		}
 	} catch (const std::runtime_error& e) {
 		// handle send error exception
@@ -146,4 +146,6 @@ const std::string ResponseHandler::toString() const
 	return response;
 }
 
-// RESPONSE EXCEPTION IMPLEMENTATIONS BELOW HERE
+const char* ResponseHandler::SendError::what() const noexcept {
+	return "Send Failed";
+}
