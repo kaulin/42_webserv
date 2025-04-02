@@ -9,6 +9,7 @@ SOURCES				:= main.cpp \
 						LocationParser.cpp \
 						HttpServer.cpp \
 						ServerHandler.cpp \
+						ServerException.cpp \
 						RequestHandler.cpp \
 						RequestParser.cpp \
 						ResponseHandler.cpp \
@@ -24,7 +25,16 @@ OBJECT_PATHS		:= $(addprefix $(OBJECT_DIRECTORY), $(OBJECTS))
 
 # Includes
 INCLUDE_DIRECTORY	:= includes/
-INCLUDES			:= webserv.hpp RequestHandler.hpp RequestParser.hpp HttpResponse.hpp HttpServer.hpp ServerHandler.hpp CGIHandler.hpp ResponseHandler.hpp
+INCLUDES			:= webserv.hpp \
+						RequestHandler.hpp \
+						RequestParser.hpp \
+						HttpResponse.hpp \
+						HttpServer.hpp \
+						ServerHandler.hpp \
+						ServerException.hpp \
+						CGIHandler.hpp \
+						RequestHandler.hpp \
+						ResponseHandler.hpp
 
 INCLUDE_PATHS		:= $(addprefix $(INCLUDE_DIRECTORY), $(INCLUDES))
 INCLUDE_FLAGS		:= -I includes/

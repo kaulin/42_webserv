@@ -11,7 +11,6 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include "Client.hpp"
-#include "HttpServer.hpp"
 
 struct Request;
 struct Client;

@@ -2,9 +2,12 @@
 #include <csignal>
 #include <filesystem>
 #include <sys/socket.h>
+#include "ServerException.hpp"
 #include "ServerHandler.hpp"
 #include "HttpServer.hpp"
 #include "RequestParser.hpp"
+#include "RequestHandler.hpp"
+#include "ResponseHandler.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -95,6 +98,7 @@ void	ServerHandler::addConnection(size_t& i) {
 		new_pollfd.revents = 0;
 		_pollFds.emplace_back(new_pollfd);
 		_clients[clientFd] = std::make_unique<Client>();
+		_clients[clientFd]->requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
 		_clients[clientFd]->fd = clientFd;
 	} catch (std::exception& e) {
 		_clients[clientFd]->responseCode = 500;
@@ -218,6 +222,11 @@ void	ServerHandler::pollLoop()
 						addConnection(i);
 					else
 					{
+						// try {
+						// 	_requestHandler.readRequest();
+						// } catch (const ServerException& e) {
+						// 	closeConnection(i);
+						// }
 						readRequest(i);
 					}
 				}
@@ -227,8 +236,10 @@ void	ServerHandler::pollLoop()
 						readFromFd(i);
 					else if (_clients[_pollFds[i].fd]->fileWriteFd > 0)
 						writeToFd(i);
-					else if (_clients[_pollFds[i].fd]->requestReady == true)
+					else if (_clients[_pollFds[i].fd]->requestReady == true) {
+
 						sendResponse(i);
+					}
 				}
 			}
 		} catch (std::exception& e) {

@@ -6,7 +6,7 @@ const char* ServerException::what() const noexcept {
 	return statusMessage(_statusCode);
 }
 
-const int ServerException::statusCode() const {
+int ServerException::statusCode() const {
 	return _statusCode;
 }
 
@@ -55,4 +55,5 @@ const char* ServerException::statusMessage(int statusCode) {
 		case 503:
 			return "Service Unavailable";
 	}
+	return "Internal Server Error";
 }

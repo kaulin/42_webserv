@@ -7,6 +7,7 @@
 #include "HttpResponse.hpp"
 #include "ResponseHandler.hpp"
 
+class RequestHandler;
 class ResponseHandler;
 
 struct Client {
@@ -14,7 +15,7 @@ struct Client {
 	std::string							requestString;
 	bool								requestReady;
 	std::unique_ptr<HttpRequest>		request;
-	std::unique_ptr<HttpResponse>			response;
+	std::unique_ptr<HttpResponse>		response;
 	std::unique_ptr<ResponseHandler>	responseHandler;
 	std::unique_ptr<RequestHandler>		requestHandler;
 	int									fileSize;
