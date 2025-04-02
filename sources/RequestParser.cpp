@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cctype>
 #include "RequestParser.hpp"
+#include "HttpRequest.hpp"
 
 // Helper function to trim whitespace
 std::string trimWhitespace(const std::string& str)
