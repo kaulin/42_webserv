@@ -129,8 +129,10 @@ void ServerHandler::addConnection(size_t& i) {
 		addrlen = sizeof(remoteaddr_in);
 		clientFd = accept(_pollFds[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
 		if (clientFd == -1)
+			throw ServerException(STATUS_INTERNAL_ERROR);
 			throw std::runtime_error("Error: accept failed");
 		if (fcntl(clientFd, F_SETFL, O_NONBLOCK))
+			throw ServerException(STATUS_INTERNAL_ERROR);
 			throw std::runtime_error("Error: fcntl failed");
 		new_pollfd.fd = clientFd;
 		new_pollfd.events = POLLIN | POLLOUT;
@@ -200,6 +202,24 @@ void	ServerHandler::pollLoop()
 			}
 		}
 	}
+}
+
+void	ServerHandler::handleServerException(int statusCode, size_t p_counter)
+{
+	p_counter = 0;
+	int conf_id = p_counter;
+	Client& client = *_clients[_pollFds[conf_id].fd].get();
+	const Config *config = _servers[conf_id]->getServerConfig();
+	// Client& client = *_clients[_pollFds[0].fd].get();
+	// const Config *config = _servers[0]->getServerConfig();
+	std::map<int, std::string>::const_iterator it = config->_error_pages.find(statusCode);
+	std::string path = "var/www/html" + it->second;
+	std::cout << path << std::endl; // test
+	client.fileSize = std::filesystem::file_size(path); // <-- segfault
+	client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+	readFromFd(p_counter);
+	sendResponse(p_counter);
+
 }
 
 void	ServerHandler::readFromFd(size_t& i) {

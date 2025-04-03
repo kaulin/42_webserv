@@ -44,6 +44,7 @@ public:
 	void		checkClient(size_t& i);
 	void		closeConnection(size_t& i);
 	void		cleanupServers();
+	void		handleServerException(int statusCode, size_t p_counter);
 	
 	static void	signalHandler(int);
 

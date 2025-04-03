@@ -35,6 +35,6 @@ public:
 	ServerConfigData();
 	~ServerConfigData();
 
-	std::map<std::string, Config>&   getConfigBlocks();
+	std::map<std::string, Config>&	getConfigBlocks();
 	size_t  getServerCount();
 };
