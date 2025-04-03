@@ -27,6 +27,7 @@ void RequestHandler::readRequest() {
 	char buf[BUFFER_SIZE] = {};
 
 	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);
+	throw ServerException(STATUS_INTERNAL_ERROR); // ServerException test
 	if (receivedBytes < 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	// else if (receivedBytes == 0) // client disconnected? send no response and clean client data in server handler
