@@ -116,9 +116,11 @@ void	ServerHandler::addConnection(size_t& i) {
 		new_pollfd.revents = 0;
 		_pollFds.emplace_back(new_pollfd);
 		_clients[clientFd] = std::make_unique<Client>();
-		_clients[clientFd]->requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
-		_clients[clientFd]->serverConfig = _servers.at(i)->getServerConfig();
-		_clients[clientFd]->fd = clientFd;
+		Client& client = *_clients[clientFd].get();
+		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
+		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
+		client.serverConfig = _servers.at(i)->getServerConfig();
+		client.fd = clientFd;
 	} catch (std::exception& e) {
 		// these should be logged, no response can be made, as there is no connection
 	}
@@ -143,7 +145,7 @@ void	ServerHandler::pollLoop()
 		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
 			try {
-				if (i < _serverCount)
+				if (_pollFds[i].revents & POLLIN && i < _serverCount)
 				{
 					addConnection(i);
 					continue;
@@ -151,7 +153,7 @@ void	ServerHandler::pollLoop()
 				Client& client = *_clients[_pollFds[i].fd].get();
 				if (_pollFds[i].revents & POLLIN)
 						client.requestHandler->readRequest();
-				else // if (_pollFds[i].revents & POLLIN)
+				else if (_pollFds[i].revents & POLLOUT)
 				{
 					if (client.cgiRequested)
 					{
@@ -163,9 +165,10 @@ void	ServerHandler::pollLoop()
 						readFromFd(i);
 					else if (client.fileWriteFd > 0)
 						writeToFd(i);
-					else if (client.responseReady == true)
+					else if (client.requestReady == true)
 					{
-						sendResponse(i);
+						client.responseHandler->formResponse();
+						client.responseHandler->sendResponse();
 						// cleanClient();
 					}
 				}
@@ -227,7 +230,7 @@ void	ServerHandler::writeToFd(size_t& i) {
 		{
 			if (client.fileTotalBytesWritten != client.fileSize)
 				throw std::runtime_error("Internal Server Error 500: write failed");
-			client.responseReady = true;
+			client.requestReady = true;
 			std::cout << "Client [" << client.fd << "] POST request resource saved to disk\n";
 			close(client.fileWriteFd);
 			client.fileWriteFd = -1;
