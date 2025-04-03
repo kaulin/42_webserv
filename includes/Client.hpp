@@ -23,6 +23,7 @@ struct Client {
 	bool								cgiRequested;
 	bool								requestReady;
 	bool								responseReady;
+	int									responseSent;
 	int									responseCode;
 	int									fileSize;
 	int									fileReadFd;
