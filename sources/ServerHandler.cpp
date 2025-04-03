@@ -76,29 +76,30 @@ void	ServerHandler::error_and_exit(const char *msg)
 	exit(errno);
 }
 
-void	ServerHandler::sendResponse(size_t& i)
-{
-	int clientFd = _pollFds[i].fd;
-	
-	std::string response =
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: text/html; charset=UTF-8\r\n"
-		"Content-Length: " + std::to_string(_clients[clientFd]->resourceString.length()) + "\r\n"
-		"\r\n";
-	response +=_clients[clientFd]->resourceString;
-	ssize_t bytes_sent;
-	std::cout << "Sending back response: " << "\n";
-	if ((bytes_sent = send(clientFd, response.c_str(), response.length(), 0)) == -1) {
-		error_and_exit("Send");
-	}
-	std::cout << "Response sent successfully!" 
-	<< " (sent " << bytes_sent << " bytes)"
-	<< std::endl;
-	if (_clients[clientFd]->keep_alive == false)
-		closeConnection(i);
+void printClientInfo(const Client& client) {
+	std::cout << "Client fd " << client.fd << ":\n";
+	std::cout << "	bool cgiRequested: " << (client.cgiRequested ? "true" : "false") << "\n";
+	std::cout << "	bool requestReady: " << (client.requestReady ? "true" : "false") << "\n";
+	std::cout << "	bool responseReady: " << (client.responseReady ? "true" : "false") << "\n";
+	std::cout << "	int responseCode: " << client.responseCode << "\n";
+	std::cout << "\n";
 }
 
-void	ServerHandler::addConnection(size_t& i) {
+void ServerHandler::resetClient(Client& client) {
+	client.resourceString = "";
+	client.cgiRequested = false;
+	client.requestReady = false;
+	client.responseReady = false;
+	client.responseSent = false;
+	client.responseCode = 200;
+	client.fileSize = 0;
+	client.fileReadFd = -1;
+	client.fileTotalBytesRead = 0;
+	client.fileWriteFd = -1;
+	client.fileTotalBytesWritten = 0;
+}
+
+void ServerHandler::addConnection(size_t& i) {
 	int clientFd;
 	socklen_t addrlen;
 	struct sockaddr_storage remoteaddr_in;
@@ -117,20 +118,36 @@ void	ServerHandler::addConnection(size_t& i) {
 		_pollFds.emplace_back(new_pollfd);
 		_clients[clientFd] = std::make_unique<Client>();
 		Client& client = *_clients[clientFd].get();
-		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
-		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
 		client.serverConfig = _servers.at(i)->getServerConfig();
 		client.fd = clientFd;
+		client.keep_alive = false;
+		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
+		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
+		resetClient(client);
+		printClientInfo(client);
 	} catch (std::exception& e) {
 		// these should be logged, no response can be made, as there is no connection
 	}
 }
 
-void	ServerHandler::closeConnection(size_t& i) {
+void ServerHandler::closeConnection(size_t& i) {
 	int clientFd = _pollFds[i].fd;
 	close(clientFd);
 	_pollFds.erase(_pollFds.begin() + i);
 	_clients.erase(clientFd);
+}
+
+void ServerHandler::checkClient(size_t& i) {
+	Client& client = *_clients[_pollFds[i].fd].get();
+	if (client.responseSent)
+	{
+		if (client.keep_alive)
+			resetClient(client);
+		else
+			closeConnection(i);
+	}
+	else if (false) // checkTimeout(client);
+		closeConnection(i);
 }
 
 void	ServerHandler::pollLoop()
@@ -152,7 +169,9 @@ void	ServerHandler::pollLoop()
 				}
 				Client& client = *_clients[_pollFds[i].fd].get();
 				if (_pollFds[i].revents & POLLIN)
-						client.requestHandler->readRequest();
+				{
+					client.requestHandler->readRequest();
+				}
 				else if (_pollFds[i].revents & POLLOUT)
 				{
 					if (client.cgiRequested)
@@ -165,14 +184,14 @@ void	ServerHandler::pollLoop()
 						readFromFd(i);
 					else if (client.fileWriteFd > 0)
 						writeToFd(i);
-					else if (client.requestReady == true)
+					else if (client.requestReady)
 					{
 						client.responseHandler->formResponse();
 						client.responseHandler->sendResponse();
 						// cleanClient();
 					}
 				}
-				// checkTimeouts(i);
+				// reset/timeout client;
 			} catch (const ServerException& e) {
 				closeConnection(i);
 			} catch (const std::exception& e) {
@@ -198,7 +217,7 @@ void	ServerHandler::readFromFd(size_t& i) {
 		{
 			if (client.fileTotalBytesRead != client.fileSize)
 				throw std::runtime_error("Internal Server Error 500: read failed");
-			client.responseReady = true;
+			client.requestReady = true;
 			std::cout << "Client [" << client.fd << "] response body read: " << client.resourceString << "\n";
 			close(client.fileReadFd);
 			client.fileReadFd = -1;
