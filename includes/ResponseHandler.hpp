@@ -26,8 +26,11 @@ private:
 	void formDELETE();
 	void formDirectoryListing();
 	void formErrorPage();
+	void formCGI();
+	void addStatus();
 	void addHeader(const std::string& key, const std::string& value);
-	const std::string toString() const;
+	void addBody(const std::string& bodyString);
+	void makeResponseString();
 public:
 	ResponseHandler(Client& client);
 	~ResponseHandler(); 
