@@ -28,8 +28,9 @@ private:
 	Logger												_fileLogger;
 	Logger												_consoleLogger;
 	CGIHandler											_CGIHandler;
-	void	readFromFd(size_t& i);
-	void	writeToFd(size_t& i);
+	static void	resetClient(Client& client);
+	void		readFromFd(size_t& i);
+	void		writeToFd(size_t& i);
 public:
 	ServerHandler(std::string path);
 	~ServerHandler();
@@ -40,8 +41,8 @@ public:
 	void		setPollList();
 	void		error_and_exit(const char *msg);
 	void		addConnection(size_t& i);
+	void		checkClient(size_t& i);
 	void		closeConnection(size_t& i);
-	void		sendResponse(size_t& i);
 	void		cleanupServers();
 	
 	static void	signalHandler(int);
