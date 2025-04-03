@@ -136,19 +136,20 @@ void	CGIHandler::runCGIScript(const Client& client)
 	_requests.erase(requestKey);
 }
 
-void	CGIHandler::setupCGI(const Client &client)
+void	CGIHandler::setupCGI(Client &client)
 {
 	// checks that the status of the client is correct
 	// add the client to the requests if 
 	if (client.requestReady && this->_requests.size() < 10)
 	{
+		const HttpRequest&  request = client.requestHandler->getRequest();
 		t_CGIrequest cgiInst;
-		cgiInst.CGIPath = std::filesystem::current_path().string() + client.request->uri;
+		cgiInst.CGIPath = std::filesystem::current_path().string() + request.uri;
 		cgiInst.argv.emplace_back(const_cast<char *>(cgiInst.CGIPath.c_str()));
 		cgiInst.argv.emplace_back(nullptr);
 		cgiInst.status = CGI_READY;
 		cgiInst.envp.clear();
-		cgiInst.envp = setCGIEnv(*client.request);
+		cgiInst.envp = setCGIEnv(request);
 		_requests.emplace(client.fd, cgiInst);
 	}
 	else
