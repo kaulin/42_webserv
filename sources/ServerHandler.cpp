@@ -172,6 +172,8 @@ void	ServerHandler::pollLoop()
 				// checkTimeouts(i);
 			} catch (const ServerException& e) {
 				closeConnection(i);
+			} catch (const std::exception& e) {
+				std::cout << "Caught exception: " << e.what() << "\n";
 			}
 		}
 	}
