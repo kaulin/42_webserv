@@ -41,8 +41,6 @@ public:
 	void		error_and_exit(const char *msg);
 	void		addConnection(size_t& i);
 	void		closeConnection(size_t& i);
-	void		readRequest(size_t& i);
-	void		processRequest(size_t& i);
 	void		sendResponse(size_t& i);
 	void		cleanupServers();
 	

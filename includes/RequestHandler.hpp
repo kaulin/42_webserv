@@ -1,6 +1,5 @@
 #pragma once
 
-#include <string>
 #include <memory>
 #include "HttpRequest.hpp"
 #include "Client.hpp"

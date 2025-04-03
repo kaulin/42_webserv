@@ -1,3 +1,5 @@
+#include <filesystem>
+#include <fcntl.h>
 #include <iostream>
 #include <sys/socket.h>
 #include "ServerException.hpp"
@@ -39,6 +41,28 @@ void RequestHandler::processRequest() {
 	_request = std::make_unique<HttpRequest>();
 	
 	RequestParser::parseRequest(_requestString, *_request.get());
+
+	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
+
+	if (_request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
+	{
+		_client.cgiRequested = true;
+	}
+	else if (_request->method == "GET")
+	{
+		std::string path = "var/www/html" + _request->uri;
+		_client.fileSize = std::filesystem::file_size(path);
+		_client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+		std::cout << "Requested file path: " << path << ", and size of file: " << _client.fileSize << "\n";
+	}
+
+	if (_request->method == "POST")
+	{
+		std::string path = "var/www/html" + _request->uri;
+		_client.fileSize = _request->body.size();
+		_client.fileWriteFd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
+		std::cout << "Requested file path: " << path << ", and size of file: " << _client.fileSize << "\n";
+	}
 }
 
 const HttpRequest &RequestHandler::getRequest() const
