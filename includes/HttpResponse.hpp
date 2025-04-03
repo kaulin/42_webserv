@@ -6,7 +6,6 @@
 
 struct HttpResponse
 {
-	int			statusCode;
 	int			totalBytesSent;
 	std::string	statusLine;
 	std::string	headers;
