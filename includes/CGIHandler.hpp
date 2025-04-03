@@ -36,6 +36,6 @@ private:
 public:
 	CGIHandler();
 
-	void			setupCGI(const Client& client);
+	void			setupCGI(Client& client);
 	void			runCGIScript(const Client& client);
 };
