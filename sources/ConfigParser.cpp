@@ -25,14 +25,14 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
 		
 		std::cout << "Error Pages:\n";
 		for (const auto& page : config.second._error_pages)
-			//std::cout << "  " << page.first << ": " << page.second << "\n";
-			std::cout << page << " ";
+			std::cout << "  " << page.first << ": " << page.second << "\n";
+			//std::cout << page << " ";
 		
-		std::cout << "Error Codes:\n";
-		for (const auto& code : config.second._error_codes)
-			std::cout << "  " << code.first << ": " << code.second << "\n";
+		// std::cout << "Error Codes:\n";
+		// for (const auto& code : config.second._error_codes)
+		// 	std::cout << "  " << code.first << ": " << code.second << "\n";
 		
-		std::cout << "---------------------\n";
+		std::cout << "\n---------------------\n";
 		std::cout << "Locations:\n";
 		for (const auto& loc : config.second._location) {
 			const Location& location = loc.second;
@@ -253,11 +253,11 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				break;
 			case ConfigKey::ERROR_404:
 				++it;
-				blockInstance._error_pages.push_back(*it);
+				blockInstance._error_pages.emplace(404, *it);
 				++it; break;
 			case ConfigKey::ERROR_500:
 				++it;
-				blockInstance._error_pages.push_back(*it);
+				blockInstance._error_pages.emplace(500, *it);
 				++it; break;
 			case ConfigKey::CLIENT_MAX_BODY_SIZE:
 			{
@@ -323,6 +323,7 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 		}
 		++it;
 	}
+	testPrintConfigs(configs);
 	return configs;
 }
 
