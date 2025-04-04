@@ -20,19 +20,19 @@ void CGIHandler::closeFds(const std::vector<int> fdsToclose)
 	}
 }
 
-std::vector<char*>	CGIHandler::setCGIEnv(const Client& client) // takes request
+std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request, const Client& client) // takes request
 {
 	std::vector<std::string> strEnv;
 
-	strEnv.emplace_back("REQUEST_METHOD=" + client.request->method);
-	strEnv.emplace_back("SERVER_NAME=" + client.request->headers.at("Host"));
-	if (client.request->method == "POST")
+	strEnv.emplace_back("REQUEST_METHOD=" + request.method);
+	strEnv.emplace_back("SERVER_NAME=" + request.headers.at("Host"));
+	if (request.method == "POST")
 	{
 		strEnv.emplace_back("CONTENT_TYPE=application/x-www-form-urlencoded");
 		strEnv.emplace_back("CONTENT_LENGTH="); // needs method to search by header
 	}
-	strEnv.emplace_back("QUERY_STRING=" + client.request->uriQuery);
-	strEnv.emplace_back("PATH_INFO=" + client.request->uri);
+	strEnv.emplace_back("QUERY_STRING=" + request.uriQuery);
+	strEnv.emplace_back("PATH_INFO=" + request.uri);
 	strEnv.emplace_back("SERVER_PORT=" + client.serverConfig->_port);
 	strEnv.emplace_back("REMOTE_ADDR=");	// not necessarily needed
 
@@ -144,6 +144,8 @@ void	CGIHandler::setupCGI(Client &client)
 	// checks that the status of the client is correct
 	// needs to check if child is already executing and if it is do nothing
 	// add the client to the requests if
+	const HttpRequest&  request = client.requestHandler->getRequest();
+	
 	if (_requests.find(client.fd) != _requests.end())
 		return;
 	if (client.requestReady && this->_requests.size() < 10)
@@ -155,7 +157,7 @@ void	CGIHandler::setupCGI(Client &client)
 		cgiInst.argv.emplace_back(nullptr);
 		cgiInst.status = CGI_READY;
 		cgiInst.envp.clear();
-		cgiInst.envp = setCGIEnv(request);
+		cgiInst.envp = setCGIEnv(request, client);
 		_requests.emplace(client.fd, cgiInst);
 	}
 	else
