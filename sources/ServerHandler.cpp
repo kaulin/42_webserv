@@ -97,6 +97,27 @@ void ServerHandler::resetClient(Client& client) {
 	client.fileTotalBytesRead = 0;
 	client.fileWriteFd = -1;
 	client.fileTotalBytesWritten = 0;
+	client.requestHandler->resetHandler();
+}
+
+void ServerHandler::closeConnection(size_t& i) {
+	int clientFd = _pollFds[i].fd;
+	close(clientFd);
+	_pollFds.erase(_pollFds.begin() + i);
+	_clients.erase(clientFd);
+}
+
+void ServerHandler::checkClient(size_t& i) {
+	Client& client = *_clients[_pollFds[i].fd].get();
+	if (client.responseSent)
+	{
+		if (client.keep_alive)
+			resetClient(client);
+		else
+			closeConnection(i);
+	}
+	else if (false) // checkTimeout(client);
+		closeConnection(i);
 }
 
 void ServerHandler::addConnection(size_t& i) {
@@ -124,30 +145,9 @@ void ServerHandler::addConnection(size_t& i) {
 		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
 		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
 		resetClient(client);
-		printClientInfo(client);
 	} catch (std::exception& e) {
 		// these should be logged, no response can be made, as there is no connection
 	}
-}
-
-void ServerHandler::closeConnection(size_t& i) {
-	int clientFd = _pollFds[i].fd;
-	close(clientFd);
-	_pollFds.erase(_pollFds.begin() + i);
-	_clients.erase(clientFd);
-}
-
-void ServerHandler::checkClient(size_t& i) {
-	Client& client = *_clients[_pollFds[i].fd].get();
-	if (client.responseSent)
-	{
-		if (client.keep_alive)
-			resetClient(client);
-		else
-			closeConnection(i);
-	}
-	else if (false) // checkTimeout(client);
-		closeConnection(i);
 }
 
 void	ServerHandler::pollLoop()
@@ -162,9 +162,10 @@ void	ServerHandler::pollLoop()
 		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
 			try {
-				if (_pollFds[i].revents & POLLIN && i < _serverCount)
+				if (i < _serverCount)
 				{
-					addConnection(i);
+					if (_pollFds[i].revents & POLLIN)
+						addConnection(i);
 					continue;
 				}
 				Client& client = *_clients[_pollFds[i].fd].get();
@@ -188,12 +189,13 @@ void	ServerHandler::pollLoop()
 					{
 						client.responseHandler->formResponse();
 						client.responseHandler->sendResponse();
-						// cleanClient();
 					}
 				}
+				checkClient(i);
 				// reset/timeout client;
 			} catch (const ServerException& e) {
-				closeConnection(i);
+				std::cout << "Caught exception: " << e.what() << "\n";
+				// closeConnection(i);
 			} catch (const std::exception& e) {
 				std::cout << "Caught exception: " << e.what() << "\n";
 			}
@@ -218,13 +220,13 @@ void	ServerHandler::readFromFd(size_t& i) {
 			if (client.fileTotalBytesRead != client.fileSize)
 				throw std::runtime_error("Internal Server Error 500: read failed");
 			client.requestReady = true;
-			std::cout << "Client [" << client.fd << "] response body read: " << client.resourceString << "\n";
+			std::cout << "Client " << client.fd << " resource read complete:\n" << client.resourceString << "\n";
 			close(client.fileReadFd);
 			client.fileReadFd = -1;
 		}
 		else
 		{
-			std::cout << "Client [" << client.fd << "] read " << bytesRead << " bytes from disk, continuing...\n";
+			std::cout << "Client " << client.fd << " read " << bytesRead << " bytes from resource, continuing...\n";
 			_pollFds[i].revents = POLL_OUT;
 		}
 	}

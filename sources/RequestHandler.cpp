@@ -11,8 +11,8 @@ RequestHandler::~RequestHandler() {}
 RequestHandler::RequestHandler(Client& client) : 
 	_client(client),
 	_requestString(""),
-	_requestReady(false)
-	// _chunkedRequest(false),
+	_readReady(false)
+	// _chunkedRequest(false)
 	// _chunkedRequestReady(false) 
 	{}
 
@@ -28,12 +28,12 @@ void RequestHandler::readRequest() {
 	else {
 		_requestString.append(buf, receivedBytes);
 		if (receivedBytes < BUFFER_SIZE) { // whole request read
-			_requestReady = true;
-			std::cout << "Client [" << _client.fd << "] request ready: " << _requestString << "\n";
+			_readReady = true;
+			std::cout << "Client " << _client.fd << " complete request received!\n";
 			processRequest();
 		}
 		else // more incoming
-			std::cout << "Received request portion: " << buf << "\n";
+			std::cout << "Client " << _client.fd << " received request portion:\n" << buf << "\n";
 	}
 }
 
@@ -63,6 +63,11 @@ void RequestHandler::processRequest() {
 		_client.fileWriteFd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
 		std::cout << "Requested file path: " << path << ", and size of file: " << _client.fileSize << "\n";
 	}
+}
+
+void RequestHandler::resetHandler() {
+	_requestString = "";
+	_readReady = false;
 }
 
 const HttpRequest &RequestHandler::getRequest() const
