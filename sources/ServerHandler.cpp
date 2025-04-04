@@ -217,8 +217,8 @@ void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 	// 	return;
 	// }
 	Client& client = *_clients[_pollFds[fd].fd].get();
-	fd = 0;
-	const Config &config = *_servers[fd]->getServerConfig();
+	size_t conf_id = 0;
+	const Config &config = *_servers[conf_id]->getServerConfig();
 	if (config._error_pages.empty()) {
 		std::cout << "no error pages defined in config" << std::endl;
 		return;
