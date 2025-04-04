@@ -111,22 +111,24 @@ void	CGIHandler::runCGIScript(Client& client)
 		else
 		{
 			// check that child has exited correctly
+			// handleParentProcess(_requests[client.fd]);
+
+			close(_requests[client.fd].pipe[WRITE]);
+
 			_requests[client.fd].status = CGI_FORKED;
 			_requests[client.fd].childPid = pid;
-			// client.fileReadFd = _requests[client.fd].pipe[READ];
-			// close(_requests[client.fd].pipe[WRITE]);
+			client.fileReadFd = _requests[client.fd].pipe[READ];
 
-			handleParentProcess(_requests[client.fd]);
 		}
-		waitpid(_requests[client.fd].childPid, &_requests[client.fd].status, 0); // is waitpid necessary
-		if (WIFEXITED(_requests[client.fd].status))
-		{
-			std::cout << "Child exited with " << WEXITSTATUS(_requests[client.fd].status) << "\n";
-		}
-		else if (WIFSIGNALED(_requests[client.fd].status))
-		{
-			std::cout << "Child process terminated with " << WTERMSIG(_requests[client.fd].status) << "\n";
-		}
+		// waitpid(_requests[client.fd].childPid, &_requests[client.fd].status, 0); // is waitpid necessary
+		// if (WIFEXITED(_requests[client.fd].status))
+		// {
+		// 	std::cout << "Child exited with " << WEXITSTATUS(_requests[client.fd].status) << "\n";
+		// }
+		// else if (WIFSIGNALED(_requests[client.fd].status))
+		// {
+		// 	std::cout << "Child process terminated with " << WTERMSIG(_requests[client.fd].status) << "\n";
+		// }
 		client.requestReady = true;
 		// send response to client and close -- > write to the client
 	}
