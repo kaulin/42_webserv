@@ -216,6 +216,7 @@ void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 	// 	std::cout << "server configuration null" << std::endl;
 	// 	return;
 	// }
+	Client& client = *_clients[_pollFds[fd].fd].get();
 	fd = 0;
 	const Config &config = *_servers[fd]->getServerConfig();
 	if (config._error_pages.empty()) {
@@ -225,6 +226,8 @@ void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 	std::map<int, std::string>::const_iterator it = config._error_pages.find(statusCode);
 	std::string path = "var/www/html" + it->second;
 	std::cout << path << std::endl; // test
+	client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+	std::cout << client.fileReadFd << std::endl;
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
