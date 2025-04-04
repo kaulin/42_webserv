@@ -20,7 +20,6 @@ class ResponseHandler
 private:
 	Client& _client;
 	std::unique_ptr<HttpResponse> _response;
-	static std::string getTimeStamp();
 	void formGET();
 	void formPOST();
 	void formDELETE();
@@ -31,11 +30,12 @@ private:
 	void addHeader(const std::string& key, const std::string& value);
 	void addBody(const std::string& bodyString);
 	void makeResponseString();
+	static std::string getTimeStamp();
 public:
 	ResponseHandler(Client& client);
-	~ResponseHandler(); 
-	void formResponse();
+	~ResponseHandler();
 	void sendResponse();
+	void formResponse();
 	
 	class SendError : public std::exception {
 		public:

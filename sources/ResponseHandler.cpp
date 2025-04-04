@@ -11,26 +11,22 @@ ResponseHandler::~ResponseHandler() {}
 void ResponseHandler::sendResponse() {
 	if (!_client.responseReady)
 		return;
-	char buf[BUFFER_SIZE] = {};
-	int bytesSent;
-	size_t leftToSend = _response->response.size() - _response->totalBytesSent;
-	size_t bytesToSend = leftToSend > BUFFER_SIZE ? BUFFER_SIZE : leftToSend;
-	_response->response.copy(buf, BUFFER_SIZE, _response->totalBytesSent);
+	size_t bytesSent;
+	size_t leftToSend = _response->response.size();
 
 	try {
-		bytesSent= send(_client.fd, buf, bytesToSend, MSG_NOSIGNAL);
+		bytesSent= send(_client.fd, _response->response.c_str(), leftToSend, MSG_NOSIGNAL);
 		if (bytesSent <= 0)
 			throw std::runtime_error("SEND ERROR EXCEPTION: send failed");
-		if (bytesSent < BUFFER_SIZE)
+		if (bytesSent == leftToSend)
 		{
-			if (static_cast<std::string::size_type>(_response->totalBytesSent) != _response->response.size())
-				throw std::runtime_error("SEND ERROR EXCEPTION: send failed");
-			std::cout << "Client " << _client.fd << " response sent:\n" << _response->response << "\n";
+			std::cout << "Client " << _client.fd << " response sent!\n" << "\n";
 			_client.responseSent = true;
 		}
 		else
 		{
-			std::cout << "Client [" << _client.fd << "] sent " << bytesSent << " bytes socket, continuing...\n";
+			std::cout << "Client [" << _client.fd << "] sent " << bytesSent << " bytes, continuing...\n";
+			_response->response.erase(0, bytesSent);
 		}
 	} catch (const std::runtime_error& e) {
 		// log? or just std::cerr << e.what() << "\n";
@@ -80,6 +76,7 @@ void ResponseHandler::formResponse()
 		formDELETE();
 	else
 		throw ServerException(STATUS_METHOD_UNSUPPORTED);
+	std::cout << "Finished response string:\n" << _response->response<< "\n";
 	_client.responseReady = true;
 }
 
@@ -89,7 +86,6 @@ void ResponseHandler::formGET() {
 	addHeader("Date", getTimeStamp());
 	addHeader("Content-Type", "text/html"); // get content type from request/client
 	addBody(_client.resourceString);
-	std::cout << "Finished response string: " << _response->response<< "\n";
 }
 
 void ResponseHandler::formPOST() {
