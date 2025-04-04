@@ -14,24 +14,17 @@ void ResponseHandler::sendResponse() {
 	size_t bytesSent;
 	size_t leftToSend = _response->response.size();
 
-	try {
-		bytesSent= send(_client.fd, _response->response.c_str(), leftToSend, MSG_NOSIGNAL);
-		if (bytesSent <= 0)
-			throw std::runtime_error("SEND ERROR EXCEPTION: send failed");
-		if (bytesSent == leftToSend)
-		{
-			std::cout << "Client " << _client.fd << " response sent!\n" << "\n";
-			_client.responseSent = true;
-		}
-		else
-		{
-			std::cout << "Client [" << _client.fd << "] sent " << bytesSent << " bytes, continuing...\n";
-			_response->response.erase(0, bytesSent);
-		}
-	} catch (const std::runtime_error& e) {
-		// log? or just std::cerr << e.what() << "\n";
-		throw ServerException(STATUS_INTERNAL_ERROR);
+	bytesSent= send(_client.fd, _response->response.c_str(), leftToSend, MSG_NOSIGNAL);
+	if (bytesSent <= 0)
+		throw SendError();
+	_response->response.erase(0, bytesSent);
+	if (bytesSent == leftToSend)
+	{
+		std::cout << "Client " << _client.fd << " response sent!\n" << "\n";
+		_client.responseSent = true;
 	}
+	else
+		std::cout << "Client [" << _client.fd << "] sent " << bytesSent << " bytes, continuing...\n";
 }
 
 /*
