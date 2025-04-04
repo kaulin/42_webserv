@@ -235,7 +235,7 @@ void	ServerHandler::writeToFd(size_t& i) {
 	size_t bytesWritten;
 	size_t leftToWrite = request.body.size();
 
-	bytesWritten = write(client.fileWriteFd, request.body.c_str(), leftToWrite);
+	bytesWritten = write(client.fileWriteFd, request.body.c_str() + client.fileTotalBytesWritten, leftToWrite);
 	if (bytesWritten <= 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	else {
