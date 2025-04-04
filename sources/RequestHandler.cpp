@@ -51,17 +51,15 @@ void RequestHandler::processRequest() {
 	else if (_request->method == "GET")
 	{
 		std::string path = "var/www/html" + _request->uri;
-		_client.fileSize = std::filesystem::file_size(path);
 		_client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
-		std::cout << "Requested file path: " << path << ", and size of file: " << _client.fileSize << "\n";
+		std::cout << "Requested file path: " << path << "\n";
 	}
 
 	if (_request->method == "POST")
 	{
 		std::string path = "var/www/html" + _request->uri;
-		_client.fileSize = _request->body.size();
 		_client.fileWriteFd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
-		std::cout << "Requested file path: " << path << ", and size of file: " << _client.fileSize << "\n";
+		std::cout << "Requested file path: " << path << "\n";
 	}
 }
 

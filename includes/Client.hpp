@@ -25,7 +25,6 @@ struct Client {
 	bool								responseReady;
 	int									responseSent;
 	int									responseCode;
-	int									fileSize;
 	int									fileReadFd;
 	int									fileTotalBytesRead;
 	int									fileWriteFd;
