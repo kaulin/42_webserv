@@ -205,15 +205,26 @@ void	ServerHandler::pollLoop()
 
 void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 {
+	// std::cout << "_servers size = " << _servers.size() << std::endl;
+	// if (fd >= _servers.size()) {
+	// 	std::cout << "fd (" << fd << ") out of range" << std::endl;
+	// 	return;
+	// }
+	// Client& client = *_clients[_pollFds[fd].fd].get(); // <-- client might be a nullptr, which will cause a segfault later
+	// std::cout << client.fd << std::endl;
+	// if (!_servers[fd] || !_servers[fd]->getServerConfig()) {
+	// 	std::cout << "server configuration null" << std::endl;
+	// 	return;
+	// }
 	fd = 0;
-	int conf_id = fd;
-	Client& client = *_clients[_pollFds[conf_id].fd].get(); // <-- client might be a nullptr, which will cause a segfault later
-	const Config *config = _servers[conf_id]->getServerConfig();
-	std::map<int, std::string>::const_iterator it = config->_error_pages.find(statusCode);
+	const Config &config = *_servers[fd]->getServerConfig();
+	if (config._error_pages.empty()) {
+		std::cout << "no error pages defined in config" << std::endl;
+		return;
+	}
+	std::map<int, std::string>::const_iterator it = config._error_pages.find(statusCode);
 	std::string path = "var/www/html" + it->second;
 	std::cout << path << std::endl; // test
-	client.fileSize = std::filesystem::file_size(path); // <-- segfault? file path should be ok
-	client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
