@@ -25,12 +25,12 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
 		
 		std::cout << "Error Pages:\n";
 		for (const auto& page : config.second._error_pages)
-			//std::cout << "  " << page.first << ": " << page.second << "\n";
-			std::cout << page << " ";
+			std::cout << "  " << page.first << ": " << page.second << "\n";
+			//std::cout << page << " ";
 		
-		std::cout << "Error Codes:\n";
-		for (const auto& code : config.second._error_codes)
-			std::cout << "  " << code.first << ": " << code.second << "\n";
+		// std::cout << "Error Codes:\n";
+		// for (const auto& code : config.second._error_codes)
+		// 	std::cout << "  " << code.first << ": " << code.second << "\n";
 		
 		std::cout << "---------------------\n";
 		std::cout << "Locations:\n";
@@ -206,6 +206,31 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 	return tokens;
 }
 
+bool isErrorCode(ConfigKey key) { return key >= ConfigKey::ERROR_200 && key <= ConfigKey::ERROR_501; }
+
+void ConfigParser::assignErrorPage(std::vector<std::string>::const_iterator &it, 
+	std::vector<std::string>::const_iterator &end,
+	Config &blockInstance, ConfigKey key)
+{
+	static const std::map<ConfigKey, int> keyToCode = {
+		{ ConfigKey::ERROR_404, 404 },
+		{ ConfigKey::ERROR_500, 500 },
+		// all pages here
+	};
+
+	// set to default here if page not specified?
+
+	auto itCode = keyToCode.find(key);
+	if (itCode != keyToCode.end()) {
+		++it;
+		if (it == end)
+			throw ConfigParserException("Config: Missing path for error code.");
+		blockInstance._error_pages.emplace(itCode->second, *it);
+		++it;
+	}
+}
+
+
 
 void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it, 
 	std::vector<std::string>::const_iterator &end,
@@ -224,6 +249,11 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 		auto keywordIt = keywordMap.find(*it);
 		ConfigKey keyEnum = (keywordIt != keywordMap.end()) ? keywordIt->second : ConfigKey::UNKNOWN;
 
+		if (isErrorCode(keyEnum))
+		{
+			assignErrorPage(it, end, blockInstance, keyEnum);
+			continue;
+		}
 		switch (keyEnum)
 		{
 			case ConfigKey::LOCATION:
@@ -251,14 +281,6 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				while (it != end && *it != ";")
 					{ blockInstance._names.push_back(*it); ++it; }
 				break;
-			case ConfigKey::ERROR_404:
-				++it;
-				blockInstance._error_pages.push_back(*it);
-				++it; break;
-			case ConfigKey::ERROR_500:
-				++it;
-				blockInstance._error_pages.push_back(*it);
-				++it; break;
 			case ConfigKey::CLIENT_MAX_BODY_SIZE:
 			{
 				++it;
@@ -285,6 +307,8 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 			}
 			case ConfigKey::UNKNOWN:
 				break; // default handling
+			default:
+				break;
 		}
 		++it; // iterates main loop in case of default handling
 	}
@@ -323,6 +347,7 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 		}
 		++it;
 	}
+	testPrintConfigs(configs);
 	return configs;
 }
 
