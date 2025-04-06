@@ -205,17 +205,6 @@ void	ServerHandler::pollLoop()
 
 void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 {
-	// std::cout << "_servers size = " << _servers.size() << std::endl;
-	// if (fd >= _servers.size()) {
-	// 	std::cout << "fd (" << fd << ") out of range" << std::endl;
-	// 	return;
-	// }
-	// Client& client = *_clients[_pollFds[fd].fd].get(); // <-- client might be a nullptr, which will cause a segfault later
-	// std::cout << client.fd << std::endl;
-	// if (!_servers[fd] || !_servers[fd]->getServerConfig()) {
-	// 	std::cout << "server configuration null" << std::endl;
-	// 	return;
-	// }
 	Client& client = *_clients[_pollFds[fd].fd].get();
 	size_t conf_id = 0;
 	const Config &config = *_servers[conf_id]->getServerConfig();
@@ -227,7 +216,6 @@ void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 	std::string path = "var/www/html" + it->second;
 	std::cout << path << std::endl; // test
 	client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
-	std::cout << client.fileReadFd << std::endl;
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
