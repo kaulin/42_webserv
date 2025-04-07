@@ -57,6 +57,8 @@ void ResponseHandler::formResponse()
 		return;
 	const HttpRequest& request = _client.requestHandler->getRequest();
 	_response = std::make_unique<HttpResponse>();
+	addStatus();
+	addHeader("Date", getTimeStamp());
 	if (_client.responseCode >= 300)
 		formErrorPage();
 	else if (_client.cgiRequested)
@@ -75,18 +77,21 @@ void ResponseHandler::formResponse()
 
 void ResponseHandler::formGET() {
 	std::cout << "Forming response: GET\n";
-	addStatus();
-	addHeader("Date", getTimeStamp());
-	addHeader("Content-Type", "text/html"); // get content type from request/client
+	addHeader("Content-Type", "text/html"); // get content type from resource type
 	addBody(_client.resourceString);
 }
 
 void ResponseHandler::formPOST() {
 	std::cout << "Forming response: POST\n";
+	addHeader("Content-Type", "text/html"); // get content type from resource type
+	addHeader("Location", _client.requestHandler->getUri());
+	addBody("");
 }
 
 void ResponseHandler::formDELETE() {
 	std::cout << "Forming response: DELETE\n";
+	addHeader("Content-Type", "application/json");
+	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully deleted\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
 }
 
 void ResponseHandler::formCGI() {
@@ -100,14 +105,8 @@ void ResponseHandler::formDirectoryListing() {
 
 void ResponseHandler::formErrorPage() {
 	std::cout << "Forming response: Error Page";
-	// const HttpRequest& request = _client.requestHandler->getRequest();
-	// std::string status = ServerException::statusMessage(_client.responseCode);
-	// _response->statusLine = request.httpVersion + " " + status + "\n";
-	// _response->body = "<html><head><title>" + status + "</title></head><body><center><h1>" + status + "</h1></center><hr><center>webserv</center></body></html>\n";
-	// addHeader("Server", "Webserv v0.6.6.6");
-	// addHeader("Content-Length", std::to_string(_response->body.size()));
-	// addHeader("Content-Type", "text/html");
-	// addHeader("Connection", "Closed");
+	addHeader("Content-Type", "text/html");
+	addBody(_client.resourceString);
 }
 
 /*
