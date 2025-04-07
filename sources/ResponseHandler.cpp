@@ -31,7 +31,7 @@ void ResponseHandler::sendResponse() {
 Adds status line to response
 */
 void ResponseHandler::addStatus() {
-	_response->response = _client.requestHandler->getHttpVersion() + " " + ServerException::statusMessage(_client.responseCode) + "\r\n";
+	_response->response = _client.requestHandler->getHttpVersion() + " " + std::to_string(_client.responseCode) + " " + ServerException::statusMessage(_client.responseCode) + "\r\n";
 }
 
 /*
@@ -46,7 +46,7 @@ void ResponseHandler::addHeader(const std::string& key, const std::string& value
 Adds body to response, preceded by Content-Length header and "\r\n" sequence
 */
 void ResponseHandler::addBody(const std::string& bodyString)
-{
+{	
 	addHeader("Content-Length", std::to_string(bodyString.length()));
 	_response->response += "\r\n" + bodyString;
 }
@@ -83,9 +83,9 @@ void ResponseHandler::formGET() {
 
 void ResponseHandler::formPOST() {
 	std::cout << "Forming response: POST\n";
-	addHeader("Content-Type", "text/html"); // get content type from resource type
+	addHeader("Content-Type", "application/json");
 	addHeader("Location", _client.requestHandler->getUri());
-	addBody("");
+	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully created\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
 }
 
 void ResponseHandler::formDELETE() {
