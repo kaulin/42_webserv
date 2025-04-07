@@ -22,6 +22,7 @@ class RequestHandler
 		void readRequest();
 		void processRequest();
 		void resetHandler();
+		static std::string getMIMEType(const std::string& filePath); 
 
 		const HttpRequest &getRequest() const;
 		// Not sure if the getters below are needed, as most of the work will be done with the whole struct from above
