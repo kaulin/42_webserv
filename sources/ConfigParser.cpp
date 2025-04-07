@@ -25,12 +25,12 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
 		
 		std::cout << "Error Pages:\n";
 		for (const auto& page : config.second._error_pages)
-			//std::cout << "  " << page.first << ": " << page.second << "\n";
-			std::cout << page << " ";
+			std::cout << "  " << page.first << ": " << page.second << "\n";
+			//std::cout << page << " ";
 		
-		std::cout << "Error Codes:\n";
-		for (const auto& code : config.second._error_codes)
-			std::cout << "  " << code.first << ": " << code.second << "\n";
+		// std::cout << "Error Codes:\n";
+		// for (const auto& code : config.second._error_codes)
+		// 	std::cout << "  " << code.first << ": " << code.second << "\n";
 		
 		std::cout << "---------------------\n";
 		std::cout << "Locations:\n";
@@ -206,6 +206,71 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 	return tokens;
 }
 
+bool isErrorCode(ConfigKey key) { return key >= ConfigKey::ERROR_200 && key <= ConfigKey::ERROR_501; }
+
+void ConfigParser::assignErrorPage(std::vector<std::string>::const_iterator &it, 
+	std::vector<std::string>::const_iterator &end,
+	Config &blockInstance, ConfigKey key)
+{
+	static const std::map<ConfigKey, int> keyToCode = {
+		{ ConfigKey::ERROR_200, 200 },
+		{ ConfigKey::ERROR_201, 201 },
+		{ ConfigKey::ERROR_202, 202 },
+		{ ConfigKey::ERROR_204, 204 },
+		{ ConfigKey::ERROR_301, 301 },
+		{ ConfigKey::ERROR_307, 307 },
+		{ ConfigKey::ERROR_308, 308 },
+		{ ConfigKey::ERROR_400, 400 },
+		{ ConfigKey::ERROR_403, 403 },
+		{ ConfigKey::ERROR_404, 404 },
+		{ ConfigKey::ERROR_405, 405 },
+		{ ConfigKey::ERROR_408, 408 },
+		{ ConfigKey::ERROR_411, 411 },
+		{ ConfigKey::ERROR_413, 413 },
+		{ ConfigKey::ERROR_415, 415 },
+		{ ConfigKey::ERROR_418, 418 },
+		{ ConfigKey::ERROR_431, 431 },
+		{ ConfigKey::ERROR_500, 500 },
+		{ ConfigKey::ERROR_501, 501 },
+	};
+
+	auto itCode = keyToCode.find(key);
+	if (itCode != keyToCode.end()) {
+		++it;
+		if (it == end)
+			throw ConfigParserException("Config: Missing path for error code.");
+		blockInstance._error_pages.emplace(itCode->second, *it);
+		++it;
+	}
+}
+
+void ConfigParser::setDefaultErrorPages(Config &blockInstance)
+{
+	static const std::map<int, std::string> defaultPages = {
+		{301, "/errors/301.html"},
+		{307, "/errors/307.html"},
+		{308, "/errors/308.html"},
+		{400, "/errors/400.html"},
+		{403, "/errors/403.html"},
+		{404, "/errors/404.html"},
+		{405, "/errors/405.html"},
+		{408, "/errors/408.html"},
+		{411, "/errors/411.html"},
+		{413, "/errors/413.html"},
+		{415, "/errors/415.html"},
+		{418, "/errors/418.html"},
+		{431, "/errors/431.html"},
+		{500, "/errors/500.html"},
+		{501, "/errors/501.html"}
+	};
+
+	for (const auto& entry : defaultPages)
+	{
+		if (blockInstance._error_pages.find(entry.first) == blockInstance._error_pages.end())
+			blockInstance._error_pages[entry.first] = entry.second;
+	}
+}
+
 
 void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it, 
 	std::vector<std::string>::const_iterator &end,
@@ -224,6 +289,11 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 		auto keywordIt = keywordMap.find(*it);
 		ConfigKey keyEnum = (keywordIt != keywordMap.end()) ? keywordIt->second : ConfigKey::UNKNOWN;
 
+		if (isErrorCode(keyEnum))
+		{
+			assignErrorPage(it, end, blockInstance, keyEnum);
+			continue;
+		}
 		switch (keyEnum)
 		{
 			case ConfigKey::LOCATION:
@@ -251,14 +321,6 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				while (it != end && *it != ";")
 					{ blockInstance._names.push_back(*it); ++it; }
 				break;
-			case ConfigKey::ERROR_404:
-				++it;
-				blockInstance._error_pages.push_back(*it);
-				++it; break;
-			case ConfigKey::ERROR_500:
-				++it;
-				blockInstance._error_pages.push_back(*it);
-				++it; break;
 			case ConfigKey::CLIENT_MAX_BODY_SIZE:
 			{
 				++it;
@@ -285,6 +347,8 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 			}
 			case ConfigKey::UNKNOWN:
 				break; // default handling
+			default:
+				break;
 		}
 		++it; // iterates main loop in case of default handling
 	}
@@ -318,11 +382,13 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 			Config blockInstance; // new server block
 			
 			assignKeyToValue(++it, end, blockInstance);
+			setDefaultErrorPages(blockInstance);
 			
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}
 		++it;
 	}
+	testPrintConfigs(configs);
 	return configs;
 }
 

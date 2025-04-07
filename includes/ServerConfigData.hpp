@@ -23,8 +23,8 @@ struct Config {
 	std::unordered_map<std::string, Location>	_location;
 	size_t										_cli_max_bodysize;
 	std::map<int, std::string>					_default_pages;
-	std::vector<std::string>					_error_pages;
-	std::map<int, std::string>					_error_codes;
+	std::map<int, std::string>					_error_pages;
+	//std::map<int, std::string>					_error_codes; // unnecessary?
 };
 
 class ServerConfigData {
