@@ -213,12 +213,26 @@ void ConfigParser::assignErrorPage(std::vector<std::string>::const_iterator &it,
 	Config &blockInstance, ConfigKey key)
 {
 	static const std::map<ConfigKey, int> keyToCode = {
+		{ ConfigKey::ERROR_200, 200 },
+		{ ConfigKey::ERROR_201, 201 },
+		{ ConfigKey::ERROR_202, 202 },
+		{ ConfigKey::ERROR_204, 204 },
+		{ ConfigKey::ERROR_301, 301 },
+		{ ConfigKey::ERROR_307, 307 },
+		{ ConfigKey::ERROR_308, 308 },
+		{ ConfigKey::ERROR_400, 400 },
+		{ ConfigKey::ERROR_403, 403 },
 		{ ConfigKey::ERROR_404, 404 },
+		{ ConfigKey::ERROR_405, 405 },
+		{ ConfigKey::ERROR_408, 408 },
+		{ ConfigKey::ERROR_411, 411 },
+		{ ConfigKey::ERROR_413, 413 },
+		{ ConfigKey::ERROR_415, 415 },
+		{ ConfigKey::ERROR_418, 418 },
+		{ ConfigKey::ERROR_431, 431 },
 		{ ConfigKey::ERROR_500, 500 },
-		// all pages here
+		{ ConfigKey::ERROR_501, 501 },
 	};
-
-	// set to default here if page not specified?
 
 	auto itCode = keyToCode.find(key);
 	if (itCode != keyToCode.end()) {
@@ -230,6 +244,32 @@ void ConfigParser::assignErrorPage(std::vector<std::string>::const_iterator &it,
 	}
 }
 
+void ConfigParser::setDefaultErrorPages(Config &blockInstance)
+{
+	static const std::map<int, std::string> defaultPages = {
+		{301, "/errors/301.html"},
+		{307, "/errors/307.html"},
+		{308, "/errors/308.html"},
+		{400, "/errors/400.html"},
+		{403, "/errors/403.html"},
+		{404, "/errors/404.html"},
+		{405, "/errors/405.html"},
+		{408, "/errors/408.html"},
+		{411, "/errors/411.html"},
+		{413, "/errors/413.html"},
+		{415, "/errors/415.html"},
+		{418, "/errors/418.html"},
+		{431, "/errors/431.html"},
+		{500, "/errors/500.html"},
+		{501, "/errors/501.html"}
+	};
+
+	for (const auto& entry : defaultPages)
+	{
+		if (blockInstance._error_pages.find(entry.first) == blockInstance._error_pages.end())
+			blockInstance._error_pages[entry.first] = entry.second;
+	}
+}
 
 
 void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it, 
@@ -342,6 +382,7 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 			Config blockInstance; // new server block
 			
 			assignKeyToValue(++it, end, blockInstance);
+			setDefaultErrorPages(blockInstance);
 			
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}

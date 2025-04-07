@@ -91,6 +91,7 @@ public:
 	static std::vector<std::string>			tokenize(std::string &file_content);
 	static void								assignKeyToValue(std::vector<std::string>::const_iterator &it, std::vector<std::string>::const_iterator &end, Config &blockInstance);
 	static void								assignErrorPage(std::vector<std::string>::const_iterator &it, std::vector<std::string>::const_iterator &end, Config &blockInstance, ConfigKey key);
+	static void								setDefaultErrorPages(Config &blockInstance);
 
 	class ConfigParserException : public std::exception
 		{
