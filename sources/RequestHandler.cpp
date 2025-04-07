@@ -78,8 +78,6 @@ std::string RequestHandler::getMIMEType(const std::string& filePath) {
 	if (extensionStart == std::string::npos)
 		throw ServerException(STATUS_TYPE_UNSUPPORTED);
 	std::string extension = filePath.substr(extensionStart);
-	if (extension.empty())
-		throw ServerException(STATUS_TYPE_UNSUPPORTED);
 	
 	// Defines MIME types, can be added to
 		std::unordered_map<std::string, std::string> types = {
