@@ -49,7 +49,7 @@ void RequestHandler::processRequest() {
 	RequestParser::parseRequest(_requestString, *_request.get());
 
 	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
-	checkMethod();
+	//checkMethod();
 	if (_request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
 		_client.cgiRequested = true;
 	else if (_request->method == "GET")
@@ -85,17 +85,17 @@ void RequestHandler::checkMethod() const {
 	std::cout << "Checking path [" << path << "] for method [" << method << "]\n";
 	while(!path.empty())
 	{
-		path.erase(path.begin() + path.rfind('/'));
+		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
 		auto it = config->_location.find(path);
 		if (it != config->_location.end()) {
 			std::cout << "	Found configuration for location [" << path << "], with method [" << method << "] set to: " << (*it).second._methods.at(method) <<  "\n";
 			if ((*it).second._methods.at(method))
 				return;
-			throw ServerException(STATUS_NOT_ALLOWED);
 		}
 		std::cout << "	No configuration for [" << path << "], continuing search\n";
+		path.erase(path.begin() + path.find_last_of('/'), path.end());
 	}
-	std::cout << "	No configuration for [" << path << "] found, method not allowed\n";
+	std::cout << "	No configuration for [" << getUriPath() << "] found, method not allowed\n";
 	throw ServerException(STATUS_NOT_ALLOWED);
 }
 
