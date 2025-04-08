@@ -120,13 +120,7 @@ std::string RequestHandler::getMIMEType(const std::string& filePath) {
 
 
 // GETTERS
-
-const HttpRequest &RequestHandler::getRequest() const
-{
-	return *_request;
-}
-
-// Not sure if the getters below are needed, as most of the work will be done with the whole struct from above
+const HttpRequest &RequestHandler::getRequest() const { return *_request; }
 const std::string &RequestHandler::getMethod() const { return _request->method; }
 const std::string &RequestHandler::getUri() const { return _request->uri; }
 const std::string &RequestHandler::getUriQuery() const { return _request->uriQuery; }
