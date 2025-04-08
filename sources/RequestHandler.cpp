@@ -1,13 +1,11 @@
-#include <filesystem>
-#include <fcntl.h>
-#include <filesystem>
 #include <iostream>
+#include <string>
 #include <sys/socket.h>
-#include "ServerException.hpp"
+#include "FileHandler.hpp"
 #include "RequestHandler.hpp"
 #include "RequestParser.hpp"
-
-RequestHandler::~RequestHandler() {}
+#include "ServerException.hpp"
+#include "ServerException.hpp"
 
 RequestHandler::RequestHandler(Client& client) : 
 	_client(client),
@@ -16,6 +14,13 @@ RequestHandler::RequestHandler(Client& client) :
 	// _chunkedRequest(false)
 	// _chunkedRequestReady(false) 
 	{}
+
+RequestHandler::~RequestHandler() {}
+
+void RequestHandler::resetHandler() {
+	_requestString = "";
+	_readReady = false;
+}
 
 void RequestHandler::readRequest() {
 	int receivedBytes;
@@ -44,83 +49,64 @@ void RequestHandler::processRequest() {
 	RequestParser::parseRequest(_requestString, *_request.get());
 
 	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
-
+	//checkMethod();
 	if (_request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
-	{
 		_client.cgiRequested = true;
-	}
 	else if (_request->method == "GET")
+		processGet();
+	else if (_request->method == "POST")
+		processPost();
+	else if (_request->method == "DELETE")
+		processDelete();
+	else
+		throw ServerException(STATUS_METHOD_UNSUPPORTED);
+}
+
+void RequestHandler::processGet() {
+	std::string path = "var/www/html" + _request->uri;
+	FileHandler::openForRead(_client.fileReadFd, path);
+	std::cout << "Requested file path: " << path << "\n";
+}
+
+void RequestHandler::processPost() {
+	std::string path = "var/www/html" + _request->uri;
+	FileHandler::openForWrite( _client.fileWriteFd, path);
+	std::cout << "Requested file path: " << path << "\n";
+}
+
+void RequestHandler::processDelete() {
+	throw ServerException(STATUS_METHOD_UNSUPPORTED);
+}
+
+void RequestHandler::checkMethod() const {
+	const Config* config = _client.serverConfig;
+	const std::string& method = getMethod();
+	std::string path = getUriPath();
+	std::cout << "Checking path [" << path << "] for method [" << method << "]\n";
+	while(!path.empty())
 	{
-		std::string path = "var/www/html" + _request->uri;
-		if (!std::filesystem::exists(path))
-			throw ServerException(STATUS_NOT_FOUND);
-		_client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
-		if (_client.fileReadFd < 0)
-			throw ServerException(STATUS_FORBIDDEN);
-		std::cout << "Requested file path: " << path << "\n";
+		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
+		auto it = config->_location.find(path);
+		if (it != config->_location.end()) {
+			std::cout << "	Found configuration for location [" << path << "], with method [" << method << "] set to: " << (*it).second._methods.at(method) <<  "\n";
+			if ((*it).second._methods.at(method))
+				return;
+		}
+		std::cout << "	No configuration for [" << path << "], continuing search\n";
+		path.erase(path.begin() + path.find_last_of('/'), path.end());
 	}
-
-	if (_request->method == "POST")
-	{
-		std::string path = "var/www/html" + _request->uri;
-		_client.fileWriteFd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
-		std::cout << "Requested file path: " << path << "\n";
-	}
+	std::cout << "	No configuration for [" << getUriPath() << "] found, method not allowed\n";
+	throw ServerException(STATUS_NOT_ALLOWED);
 }
 
-void RequestHandler::resetHandler() {
-	_requestString = "";
-	_readReady = false;
-}
-
-std::string RequestHandler::getMIMEType(const std::string& filePath) {
-	size_t extensionStart = filePath.find_last_of(".");
-	if (extensionStart == std::string::npos)
-		throw ServerException(STATUS_TYPE_UNSUPPORTED);
-	std::string extension = filePath.substr(extensionStart);
-	
-	// Defines MIME types, can be added to
-		std::unordered_map<std::string, std::string> types = {
-		{".html", "text/html"},
-		{".htm", "text/html"},
-		{".css", "text/css"},
-		{".js", "application/javascript"},
-		{".json", "application/json"},
-		{".png", "image/png"},
-		{".jpg", "image/jpeg"},
-		{".jpeg", "image/jpeg"},
-		{".gif", "image/gif"},
-		{".bmp", "image/bmp"},
-		{".svg", "image/svg+xml"},
-		{".txt", "text/plain"},
-		{".xml", "application/xml"},
-		{".pdf", "application/pdf"},
-		{".zip", "application/zip"},
-		{".mp3", "audio/mpeg"},
-		{".mp4", "video/mp4"},
-		{".avi", "video/x-msvideo"},
-		{".csv", "text/csv"},
-		{".md", "text/markdown"}
-	};
-
-	auto type = types.find(extension);
-	if (type == types.end())
-		throw ServerException(STATUS_TYPE_UNSUPPORTED);
-	return type->second;
-}
-
-const HttpRequest &RequestHandler::getRequest() const
-{
-	return *_request;
-}
-
-// Not sure if the getters below are needed, as most of the work will be done with the whole struct from above
-const std::string &RequestHandler::getMethod() const { return _request->method; }
-const std::string &RequestHandler::getUri() const { return _request->uri; }
-const std::string &RequestHandler::getUriQuery() const { return _request->uriQuery; }
-const std::string &RequestHandler::getUriPath() const { return _request->uriPath; }
-const std::string &RequestHandler::getHttpVersion() const { return _request->httpVersion; }
-const std::string &RequestHandler::getBody() const { return _request->body; }
+// GETTERS
+const HttpRequest& RequestHandler::getRequest() const { return *_request; }
+const std::string& RequestHandler::getMethod() const { return _request->method; }
+const std::string& RequestHandler::getUri() const { return _request->uri; }
+const std::string& RequestHandler::getUriQuery() const { return _request->uriQuery; }
+const std::string& RequestHandler::getUriPath() const { return _request->uriPath; }
+const std::string& RequestHandler::getHttpVersion() const { return _request->httpVersion; }
+const std::string& RequestHandler::getBody() const { return _request->body; }
 
 
 // int main()

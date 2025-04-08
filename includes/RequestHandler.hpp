@@ -13,24 +13,27 @@ class RequestHandler
 		Client& _client;
 		std::string _requestString;
 		bool _readReady;
+		void processRequest();
+		void processGet();
+		void processPost();
+		void processDelete();
+		void checkMethod() const; 
 		// bool _chunkedRequest;
 		// std::string _chunkedBodyString;
 		// // bool _chunkedRequestReady;
 	public:
 		RequestHandler(Client& client);
 		~RequestHandler();
-		void readRequest();
-		void processRequest();
 		void resetHandler();
-		static std::string getMIMEType(const std::string& filePath); 
+		void readRequest();
 
-		const HttpRequest &getRequest() const;
+		const HttpRequest& getRequest() const;
 		// Not sure if the getters below are needed, as most of the work will be done with the whole struct from above
-		const std::string &getMethod() const;
-		const std::string &getUri() const;
-		const std::string &getUriQuery() const;
-		const std::string &getUriPath() const;
-		const std::string &getHttpVersion() const;
-		const std::string &getBody() const;
+		const std::string& getMethod() const;
+		const std::string& getUri() const;
+		const std::string& getUriQuery() const;
+		const std::string& getUriPath() const;
+		const std::string& getHttpVersion() const;
+		const std::string& getBody() const;
 
 };
