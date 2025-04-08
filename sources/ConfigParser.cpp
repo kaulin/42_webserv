@@ -32,7 +32,7 @@ void	testPrintConfigs(std::map<std::string, Config> configs)
 		// for (const auto& code : config.second._error_codes)
 		// 	std::cout << "  " << code.first << ": " << code.second << "\n";
 		
-		std::cout << "---------------------\n";
+		std::cout << "\n---------------------\n";
 		std::cout << "Locations:\n";
 		for (const auto& loc : config.second._location) {
 			const Location& location = loc.second;

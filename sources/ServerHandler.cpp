@@ -1,12 +1,14 @@
 #include <memory>
 #include <csignal>
 #include <sys/socket.h>
+#include <filesystem>
 #include "ServerException.hpp"
 #include "ServerHandler.hpp"
 #include "HttpServer.hpp"
 #include "RequestParser.hpp"
 #include "RequestHandler.hpp"
 #include "ResponseHandler.hpp"
+#include "FileHandler.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -129,9 +131,9 @@ void ServerHandler::addConnection(size_t& i) {
 		addrlen = sizeof(remoteaddr_in);
 		clientFd = accept(_pollFds[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
 		if (clientFd == -1)
-			throw std::runtime_error("Error: accept failed");
+			throw ServerException(STATUS_INTERNAL_ERROR);
 		if (fcntl(clientFd, F_SETFL, O_NONBLOCK))
-			throw std::runtime_error("Error: fcntl failed");
+			throw ServerException(STATUS_INTERNAL_ERROR);
 		new_pollfd.fd = clientFd;
 		new_pollfd.events = POLLIN | POLLOUT;
 		new_pollfd.revents = 0;
@@ -193,13 +195,29 @@ void	ServerHandler::pollLoop()
 				checkClient(i);
 				// reset/timeout client;
 			} catch (const ServerException& e) {
-				std::cout << "Caught exception: " << e.what() << "\n";
-				// closeConnection(i);
+				handleServerException(e.statusCode(), i);
+				//closeConnection(i);
 			} catch (const std::exception& e) {
 				std::cout << "Caught exception: " << e.what() << "\n";
 			}
 		}
 	}
+}
+
+void	ServerHandler::handleServerException(int statusCode, size_t& fd)
+{
+	Client& client = *_clients[_pollFds[fd].fd].get();
+	size_t conf_id = 0;
+	const Config &config = *_servers[conf_id]->getServerConfig();
+	if (config._error_pages.empty()) {
+		std::cout << "no error pages defined in config" << std::endl;
+		return;
+	}
+	std::map<int, std::string>::const_iterator it = config._error_pages.find(statusCode);
+	std::string path = "var/www/html" + it->second;
+	std::cout << path << std::endl; // test
+	//client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+	FileHandler::openForRead(client.fileReadFd, path);
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
