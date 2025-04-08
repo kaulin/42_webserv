@@ -207,13 +207,12 @@ void	ServerHandler::pollLoop()
 void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 {
 	Client& client = *_clients[_pollFds[fd].fd].get();
-	size_t conf_id = 0;
-	const Config &config = *_servers[conf_id]->getServerConfig();
-	if (config._error_pages.empty()) {
+	client.responseCode = statusCode;
+	if (client.serverConfig->_error_pages.empty()) {
 		std::cout << "no error pages defined in config" << std::endl;
 		return;
 	}
-	std::map<int, std::string>::const_iterator it = config._error_pages.find(statusCode);
+	std::map<int, std::string>::const_iterator it = client.serverConfig->_error_pages.find(statusCode);
 	std::string path = "var/www/html" + it->second;
 	std::cout << path << std::endl; // test
 	//client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
