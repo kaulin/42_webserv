@@ -93,7 +93,7 @@ void ServerHandler::resetClient(Client& client) {
 	client.requestReady = false;
 	client.responseReady = false;
 	client.responseSent = false;
-	client.responseCode = STATUS_ACCEPTED;
+	client.responseCode = STATUS_OK;
 	client.fileReadFd = -1;
 	client.fileTotalBytesRead = 0;
 	client.fileWriteFd = -1;
