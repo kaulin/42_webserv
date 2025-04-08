@@ -91,7 +91,7 @@ void ServerHandler::resetClient(Client& client) {
 	client.requestReady = false;
 	client.responseReady = false;
 	client.responseSent = false;
-	client.responseCode = 200;
+	client.responseCode = STATUS_ACCEPTED;
 	client.fileReadFd = -1;
 	client.fileTotalBytesRead = 0;
 	client.fileWriteFd = -1;
@@ -243,6 +243,7 @@ void	ServerHandler::writeToFd(size_t& i) {
 		if (bytesWritten < BUFFER_SIZE)
 		{
 			client.requestReady = true;
+			client.responseCode = STATUS_CREATED;
 			std::cout << "Client [" << client.fd << "] POST request resource saved to disk\n";
 			close(client.fileWriteFd);
 			client.fileWriteFd = -1;

@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fcntl.h>
+#include <filesystem>
 #include <iostream>
 #include <sys/socket.h>
 #include "ServerException.hpp"
@@ -51,7 +52,11 @@ void RequestHandler::processRequest() {
 	else if (_request->method == "GET")
 	{
 		std::string path = "var/www/html" + _request->uri;
+		if (!std::filesystem::exists(path))
+			throw ServerException(STATUS_NOT_FOUND);
 		_client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+		if (_client.fileReadFd < 0)
+			throw ServerException(STATUS_FORBIDDEN);
 		std::cout << "Requested file path: " << path << "\n";
 	}
 

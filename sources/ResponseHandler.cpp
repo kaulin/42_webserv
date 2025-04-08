@@ -31,7 +31,7 @@ void ResponseHandler::sendResponse() {
 Adds status line to response
 */
 void ResponseHandler::addStatus() {
-	_response->response = _client.requestHandler->getHttpVersion() + " " + ServerException::statusMessage(_client.responseCode) + "\r\n";
+	_response->response = _client.requestHandler->getHttpVersion() + " " + std::to_string(_client.responseCode) + " " + ServerException::statusMessage(_client.responseCode) + "\r\n";
 }
 
 /*
@@ -46,7 +46,7 @@ void ResponseHandler::addHeader(const std::string& key, const std::string& value
 Adds body to response, preceded by Content-Length header and "\r\n" sequence
 */
 void ResponseHandler::addBody(const std::string& bodyString)
-{
+{	
 	addHeader("Content-Length", std::to_string(bodyString.length()));
 	_response->response += "\r\n" + bodyString;
 }
@@ -57,6 +57,8 @@ void ResponseHandler::formResponse()
 		return;
 	const HttpRequest& request = _client.requestHandler->getRequest();
 	_response = std::make_unique<HttpResponse>();
+	addStatus();
+	addHeader("Date", getTimeStamp());
 	if (_client.responseCode >= 300)
 		formErrorPage();
 	else if (_client.cgiRequested)
@@ -75,18 +77,21 @@ void ResponseHandler::formResponse()
 
 void ResponseHandler::formGET() {
 	std::cout << "Forming response: GET\n";
-	addStatus();
-	addHeader("Date", getTimeStamp());
-	addHeader("Content-Type", "text/html"); // get content type from request/client
+	addHeader("Content-Type", "text/html"); // get content type from resource type
 	addBody(_client.resourceString);
 }
 
 void ResponseHandler::formPOST() {
 	std::cout << "Forming response: POST\n";
+	addHeader("Content-Type", "application/json");
+	addHeader("Location", _client.requestHandler->getUri());
+	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully created\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
 }
 
 void ResponseHandler::formDELETE() {
 	std::cout << "Forming response: DELETE\n";
+	addHeader("Content-Type", "application/json");
+	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully deleted\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
 }
 
 void ResponseHandler::formCGI() {
@@ -100,14 +105,14 @@ void ResponseHandler::formDirectoryListing() {
 
 void ResponseHandler::formErrorPage() {
 	std::cout << "Forming response: Error Page";
-	// const HttpRequest& request = _client.requestHandler->getRequest();
-	// std::string status = ServerException::statusMessage(_client.responseCode);
-	// _response->statusLine = request.httpVersion + " " + status + "\n";
-	// _response->body = "<html><head><title>" + status + "</title></head><body><center><h1>" + status + "</h1></center><hr><center>webserv</center></body></html>\n";
-	// addHeader("Server", "Webserv v0.6.6.6");
-	// addHeader("Content-Length", std::to_string(_response->body.size()));
-	// addHeader("Content-Type", "text/html");
-	// addHeader("Connection", "Closed");
+	addHeader("Content-Type", "text/html");
+	if (_client.resourceString.empty()) {
+		std::string code = std::to_string(_client.responseCode);
+		std::string message = ServerException::statusMessage(_client.responseCode);
+
+		_client.resourceString =  "<!DOCTYPE html>\n<html>\n<head>\n    <title>Error " + code + " - " + message + "</title>\n</head>\n<body>\n    <h1>" + code + "</h1>\n    <p>" + message + "</p>\n</body>\n</html>";
+	}
+	addBody(_client.resourceString);
 }
 
 /*
