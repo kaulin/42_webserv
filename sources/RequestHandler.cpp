@@ -7,8 +7,6 @@
 #include "RequestHandler.hpp"
 #include "RequestParser.hpp"
 
-RequestHandler::~RequestHandler() {}
-
 RequestHandler::RequestHandler(Client& client) : 
 	_client(client),
 	_requestString(""),
@@ -16,6 +14,13 @@ RequestHandler::RequestHandler(Client& client) :
 	// _chunkedRequest(false)
 	// _chunkedRequestReady(false) 
 	{}
+
+RequestHandler::~RequestHandler() {}
+
+void RequestHandler::resetHandler() {
+	_requestString = "";
+	_readReady = false;
+}
 
 void RequestHandler::readRequest() {
 	int receivedBytes;
@@ -46,31 +51,35 @@ void RequestHandler::processRequest() {
 	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
 
 	if (_request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
-	{
 		_client.cgiRequested = true;
-	}
 	else if (_request->method == "GET")
-	{
-		std::string path = "var/www/html" + _request->uri;
-		if (!std::filesystem::exists(path))
-			throw ServerException(STATUS_NOT_FOUND);
-		_client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
-		if (_client.fileReadFd < 0)
-			throw ServerException(STATUS_FORBIDDEN);
-		std::cout << "Requested file path: " << path << "\n";
-	}
-
-	if (_request->method == "POST")
-	{
-		std::string path = "var/www/html" + _request->uri;
-		_client.fileWriteFd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
-		std::cout << "Requested file path: " << path << "\n";
-	}
+		processGet();
+	else if (_request->method == "POST")
+		processPost();
+	else if (_request->method == "DELETE")
+		processDelete();
+	else
+		throw ServerException(STATUS_METHOD_UNSUPPORTED);
 }
 
-void RequestHandler::resetHandler() {
-	_requestString = "";
-	_readReady = false;
+void RequestHandler::processGet() {
+	std::string path = "var/www/html" + _request->uri;
+	if (!std::filesystem::exists(path))
+		throw ServerException(STATUS_NOT_FOUND);
+	_client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+	if (_client.fileReadFd < 0)
+		throw ServerException(STATUS_FORBIDDEN);
+	std::cout << "Requested file path: " << path << "\n";
+}
+
+void RequestHandler::processPost() {
+	std::string path = "var/www/html" + _request->uri;
+	_client.fileWriteFd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, 0644);
+	std::cout << "Requested file path: " << path << "\n";
+}
+
+void RequestHandler::processDelete() {
+	throw ServerException(STATUS_METHOD_UNSUPPORTED);
 }
 
 std::string RequestHandler::getMIMEType(const std::string& filePath) {
@@ -108,6 +117,9 @@ std::string RequestHandler::getMIMEType(const std::string& filePath) {
 		throw ServerException(STATUS_TYPE_UNSUPPORTED);
 	return type->second;
 }
+
+
+// GETTERS
 
 const HttpRequest &RequestHandler::getRequest() const
 {
