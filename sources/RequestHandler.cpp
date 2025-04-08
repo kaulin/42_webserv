@@ -1,9 +1,11 @@
 #include <iostream>
+#include <string>
 #include <sys/socket.h>
 #include "FileHandler.hpp"
-#include "ServerException.hpp"
 #include "RequestHandler.hpp"
 #include "RequestParser.hpp"
+#include "ServerException.hpp"
+#include "ServerException.hpp"
 
 RequestHandler::RequestHandler(Client& client) : 
 	_client(client),
@@ -47,7 +49,7 @@ void RequestHandler::processRequest() {
 	RequestParser::parseRequest(_requestString, *_request.get());
 
 	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
-
+	checkMethod();
 	if (_request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
 		_client.cgiRequested = true;
 	else if (_request->method == "GET")
@@ -76,17 +78,35 @@ void RequestHandler::processDelete() {
 	throw ServerException(STATUS_METHOD_UNSUPPORTED);
 }
 
-
-
+void RequestHandler::checkMethod() const {
+	const Config* config = _client.serverConfig;
+	const std::string& method = getMethod();
+	std::string path = getUriPath();
+	std::cout << "Checking path [" << path << "] for method [" << method << "]\n";
+	while(!path.empty())
+	{
+		path.erase(path.begin() + path.rfind('/'));
+		auto it = config->_location.find(path);
+		if (it != config->_location.end()) {
+			std::cout << "	Found configuration for location [" << path << "], with method [" << method << "] set to: " << (*it).second._methods.at(method) <<  "\n";
+			if ((*it).second._methods.at(method))
+				return;
+			throw ServerException(STATUS_NOT_ALLOWED);
+		}
+		std::cout << "	No configuration for [" << path << "], continuing search\n";
+	}
+	std::cout << "	No configuration for [" << path << "] found, method not allowed\n";
+	throw ServerException(STATUS_NOT_ALLOWED);
+}
 
 // GETTERS
-const HttpRequest &RequestHandler::getRequest() const { return *_request; }
-const std::string &RequestHandler::getMethod() const { return _request->method; }
-const std::string &RequestHandler::getUri() const { return _request->uri; }
-const std::string &RequestHandler::getUriQuery() const { return _request->uriQuery; }
-const std::string &RequestHandler::getUriPath() const { return _request->uriPath; }
-const std::string &RequestHandler::getHttpVersion() const { return _request->httpVersion; }
-const std::string &RequestHandler::getBody() const { return _request->body; }
+const HttpRequest& RequestHandler::getRequest() const { return *_request; }
+const std::string& RequestHandler::getMethod() const { return _request->method; }
+const std::string& RequestHandler::getUri() const { return _request->uri; }
+const std::string& RequestHandler::getUriQuery() const { return _request->uriQuery; }
+const std::string& RequestHandler::getUriPath() const { return _request->uriPath; }
+const std::string& RequestHandler::getHttpVersion() const { return _request->httpVersion; }
+const std::string& RequestHandler::getBody() const { return _request->body; }
 
 
 // int main()

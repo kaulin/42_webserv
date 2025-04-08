@@ -17,6 +17,7 @@ class RequestHandler
 		void processGet();
 		void processPost();
 		void processDelete();
+		void checkMethod() const; 
 		// bool _chunkedRequest;
 		// std::string _chunkedBodyString;
 		// // bool _chunkedRequestReady;
@@ -26,13 +27,13 @@ class RequestHandler
 		void resetHandler();
 		void readRequest();
 
-		const HttpRequest &getRequest() const;
+		const HttpRequest& getRequest() const;
 		// Not sure if the getters below are needed, as most of the work will be done with the whole struct from above
-		const std::string &getMethod() const;
-		const std::string &getUri() const;
-		const std::string &getUriQuery() const;
-		const std::string &getUriPath() const;
-		const std::string &getHttpVersion() const;
-		const std::string &getBody() const;
+		const std::string& getMethod() const;
+		const std::string& getUri() const;
+		const std::string& getUriQuery() const;
+		const std::string& getUriPath() const;
+		const std::string& getHttpVersion() const;
+		const std::string& getBody() const;
 
 };
