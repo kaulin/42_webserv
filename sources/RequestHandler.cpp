@@ -70,7 +70,10 @@ void RequestHandler::processGet() {
 }
 
 void RequestHandler::processPost() {
-	std::string path = "var/www/html" + _request->uri;
+	auto itContentType = _request->headers.find("Content-Type");
+	if (itContentType == _request->headers.end() || (*itContentType).second != FileHandler::getMIMEType(_request->uriPath))
+		throw ServerException(STATUS_BAD_REQUEST);
+	std::string path = "var/www/html" + _request->uriPath;
 	FileHandler::openForWrite( _client.fileWriteFd, path);
 	std::cout << "Requested file path: " << path << "\n";
 }
