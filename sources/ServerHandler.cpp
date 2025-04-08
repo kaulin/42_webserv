@@ -8,6 +8,7 @@
 #include "RequestParser.hpp"
 #include "RequestHandler.hpp"
 #include "ResponseHandler.hpp"
+#include "FileHandler.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -215,7 +216,8 @@ void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 	std::map<int, std::string>::const_iterator it = config._error_pages.find(statusCode);
 	std::string path = "var/www/html" + it->second;
 	std::cout << path << std::endl; // test
-	client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+	//client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+	FileHandler::openForRead(client.fileReadFd, path);
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
