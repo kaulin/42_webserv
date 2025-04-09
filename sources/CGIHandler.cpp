@@ -31,7 +31,7 @@ std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request, const Clien
 	}
 	strEnv.emplace_back("QUERY_STRING=" + request.uriQuery);
 	strEnv.emplace_back("PATH_INFO=" + request.uri);
-	strEnv.emplace_back("SERVER_PORT=" + client.serverConfig->_port);
+	strEnv.emplace_back("SERVER_PORT=" + client.serverConfig->port);
 	strEnv.emplace_back("REMOTE_ADDR=");	// not necessarily needed
 
 	std::vector<char*> env;
