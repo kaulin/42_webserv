@@ -105,7 +105,7 @@ void ResponseHandler::formDirectoryListing() {
 }
 
 void ResponseHandler::formErrorPage() {
-	std::cout << "Forming response: Error Page";
+	std::cout << "Forming response: Error Page\n";
 	addHeader("Content-Type", "text/html");
 	if (_client.resourceString.empty()) {
 		std::string code = std::to_string(_client.responseCode);
