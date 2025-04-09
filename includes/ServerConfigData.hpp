@@ -6,25 +6,26 @@
 #include <string>
 
 struct Location {
-	std::string	_path;
-	std::string	_root;
-	std::string	_index;
-	std::string	_cgi_path;
-	std::string	_cgi_param;
-	std::pair<int, std::string>	_redirect;
-	std::unordered_map<std::string, bool>	_methods = {{"GET", false}, {"POST", false}, {"DELETE", false}};
+	std::string	path;
+	std::string	root;
+	std::string	index;
+	std::string	cgi_path;
+	std::string	cgi_param;
+	std::pair<int, std::string>	redirect;
+	std::unordered_map<std::string, bool>	methods = {{"GET", false}, {"POST", false}, {"DELETE", false}};
 	bool		_dir_listing;
 };
 
 struct Config {
-	std::string									_host;
-	std::vector<std::string>					_names;
-	std::string									_port;
-	std::unordered_map<std::string, Location>	_location;
-	size_t										_cli_max_bodysize;
-	std::map<int, std::string>					_default_pages;
-	std::map<int, std::string>					_error_pages;
-	//std::map<int, std::string>					_error_codes; // unnecessary?
+	std::string									root;
+	std::string									host;
+	std::vector<std::string>					names;
+	std::string									port;
+	std::unordered_map<std::string, Location>	locations;
+	size_t										cli_max_bodysize;
+	std::map<int, std::string>					default_pages;
+	std::map<int, std::string>					error_pages;
+	//std::map<int, std::string>					error_codes; // unnecessary?
 };
 
 class ServerConfigData {

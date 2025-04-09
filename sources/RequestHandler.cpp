@@ -50,7 +50,7 @@ void RequestHandler::processRequest() {
 	RequestParser::parseRequest(_requestString, *_request.get());
 
 	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
-	//checkMethod();
+	checkMethod();
 	if (_request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
 		_client.cgiRequested = true;
 	else if (_request->method == "GET")
@@ -95,10 +95,10 @@ void RequestHandler::checkMethod() const {
 	while(!path.empty())
 	{
 		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
-		auto it = config->_location.find(path);
-		if (it != config->_location.end()) {
-			std::cout << "	Found configuration for location [" << path << "], with method [" << method << "] set to: " << (*it).second._methods.at(method) <<  "\n";
-			if ((*it).second._methods.at(method))
+		auto it = config->locations.find(path);
+		if (it != config->locations.end()) {
+			std::cout << "	Found configuration for location [" << path << "], with method [" << method << "] set to: " << (*it).second.methods.at(method) <<  "\n";
+			if ((*it).second.methods.at(method))
 				return;
 		}
 		std::cout << "	No configuration for [" << path << "], continuing search\n";

@@ -20,6 +20,7 @@ enum class ConfigKey
 	LOCATION,
 	END_BLOCK,
 	SEMICOLON,
+	ROOT,
 	HOST,
 	PORT,
 	SERVER_NAME,
@@ -34,6 +35,7 @@ enum class ConfigKey
 	ERROR_403,
 	ERROR_404,
 	ERROR_405,
+	ERROR_406,
 	ERROR_408,
 	ERROR_411,
 	ERROR_413,
@@ -52,6 +54,7 @@ const std::unordered_map<std::string, ConfigKey> keywordMap =
 	{"location", ConfigKey::LOCATION},
 	{"}", ConfigKey::END_BLOCK},
 	{";", ConfigKey::SEMICOLON},
+	{"root", ConfigKey::ROOT},
 	{"host", ConfigKey::HOST},
 	{"port", ConfigKey::PORT},
 	{"server_name", ConfigKey::SERVER_NAME},
@@ -66,6 +69,7 @@ const std::unordered_map<std::string, ConfigKey> keywordMap =
 	{"error_page403", ConfigKey::ERROR_403},
 	{"error_page404", ConfigKey::ERROR_404},
 	{"error_page405", ConfigKey::ERROR_405},
+	{"error_page406", ConfigKey::ERROR_406},
 	{"error_page408", ConfigKey::ERROR_408},
 	{"error_page411", ConfigKey::ERROR_411},
 	{"error_page413", ConfigKey::ERROR_413},
@@ -92,6 +96,7 @@ public:
 	static void								assignKeyToValue(std::vector<std::string>::const_iterator &it, std::vector<std::string>::const_iterator &end, Config &blockInstance);
 	static void								assignErrorPage(std::vector<std::string>::const_iterator &it, std::vector<std::string>::const_iterator &end, Config &blockInstance, ConfigKey key);
 	static void								setDefaultErrorPages(Config &blockInstance);
+	static void								setRoot(Config *blockInstance);
 
 	class ConfigParserException : public std::exception
 		{

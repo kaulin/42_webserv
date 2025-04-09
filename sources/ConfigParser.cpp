@@ -3,56 +3,57 @@
 #include <filesystem>
 
 
-void	testPrintConfigs(std::map<std::string, Config> configs)
-{
-	for (const auto &config : configs)
-	{
-		std::cout << "Host: " << config.second._host << "\n"; 
-		std::cout << "Names: ";
-		for (const auto& name : config.second._names)
-			std::cout << name << " ";
-		std::cout << "\n";
+// void	testPrintConfigs(std::map<std::string, Config> configs)
+// {
+// 	for (const auto &config : configs)
+// 	{
+// 		std::cout << "Root: " << config.second.root << "\n"; 
+// 		std::cout << "Host: " << config.second.host << "\n"; 
+// 		std::cout << "Names: ";
+// 		for (const auto& name : config.second.names)
+// 			std::cout << name << " ";
+// 		std::cout << "\n";
 		
-		std::cout << "Port: ";
-		std::cout << config.second._port << " ";
-		std::cout << "\n";
+// 		std::cout << "Port: ";
+// 		std::cout << config.second.port << " ";
+// 		std::cout << "\n";
 		
-		std::cout << "Client Max Body Size: " << config.second._cli_max_bodysize << "\n";
+// 		std::cout << "Client Max Body Size: " << config.second.cli_max_bodysize << "\n";
 		
-		std::cout << "Default Pages:\n";
-		for (const auto& page : config.second._default_pages)
-			std::cout << "  " << page.first << ": " << page.second << "\n";
+// 		std::cout << "Default Pages:\n";
+// 		for (const auto& page : config.second.default_pages)
+// 			std::cout << "  " << page.first << ": " << page.second << "\n";
 		
-		std::cout << "Error Pages:\n";
-		for (const auto& page : config.second._error_pages)
-			std::cout << "  " << page.first << ": " << page.second << "\n";
-			//std::cout << page << " ";
+// 		std::cout << "Error Pages:\n";
+// 		for (const auto& page : config.second.error_pages)
+// 			std::cout << "  " << page.first << ": " << page.second << "\n";
+// 			//std::cout << page << " ";
 		
-		// std::cout << "Error Codes:\n";
-		// for (const auto& code : config.second._error_codes)
-		// 	std::cout << "  " << code.first << ": " << code.second << "\n";
+// 		// std::cout << "Error Codes:\n";
+// 		// for (const auto& code : config.second._error_codes)
+// 		// 	std::cout << "  " << code.first << ": " << code.second << "\n";
 		
-		std::cout << "\n---------------------\n";
-		std::cout << "Locations:\n";
-		for (const auto& loc : config.second._location) {
-			const Location& location = loc.second;
-			std::cout << "  Path: " << location._path << "\n";
-			std::cout << "  Root: " << location._root << "\n";
-			std::cout << "  Index: " << location._index << "\n";
-			std::cout << "  CGI Path: " << location._cgi_path << "\n";
-			std::cout << "  CGI Param: " << location._cgi_param << "\n";
-			std::cout << "  Redirect: " << location._redirect.first << " -> " << location._redirect.second << "\n";
-			std::cout << "  Directory Listing: " << (location._dir_listing ? "Enabled" : "Disabled") << "\n";
+// 		std::cout << "\n---------------------\n";
+// 		std::cout << "Locations:\n";
+// 		for (const auto& loc : config.second.locations) {
+// 			const Location& location = loc.second;
+// 			std::cout << "  Path: " << location.path << "\n";
+// 			std::cout << "  Root: " << location.root << "\n";
+// 			std::cout << "  Index: " << location.index << "\n";
+// 			std::cout << "  CGI Path: " << location.cgi_path << "\n";
+// 			std::cout << "  CGI Param: " << location.cgi_param << "\n";
+// 			std::cout << "  Redirect: " << location.redirect.first << " -> " << location.redirect.second << "\n";
+// 			std::cout << "  Directory Listing: " << (location._dir_listing ? "Enabled" : "Disabled") << "\n";
 			
-			std::cout << "  Methods:\n";
-			for (const auto& method : location._methods)
-				std::cout << "	" << method.first << ": " << (method.second ? "Allowed" : "Not Allowed") << "\n";
+// 			std::cout << "  Methods:\n";
+// 			for (const auto& method : location.methods)
+// 				std::cout << "	" << method.first << ": " << (method.second ? "Allowed" : "Not Allowed") << "\n";
 			
-			std::cout << "\n";
-		}
-	}
-	std::cout << "Finished printing configs\n";
-}
+// 			std::cout << "\n";
+// 		}
+// 	}
+// 	std::cout << "Finished printing configs\n";
+// }
 
 // helper trimming function
 std::string trim(const std::string &str)
@@ -224,6 +225,7 @@ void ConfigParser::assignErrorPage(std::vector<std::string>::const_iterator &it,
 		{ ConfigKey::ERROR_403, 403 },
 		{ ConfigKey::ERROR_404, 404 },
 		{ ConfigKey::ERROR_405, 405 },
+		{ ConfigKey::ERROR_406, 406 },
 		{ ConfigKey::ERROR_408, 408 },
 		{ ConfigKey::ERROR_411, 411 },
 		{ ConfigKey::ERROR_413, 413 },
@@ -239,7 +241,7 @@ void ConfigParser::assignErrorPage(std::vector<std::string>::const_iterator &it,
 		++it;
 		if (it == end)
 			throw ConfigParserException("Config: Missing path for error code.");
-		blockInstance._error_pages.emplace(itCode->second, *it);
+		blockInstance.error_pages.emplace(itCode->second, *it);
 		++it;
 	}
 }
@@ -254,6 +256,7 @@ void ConfigParser::setDefaultErrorPages(Config &blockInstance)
 		{403, "/errors/403.html"},
 		{404, "/errors/404.html"},
 		{405, "/errors/405.html"},
+		{406, "/errors/406.html"},
 		{408, "/errors/408.html"},
 		{411, "/errors/411.html"},
 		{413, "/errors/413.html"},
@@ -266,8 +269,8 @@ void ConfigParser::setDefaultErrorPages(Config &blockInstance)
 
 	for (const auto& entry : defaultPages)
 	{
-		if (blockInstance._error_pages.find(entry.first) == blockInstance._error_pages.end())
-			blockInstance._error_pages[entry.first] = entry.second;
+		if (blockInstance.error_pages.find(entry.first) == blockInstance.error_pages.end())
+			blockInstance.error_pages[entry.first] = entry.second;
 	}
 }
 
@@ -298,8 +301,8 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 		{
 			case ConfigKey::LOCATION:
 			{
-				auto locationPair = LocationParser::set_location_block(++it, end, blockInstance._location);
-				blockInstance._location.emplace(locationPair.first, locationPair.second);
+				auto locationPair = LocationParser::set_location_block(++it, end, blockInstance.locations);
+				blockInstance.locations.emplace(locationPair.first, locationPair.second);
 				++it;
 				continue;
 			}
@@ -308,18 +311,22 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 			case ConfigKey::SEMICOLON:
 				++it;
 				continue;
+			case ConfigKey::ROOT:
+				++it;
+				blockInstance.root = *it;
+				++it; break;
 			case ConfigKey::HOST:
 				++it;
-				blockInstance._host = *it;
+				blockInstance.host = *it;
 				++it; break;
 			case ConfigKey::PORT:
 				++it;
-				blockInstance._port = *it; 
+				blockInstance.port = *it; 
 				++it; break;
 			case ConfigKey::SERVER_NAME:
 				++it;
 				while (it != end && *it != ";")
-					{ blockInstance._names.push_back(*it); ++it; }
+					{ blockInstance.names.push_back(*it); ++it; }
 				break;
 			case ConfigKey::CLIENT_MAX_BODY_SIZE:
 			{
@@ -342,7 +349,7 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				}
 				if (bodySize > SIZE_MAX / mult)
 					throw ConfigParserException("Config: Max client body size overflow.");
-				blockInstance._cli_max_bodysize = bodySize * mult;
+				blockInstance.cli_max_bodysize = bodySize * mult;
 				++it; break; 
 			}
 			case ConfigKey::UNKNOWN:
@@ -354,7 +361,6 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 	}
 }
 
-
 void	ConfigParser::checkConfigFilePath(std::string path)
 {
 	if (path.empty()) {
@@ -362,6 +368,17 @@ void	ConfigParser::checkConfigFilePath(std::string path)
 	}
 	if (path.find(".conf") == std::string::npos) {
 		throw ConfigParserException("Config: Invalid file path.");
+	}
+}
+
+void	ConfigParser::setRoot(Config *blockInstance)
+{
+	if (blockInstance->root.empty())
+		blockInstance->root = "var/www/html";
+	for (auto& loc : blockInstance->locations)
+	{
+		if (loc.second.root.empty())
+			loc.second.root = blockInstance->root;
 	}
 }
 
@@ -383,12 +400,13 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 			
 			assignKeyToValue(++it, end, blockInstance);
 			setDefaultErrorPages(blockInstance);
+			setRoot(&blockInstance);
 			
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}
 		++it;
 	}
-	testPrintConfigs(configs);
+	//testPrintConfigs(configs);
 	return configs;
 }
 
