@@ -64,12 +64,17 @@ void RequestHandler::processRequest() {
 }
 
 void RequestHandler::processGet() {
+	// Check if request has Accept header and that requested resource matches said content type (TODO: add default "*/*")
+	auto itContentType = _request->headers.find("Accept");
+	if (itContentType == _request->headers.end() || (*itContentType).second != FileHandler::getMIMEType(_request->uriPath))
+		throw ServerException(STATUS_NOT_ACCEPTABLE);
 	std::string path = "var/www/html" + _request->uri;
 	FileHandler::openForRead(_client.fileReadFd, path);
 	std::cout << "Requested file path: " << path << "\n";
 }
 
 void RequestHandler::processPost() {
+	// Check if requested resource file type matches with Content-Type header
 	auto itContentType = _request->headers.find("Content-Type");
 	if (itContentType == _request->headers.end() || (*itContentType).second != FileHandler::getMIMEType(_request->uriPath))
 		throw ServerException(STATUS_BAD_REQUEST);
