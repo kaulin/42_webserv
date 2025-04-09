@@ -93,7 +93,7 @@ void ServerHandler::resetClient(Client& client) {
 	client.requestReady = false;
 	client.responseReady = false;
 	client.responseSent = false;
-	client.responseCode = STATUS_ACCEPTED;
+	client.responseCode = STATUS_OK;
 	client.fileReadFd = -1;
 	client.fileTotalBytesRead = 0;
 	client.fileWriteFd = -1;
@@ -234,13 +234,13 @@ void	ServerHandler::readFromFd(size_t& i) {
 		if (bytesRead < BUFFER_SIZE)
 		{
 			client.requestReady = true;
-			std::cout << "Client " << client.fd << " resource read complete:\n" << client.resourceString << "\n";
+			std::cout << "Client " << client.fd << " resource read complete!\n";
 			close(client.fileReadFd);
 			client.fileReadFd = -1;
 		}
 		else
 		{
-			std::cout << "Client " << client.fd << " read " << bytesRead << " bytes from resource, continuing...\n";
+			std::cout << "Client " << client.fd << " read " << bytesRead << " bytes, continuing...\n";
 			_pollFds[i].revents = POLL_OUT;
 		}
 	}

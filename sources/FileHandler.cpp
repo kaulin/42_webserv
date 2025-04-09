@@ -43,6 +43,7 @@ std::string FileHandler::getMIMEType(const std::string& filePath) {
 		{".js", "application/javascript"},
 		{".json", "application/json"},
 		{".png", "image/png"},
+		{".ico", "image/x-icon"},
 		{".jpg", "image/jpeg"},
 		{".jpeg", "image/jpeg"},
 		{".gif", "image/gif"},

@@ -1,4 +1,5 @@
 #include <sys/socket.h>
+#include "FileHandler.hpp"
 #include "ResponseHandler.hpp"
 #include "ServerException.hpp"
 
@@ -71,13 +72,13 @@ void ResponseHandler::formResponse()
 		formDELETE();
 	else
 		throw ServerException(STATUS_METHOD_UNSUPPORTED);
-	std::cout << "Finished response string:\n" << _response->response<< "\n";
+	std::cout << "Finished forming response string!\n";
 	_client.responseReady = true;
 }
 
 void ResponseHandler::formGET() {
 	std::cout << "Forming response: GET\n";
-	addHeader("Content-Type", "text/html"); // get content type from resource type
+	addHeader("Content-Type", FileHandler::getMIMEType(_client.requestHandler->getUriPath()));
 	addBody(_client.resourceString);
 }
 
@@ -104,7 +105,7 @@ void ResponseHandler::formDirectoryListing() {
 }
 
 void ResponseHandler::formErrorPage() {
-	std::cout << "Forming response: Error Page";
+	std::cout << "Forming response: Error Page\n";
 	addHeader("Content-Type", "text/html");
 	if (_client.resourceString.empty()) {
 		std::string code = std::to_string(_client.responseCode);

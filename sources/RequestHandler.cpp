@@ -64,13 +64,21 @@ void RequestHandler::processRequest() {
 }
 
 void RequestHandler::processGet() {
-	std::string path = "var/www/html" + _request->uri;
+	// Check if request has Accept header and that requested resource matches said content type (TODO: add default "*/*")
+	auto itAcceptHeader = _request->headers.find("Accept");
+	if (itAcceptHeader != _request->headers.end() && (*itAcceptHeader).second.find(FileHandler::getMIMEType(_request->uriPath)) == std::string::npos)
+		throw ServerException(STATUS_NOT_ACCEPTABLE);
+	std::string path = "var/www/html" + _request->uriPath;
 	FileHandler::openForRead(_client.fileReadFd, path);
 	std::cout << "Requested file path: " << path << "\n";
 }
 
 void RequestHandler::processPost() {
-	std::string path = "var/www/html" + _request->uri;
+	// Check if requested resource file type matches with Content-Type header
+	auto itContentTypeHeader = _request->headers.find("Content-Type");
+	if (itContentTypeHeader == _request->headers.end() || (*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
+		throw ServerException(STATUS_BAD_REQUEST);
+	std::string path = "var/www/html" + _request->uriPath;
 	FileHandler::openForWrite( _client.fileWriteFd, path);
 	std::cout << "Requested file path: " << path << "\n";
 }
@@ -81,8 +89,8 @@ void RequestHandler::processDelete() {
 
 void RequestHandler::checkMethod() const {
 	const Config* config = _client.serverConfig;
-	const std::string& method = getMethod();
-	std::string path = getUriPath();
+	const std::string& method = _request->method;
+	std::string path = _request->uriPath;
 	std::cout << "Checking path [" << path << "] for method [" << method << "]\n";
 	while(!path.empty())
 	{
@@ -96,7 +104,7 @@ void RequestHandler::checkMethod() const {
 		std::cout << "	No configuration for [" << path << "], continuing search\n";
 		path.erase(path.begin() + path.find_last_of('/'), path.end());
 	}
-	std::cout << "	No configuration for [" << getUriPath() << "] found, method not allowed\n";
+	std::cout << "	No configuration for [" << _request->uriPath << "] found, method not allowed\n";
 	throw ServerException(STATUS_NOT_ALLOWED);
 }
 

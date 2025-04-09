@@ -31,9 +31,11 @@ const char* ServerException::statusMessage(int statusCode) {
 		case 403:
 			return "Forbidden";
 		case 404:
-			return "Not Found";
+			return "Not Found"; 
 		case 405:
 			return "Method Not Allowed";
+		case 406:
+			return "Not Acceptable";
 		case 408:
 			return "Request Timeout";
 		case 411:
