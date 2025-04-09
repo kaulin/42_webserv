@@ -26,12 +26,11 @@ typedef struct s_CGIrequest {
 
 class CGIHandler {
 private:
-	std::unordered_map<int, t_CGIrequest>	_requests;
+	std::unordered_map<int, std::unique_ptr<t_CGIrequest>> _requests;
 
 	// Private class methods
 	void 				closeFds(const std::vector<int> fdsToclose);
 	void 				handleChildProcess(int clientFd);
-	void				handleParentProcess(t_CGIrequest request);
 	std::vector<char*>	setCGIEnv(const HttpRequest& request, const Client& client);
 public:
 	CGIHandler();
