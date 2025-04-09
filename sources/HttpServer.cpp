@@ -15,7 +15,7 @@
 
 HttpServer::HttpServer(Config serverData)
 {
-	_port = serverData._port;
+	_port = serverData.port;
 	_sockFd = -1;
 	_config = serverData;
 	std::cout << "Created new virtual server instance\n";
