@@ -150,7 +150,6 @@ void	CGIHandler::setupCGI(Client &client)
 		return;
 	if (client.requestReady && this->_requests.size() < 10)
 	{
-		const HttpRequest&  request = client.requestHandler->getRequest();
 		t_CGIrequest cgiInst;
 		cgiInst.CGIPath = std::filesystem::current_path().string() + request.uri;
 		cgiInst.argv.emplace_back(const_cast<char *>(cgiInst.CGIPath.c_str()));
