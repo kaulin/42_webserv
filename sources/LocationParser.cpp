@@ -94,7 +94,7 @@ std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<
 				set_location_methods(it, location_block.methods);
 				break;
 			case LocationConfigKey::AUTOINDEX:
-				location_block._dir_listing = set_autoindex(it);
+				location_block.dir_listing = set_autoindex(it);
 				break;
 			case LocationConfigKey::REDIR:
 				location_block.redirect = set_redirect(it);

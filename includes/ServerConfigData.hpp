@@ -13,7 +13,7 @@ struct Location {
 	std::string	cgi_param;
 	std::pair<int, std::string>	redirect;
 	std::unordered_map<std::string, bool>	methods = {{"GET", false}, {"POST", false}, {"DELETE", false}};
-	bool		_dir_listing;
+	bool		dir_listing;
 };
 
 struct Config {
