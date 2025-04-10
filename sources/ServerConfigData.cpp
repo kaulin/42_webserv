@@ -28,3 +28,46 @@ size_t  ServerConfigData::getServerCount()
 {
 	return _serverConfigBlocks.size();
 }
+
+/*
+	Returns the Location struct for a specific path, if it exists, or nullptr, 
+	if it doesn't.
+*/
+const Location* ServerConfigData::getLocation(const Config& config, std::string path) {
+	path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
+	auto itLocation = config.locations.find(path);
+	if (itLocation == config.locations.end())
+		return nullptr;
+	return &(*itLocation).second;
+}
+
+/*
+	Returns the root of a specific path. If no Location setting is set for 
+	current directory, looks at parent directories.
+*/
+const std::string& ServerConfigData::getRoot(const Config& config, std::string path){
+	while(!path.empty())
+	{
+		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
+		const Location* location = getLocation(config, path);
+		if (location != nullptr)
+			return location->root;
+		path.erase(path.begin() + path.find_last_of('/'), path.end());
+	}
+}
+
+/*
+	Checks that the method requested is allowed for current directory or it's 
+	parent directories.
+*/
+bool ServerConfigData::checkMethod(const Config& config, const std::string& method, std::string path) {
+	while(!path.empty())
+	{
+		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
+		const Location* location = getLocation(config, path);
+		if (location != nullptr && location->methods.at(method))
+			return true;
+		path.erase(path.begin() + path.find_last_of('/'), path.end());
+	}
+	return false;
+}
