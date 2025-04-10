@@ -21,6 +21,7 @@ struct Client {
 	std::unique_ptr<RequestHandler>		requestHandler;
 	std::string							resourceString;
 	bool								cgiRequested;
+	bool								directoryListing;
 	bool								requestReady;
 	bool								responseReady;
 	int									responseSent;

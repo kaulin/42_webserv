@@ -10,7 +10,6 @@
 RequestHandler::RequestHandler(Client& client) : 
 	_client(client),
 	_requestString(""),
-	_directoryListing(false),
 	_readReady(false)
 	// _chunkedRequest(false)
 	// _chunkedRequestReady(false) 
@@ -20,7 +19,6 @@ RequestHandler::~RequestHandler() {}
 
 void RequestHandler::resetHandler() {
 	_requestString = "";
-	_directoryListing = false;
 	_readReady = false;
 }
 
@@ -74,7 +72,7 @@ void RequestHandler::processGet() {
 		if (!location->index.empty())
 			path = location->path + location->index;
 		else if (location->dir_listing) {
-			_directoryListing = true;
+			_client.directoryListing = true;
 			_client.requestReady = true;
 			return;
 		}

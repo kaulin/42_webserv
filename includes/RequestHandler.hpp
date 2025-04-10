@@ -13,7 +13,6 @@ class RequestHandler
 		Client& _client;
 		std::string _requestString;
 		bool _readReady;
-		bool _directoryListing;
 		void processRequest();
 		void processGet();
 		void processPost();
