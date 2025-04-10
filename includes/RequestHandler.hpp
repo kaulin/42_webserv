@@ -13,11 +13,11 @@ class RequestHandler
 		Client& _client;
 		std::string _requestString;
 		bool _readReady;
+		bool _directoryListing;
 		void processRequest();
 		void processGet();
 		void processPost();
 		void processDelete();
-		void checkMethod() const; 
 		// bool _chunkedRequest;
 		// std::string _chunkedBodyString;
 		// // bool _chunkedRequestReady;
