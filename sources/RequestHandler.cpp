@@ -6,11 +6,11 @@
 #include "RequestHandler.hpp"
 #include "RequestParser.hpp"
 #include "ServerException.hpp"
-#include "ServerException.hpp"
 
 RequestHandler::RequestHandler(Client& client) : 
 	_client(client),
 	_requestString(""),
+	_directoryListing(false),
 	_readReady(false)
 	// _chunkedRequest(false)
 	// _chunkedRequestReady(false) 
@@ -20,6 +20,7 @@ RequestHandler::~RequestHandler() {}
 
 void RequestHandler::resetHandler() {
 	_requestString = "";
+	_directoryListing = false;
 	_readReady = false;
 }
 
@@ -51,7 +52,8 @@ void RequestHandler::processRequest() {
 	RequestParser::parseRequest(_requestString, *_request.get());
 
 	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
-	checkMethod();
+	if (!ServerConfigData::checkMethod(*_client.serverConfig, _request->method, _request->uriPath))
+		throw ServerException(STATUS_NOT_ALLOWED);
 	if (_request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
 		_client.cgiRequested = true;
 	else if (_request->method == "GET")
@@ -65,16 +67,23 @@ void RequestHandler::processRequest() {
 }
 
 void RequestHandler::processGet() {
-	std::string path = "var/www/html" + _request->uriPath;
+	std::string path = _request->uriPath;
 	// Check if request is for a directory, check for default index, check for auto-index
-	// if (std::filesystem::is_directory(path)) {
-	// 	auto itSetting = _client.serverConfig->_location.find()
-	// }
+	const Location* location = ServerConfigData::getLocation(*_client.serverConfig, path);
+	if (location != nullptr) {
+		if (!location->index.empty())
+			path = location->path + location->index;
+		else if (location->dir_listing) {
+			_directoryListing = true;
+			_client.requestReady = true;
+			return;
+		}
+	}
 	// Check if request has Accept header and that requested resource matches said content type (TODO: add default "*/*")
-	auto itAcceptHeader = _request->headers.find("Accept");
-	if (itAcceptHeader != _request->headers.end() && (*itAcceptHeader).second.find(FileHandler::getMIMEType(_request->uriPath)) == std::string::npos)
-		throw ServerException(STATUS_NOT_ACCEPTABLE);
-	std::string path = "var/www/html" + _request->uriPath;
+	// auto itAcceptHeader = _request->headers.find("Accept");
+	// if (itAcceptHeader != _request->headers.end() && (*itAcceptHeader).second.find(FileHandler::getMIMEType(_request->uriPath)) == std::string::npos)
+	// 	throw ServerException(STATUS_NOT_ACCEPTABLE);
+	std::string path = ServerConfigData::getRoot(*_client.serverConfig, path);
 	FileHandler::openForRead(_client.fileReadFd, path);
 	std::cout << "Requested file path: " << path << "\n";
 }
@@ -91,27 +100,6 @@ void RequestHandler::processPost() {
 
 void RequestHandler::processDelete() {
 	throw ServerException(STATUS_METHOD_UNSUPPORTED);
-}
-
-void RequestHandler::checkMethod() const {
-	const Config* config = _client.serverConfig;
-	const std::string& method = _request->method;
-	std::string path = _request->uriPath;
-	std::cout << "Checking path [" << path << "] for method [" << method << "]\n";
-	while(!path.empty())
-	{
-		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
-		auto it = config->locations.find(path);
-		if (it != config->locations.end()) {
-			std::cout << "	Found configuration for location [" << path << "], with method [" << method << "] set to: " << (*it).second.methods.at(method) <<  "\n";
-			if ((*it).second.methods.at(method))
-				return;
-		}
-		std::cout << "	No configuration for [" << path << "], continuing search\n";
-		path.erase(path.begin() + path.find_last_of('/'), path.end());
-	}
-	std::cout << "	No configuration for [" << _request->uriPath << "] found, method not allowed\n";
-	throw ServerException(STATUS_NOT_ALLOWED);
 }
 
 // GETTERS
