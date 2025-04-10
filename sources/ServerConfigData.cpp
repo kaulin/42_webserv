@@ -54,6 +54,7 @@ const std::string& ServerConfigData::getRoot(const Config& config, std::string p
 			return location->root;
 		path.erase(path.begin() + path.find_last_of('/'), path.end());
 	}
+	return config.root;
 }
 
 /*
