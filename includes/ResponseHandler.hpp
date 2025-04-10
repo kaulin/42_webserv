@@ -29,7 +29,6 @@ private:
 	void addStatus();
 	void addHeader(const std::string& key, const std::string& value);
 	void addBody(const std::string& bodyString);
-	void makeResponseString();
 	static std::string getTimeStamp();
 public:
 	ResponseHandler(Client& client);
