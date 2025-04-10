@@ -68,7 +68,7 @@ void RequestHandler::processGet() {
 	std::string path = _request->uriPath;
 	// Check if request is for a directory, check for default index, check for auto-index
 	const Location* location = ServerConfigData::getLocation(*_client.serverConfig, path);
-	if (location != nullptr) {
+	if (FileHandler::isDirectory(_request->uriPath) && location != nullptr) {
 		if (!location->index.empty())
 			path = location->path + location->index;
 		else if (location->dir_listing) {
