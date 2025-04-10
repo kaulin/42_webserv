@@ -81,7 +81,7 @@ void RequestHandler::processGet() {
 	// auto itAcceptHeader = _request->headers.find("Accept");
 	// if (itAcceptHeader != _request->headers.end() && (*itAcceptHeader).second.find(FileHandler::getMIMEType(_request->uriPath)) == std::string::npos)
 	// 	throw ServerException(STATUS_NOT_ACCEPTABLE);
-	std::string path = ServerConfigData::getRoot(*_client.serverConfig, path);
+	path = ServerConfigData::getRoot(*_client.serverConfig, path) + path;
 	FileHandler::openForRead(_client.fileReadFd, path);
 	std::cout << "Requested file path: " << path << "\n";
 }
