@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <sys/socket.h>
@@ -64,6 +65,11 @@ void RequestHandler::processRequest() {
 }
 
 void RequestHandler::processGet() {
+	std::string path = "var/www/html" + _request->uriPath;
+	// Check if request is for a directory, check for default index, check for auto-index
+	// if (std::filesystem::is_directory(path)) {
+	// 	auto itSetting = _client.serverConfig->_location.find()
+	// }
 	// Check if request has Accept header and that requested resource matches said content type (TODO: add default "*/*")
 	auto itAcceptHeader = _request->headers.find("Accept");
 	if (itAcceptHeader != _request->headers.end() && (*itAcceptHeader).second.find(FileHandler::getMIMEType(_request->uriPath)) == std::string::npos)
