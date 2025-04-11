@@ -103,6 +103,15 @@ void ServerHandler::resetClient(Client& client) {
 	client.requestHandler->resetHandler();
 }
 
+bool ServerHandler::checkTimeout(const Client& client)
+{
+	const std::time_t now = std::time(nullptr);
+	const int timeout = 30;
+	if (now - client.lastRequest > timeout)
+		return false;
+	return true;
+}
+
 void ServerHandler::closeConnection(size_t& i) {
 	int clientFd = _pollFds[i].fd;
 	close(clientFd);
@@ -119,7 +128,7 @@ void ServerHandler::checkClient(size_t& i) {
 		else
 			closeConnection(i);
 	}
-	else if (false) // checkTimeout(client);
+	else if (!checkTimeout(client))
 		closeConnection(i);
 }
 
@@ -172,6 +181,7 @@ void	ServerHandler::pollLoop()
 					continue;
 				}
 				Client& client = *_clients[_pollFds[i].fd].get();
+				client.lastRequest = std::time(nullptr);
 				if (_pollFds[i].revents & POLLIN)
 				{
 					client.requestHandler->readRequest();
@@ -191,7 +201,6 @@ void	ServerHandler::pollLoop()
 					}
 				}
 				checkClient(i);
-				// reset/timeout client;
 			} catch (const ServerException& e) {
 				handleServerException(e.statusCode(), i);
 				//closeConnection(i);
