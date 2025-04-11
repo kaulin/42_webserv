@@ -19,6 +19,7 @@ struct Client {
 	std::time_t							lastRequest;
 	std::unique_ptr<ResponseHandler>	responseHandler;
 	std::unique_ptr<RequestHandler>		requestHandler;
+	std::string							resourcePath;
 	std::string							resourceString;
 	bool								cgiRequested;
 	bool								directoryListing;
