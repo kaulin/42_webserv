@@ -73,39 +73,33 @@ void ResponseHandler::formResponse()
 		formPOST();
 	else if (request.method == "DELETE")
 		formDELETE();
-	std::cout << "Finished forming response string!\n";
 	_client.responseReady = true;
 }
 
 void ResponseHandler::formGET() {
-	std::cout << "Forming response: GET\n";
 	addHeader("Content-Type", FileHandler::getMIMEType(_client.resourcePath));
 	addBody(_client.resourceString);
 }
 
 void ResponseHandler::formPOST() {
-	std::cout << "Forming response: POST\n";
 	addHeader("Content-Type", "application/json");
 	addHeader("Location", _client.requestHandler->getUri());
 	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully created\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
 }
 
 void ResponseHandler::formDELETE() {
-	std::cout << "Forming response: DELETE\n";
 	addHeader("Content-Type", "application/json");
 	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully deleted\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
 }
 
 void ResponseHandler::formCGI() {
-	std::cout << "Forming response: CGI";
 	_response->response = _client.resourceString;
 }
 
 void ResponseHandler::formDirectoryListing() {
-	std::cout << "Forming response: DirectoryListing";
 	addHeader("Content-Type", "text/html");
 	std::string dirlist;
-	dirlist = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n</head>\n<body>\n<h1>Directory listing</h1>\n<hr>\n<ul>\n";
+	dirlist = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n</head>\n<body>\n<h1>Index of " + _client.requestHandler->getUriPath() +  "</h1>\n<hr>\n<ul>\n";
 	for (const std::filesystem::__cxx11::directory_entry& entry : std::filesystem::directory_iterator(_client.resourcePath))
 	{
 		if (entry.is_directory())
@@ -118,7 +112,6 @@ void ResponseHandler::formDirectoryListing() {
 }
 
 void ResponseHandler::formErrorPage() {
-	std::cout << "Forming response: Error Page\n";
 	addHeader("Content-Type", "text/html");
 	if (_client.resourceString.empty()) {
 		std::string code = std::to_string(_client.responseCode);
