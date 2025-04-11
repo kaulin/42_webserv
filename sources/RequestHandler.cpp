@@ -28,7 +28,7 @@ void RequestHandler::readRequest() {
 
 	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);
 	//throw ServerException(STATUS_INTERNAL_ERROR); // ServerException test
-	if (receivedBytes < 0)
+	if (receivedBytes <= 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	// else if (receivedBytes == 0) // client disconnected? send no response and clean client data in server handler
 	//	throw ServerException(STATUS_CLIENT_DISCONNECTED); // <- not yet implemented
@@ -46,7 +46,7 @@ void RequestHandler::readRequest() {
 
 void RequestHandler::processRequest() {
 	_request = std::make_unique<HttpRequest>();
-	
+
 	RequestParser::parseRequest(_requestString, *_request.get());
 
 	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
@@ -67,23 +67,31 @@ void RequestHandler::processRequest() {
 void RequestHandler::processGet() {
 	std::string path = _request->uriPath;
 	// Check if request is for a directory, check for default index, check for auto-index
-	const Location* location = ServerConfigData::getLocation(*_client.serverConfig, path);
-	if (FileHandler::isDirectory(_request->uriPath) && location != nullptr) {
-		if (!location->index.empty())
-			path = location->path + location->index;
-		else if (location->dir_listing) {
-			_client.directoryListing = true;
-			_client.requestReady = true;
-			return;
+	std::cout << "Is this the resource path: " << _client.serverConfig->root + _request->uriPath << "\n";
+	if (FileHandler::isDirectory(_client.serverConfig->root + _request->uriPath)) {
+		std::cout << "DIR DETECTED WHOOPDEEDOO\n";
+		const Location* location = ServerConfigData::getLocation(*_client.serverConfig, path);
+		if (location != nullptr) {
+			if (!location->index.empty())
+				path = location->path + location->index;
+			else if (location->dir_listing) {
+				_client.directoryListing = true;
+				_client.requestReady = true;
+				return;
+			}
+			else
+				throw ServerException(STATUS_FORBIDDEN);
 		}
+		else
+			throw ServerException(STATUS_FORBIDDEN);
 	}
 	// Check if request has Accept header and that requested resource matches said content type (TODO: add default "*/*")
 	// auto itAcceptHeader = _request->headers.find("Accept");
 	// if (itAcceptHeader != _request->headers.end() && (*itAcceptHeader).second.find(FileHandler::getMIMEType(_request->uriPath)) == std::string::npos)
 	// 	throw ServerException(STATUS_NOT_ACCEPTABLE);
-	path = ServerConfigData::getRoot(*_client.serverConfig, path) + path;
-	FileHandler::openForRead(_client.fileReadFd, path);
-	std::cout << "Requested file path: " << path << "\n";
+	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, path) + path;
+	FileHandler::openForRead(_client.fileReadFd, _client.resourcePath);
+	std::cout << "Requested file path: " << _client.resourcePath << "\n";
 }
 
 void RequestHandler::processPost() {
@@ -91,9 +99,9 @@ void RequestHandler::processPost() {
 	auto itContentTypeHeader = _request->headers.find("Content-Type");
 	if (itContentTypeHeader == _request->headers.end() || (*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
 		throw ServerException(STATUS_BAD_REQUEST);
-	std::string path = "var/www/html" + _request->uriPath;
-	FileHandler::openForWrite( _client.fileWriteFd, path);
-	std::cout << "Requested file path: " << path << "\n";
+	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
+	FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
+	std::cout << "Requested file path: " << _client.resourcePath << "\n";
 }
 
 void RequestHandler::processDelete() {

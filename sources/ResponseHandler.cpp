@@ -73,15 +73,13 @@ void ResponseHandler::formResponse()
 		formPOST();
 	else if (request.method == "DELETE")
 		formDELETE();
-	else
-		throw ServerException(STATUS_METHOD_UNSUPPORTED);
 	std::cout << "Finished forming response string!\n";
 	_client.responseReady = true;
 }
 
 void ResponseHandler::formGET() {
 	std::cout << "Forming response: GET\n";
-	addHeader("Content-Type", FileHandler::getMIMEType(_client.requestHandler->getUriPath()));
+	addHeader("Content-Type", FileHandler::getMIMEType(_client.resourcePath));
 	addBody(_client.resourceString);
 }
 
