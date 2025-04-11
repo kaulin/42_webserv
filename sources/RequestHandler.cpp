@@ -49,6 +49,8 @@ void RequestHandler::processRequest() {
 
 	RequestParser::parseRequest(_requestString, *_request.get());
 
+	// TODO Check redirects
+
 	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
 	if (!ServerConfigData::checkMethod(*_client.serverConfig, _request->method, _request->uriPath))
 		throw ServerException(STATUS_NOT_ALLOWED);
@@ -67,9 +69,7 @@ void RequestHandler::processRequest() {
 void RequestHandler::processGet() {
 	std::string path = _request->uriPath;
 	// Check if request is for a directory, check for default index, check for auto-index
-	std::cout << "Is this the resource path: " << _client.serverConfig->root + _request->uriPath << "\n";
 	if (FileHandler::isDirectory(_client.serverConfig->root + _request->uriPath)) {
-		std::cout << "DIR DETECTED WHOOPDEEDOO\n";
 		const Location* location = ServerConfigData::getLocation(*_client.serverConfig, path);
 		if (location != nullptr) {
 			if (!location->index.empty())
@@ -77,6 +77,7 @@ void RequestHandler::processGet() {
 			else if (location->dir_listing) {
 				_client.directoryListing = true;
 				_client.requestReady = true;
+				_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, path) + path;
 				return;
 			}
 			else
