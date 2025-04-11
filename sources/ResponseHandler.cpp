@@ -106,7 +106,7 @@ void ResponseHandler::formDirectoryListing() {
 	addHeader("Content-Type", "text/html");
 	std::string dirlist;
 	dirlist = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n</head>\n<body>\n<h1>Directory listing</h1>\n<hr>\n<ul>\n";
-	for (const std::filesystem::__cxx11::directory_entry& entry : std::filesystem::directory_iterator(_client.requestHandler->getUriPath()))
+	for (const std::filesystem::__cxx11::directory_entry& entry : std::filesystem::directory_iterator(_client.resourcePath))
 	{
 		if (entry.is_directory())
 			dirlist += "<li><a href=\"https://www.youtube.com/watch?v=dQw4w9WgXcQ\" />" + entry.path().string().substr(entry.path().string().find_last_of("/") + 1) + "/</a></li>\n";
