@@ -44,6 +44,7 @@ public:
 	void		checkClient(size_t& i);
 	void		closeConnection(size_t& i);
 	void		cleanupServers();
+	bool		checkTimeout(const Client& client);
 	void		handleServerException(int statusCode, size_t& fd);
 	
 	static void	signalHandler(int);
