@@ -26,8 +26,11 @@ std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request, const Clien
 	strEnv.emplace_back("SERVER_NAME=" + request.headers.at("Host"));
 	if (request.method == "POST")
 	{
-		strEnv.emplace_back("CONTENT_TYPE=application/x-www-form-urlencoded");
-		strEnv.emplace_back("CONTENT_LENGTH="); // needs method to search by header
+		auto contentType = request.headers.find("Content-Type");
+		if (contentType != request.headers.end())
+			strEnv.emplace_back("CONTENT_TYPE=" + request.headers.at("Content-Type"));
+		auto contentLength = request.headers.find("Content-Length");
+		strEnv.emplace_back("CONTENT_LENGTH=" + request.headers.at("Content-Length"));
 	}
 	strEnv.emplace_back("QUERY_STRING=" + request.uriQuery);
 	strEnv.emplace_back("PATH_INFO=" + request.uri);
