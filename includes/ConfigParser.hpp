@@ -97,6 +97,7 @@ public:
 	static void								assignErrorPage(std::vector<std::string>::const_iterator &it, std::vector<std::string>::const_iterator &end, Config &blockInstance, ConfigKey key);
 	static void								setDefaultErrorPages(Config &blockInstance);
 	static void								setRoot(Config *blockInstance);
+	static void								checkDuplicates(std::map<std::string, Config> configs, Config *blockInstance);
 
 	class ConfigParserException : public std::exception
 		{

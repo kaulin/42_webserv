@@ -204,6 +204,8 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 			tokens.push_back(";");
 		previous = token;
 	}
+	for (auto token : tokens)
+		std::cout << token << std::endl;
 	return tokens;
 }
 
@@ -289,6 +291,8 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 	// content starts here
 	while (it != end)
 	{
+		if (*it == "server")
+			throw ConfigParserException("Config: Server block cannot contain another server block.");
 		auto keywordIt = keywordMap.find(*it);
 		ConfigKey keyEnum = (keywordIt != keywordMap.end()) ? keywordIt->second : ConfigKey::UNKNOWN;
 
@@ -382,6 +386,15 @@ void	ConfigParser::setRoot(Config *blockInstance)
 	}
 }
 
+void ConfigParser::checkDuplicates(std::map<std::string, Config> configs, Config *blockInstance)
+{
+	for (auto config : configs)
+	{
+		if (config.second.port == blockInstance->port)
+			throw ConfigParserException("Config: Duplicate ports not allowed.");
+	}
+}
+
 std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 {
 	std::map<std::string, Config> configs;
@@ -402,6 +415,7 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 			setDefaultErrorPages(blockInstance);
 			setRoot(&blockInstance);
 			
+			checkDuplicates(configs, &blockInstance);
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}
 		++it;
