@@ -34,7 +34,8 @@ size_t  ServerConfigData::getServerCount()
 	if it doesn't.
 */
 const Location* ServerConfigData::getLocation(const Config& config, std::string path) {
-	path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
+	if (path.size() > 1 && path.back() == '/')
+			path.erase(path.begin() + path.find_last_of('/'), path.end());
 	auto itLocation = config.locations.find(path);
 	if (itLocation == config.locations.end())
 		return nullptr;
@@ -48,11 +49,12 @@ const Location* ServerConfigData::getLocation(const Config& config, std::string 
 const std::string& ServerConfigData::getRoot(const Config& config, std::string path){
 	while(!path.empty())
 	{
-		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
+		if (path.size() > 1 && path.back() == '/')
+			path.erase(path.begin() + path.find_last_of('/'), path.end());
 		const Location* location = getLocation(config, path);
 		if (location != nullptr)
 			return location->root;
-		path.erase(path.begin() + path.find_last_of('/'), path.end());
+		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
 	}
 	return config.root;
 }
@@ -64,11 +66,14 @@ const std::string& ServerConfigData::getRoot(const Config& config, std::string p
 bool ServerConfigData::checkMethod(const Config& config, const std::string& method, std::string path) {
 	while(!path.empty())
 	{
-		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
+		if (path.size() > 1 && path.back() == '/')
+			path.erase(path.begin() + path.find_last_of('/'), path.end());
 		const Location* location = getLocation(config, path);
-		if (location != nullptr && location->methods.at(method))
+		if (location != nullptr && location->methods.at(method)) {
+			std::cout << "Location found\n";
 			return true;
-		path.erase(path.begin() + path.find_last_of('/'), path.end());
+		}
+		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
 	}
 	return false;
 }
