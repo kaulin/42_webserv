@@ -88,8 +88,10 @@ void printClientInfo(const Client& client) {
 }
 
 void ServerHandler::resetClient(Client& client) {
+	client.resourcePath = "";
 	client.resourceString = "";
 	client.cgiRequested = false;
+	client.directoryListing = false;
 	client.requestReady = false;
 	client.responseReady = false;
 	client.responseSent = false;

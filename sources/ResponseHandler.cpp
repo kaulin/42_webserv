@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <sys/socket.h>
 #include "FileHandler.hpp"
 #include "ResponseHandler.hpp"
@@ -64,54 +65,59 @@ void ResponseHandler::formResponse()
 		formErrorPage();
 	else if (_client.cgiRequested)
 		formCGI();
+	else if (request.method == "GET" && _client.directoryListing)
+		formDirectoryListing();
 	else if (request.method == "GET")
 		formGET();
 	else if (request.method == "POST")
 		formPOST();
 	else if (request.method == "DELETE")
 		formDELETE();
-	else
-		throw ServerException(STATUS_METHOD_UNSUPPORTED);
-	std::cout << "Finished forming response string!\n";
 	_client.responseReady = true;
 }
 
 void ResponseHandler::formGET() {
-	std::cout << "Forming response: GET\n";
-	addHeader("Content-Type", FileHandler::getMIMEType(_client.requestHandler->getUriPath()));
+	addHeader("Content-Type", FileHandler::getMIMEType(_client.resourcePath));
 	addBody(_client.resourceString);
 }
 
 void ResponseHandler::formPOST() {
-	std::cout << "Forming response: POST\n";
 	addHeader("Content-Type", "application/json");
 	addHeader("Location", _client.requestHandler->getUri());
 	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully created\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
 }
 
 void ResponseHandler::formDELETE() {
-	std::cout << "Forming response: DELETE\n";
 	addHeader("Content-Type", "application/json");
 	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully deleted\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
 }
 
 void ResponseHandler::formCGI() {
-	std::cout << "Forming response: CGI";
 	_response->response = _client.resourceString;
 }
 
 void ResponseHandler::formDirectoryListing() {
-	std::cout << "Forming response: DirectoryListing";
+	addHeader("Content-Type", "text/html");
+	std::string dirlist;
+	dirlist = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n</head>\n<body>\n<h1>Index of " + _client.requestHandler->getUriPath() +  "</h1>\n<hr>\n<ul>\n";
+	for (const std::filesystem::__cxx11::directory_entry& entry : std::filesystem::directory_iterator(_client.resourcePath))
+	{
+		if (entry.is_directory())
+			dirlist += "<li><a href=\"https://www.youtube.com/watch?v=dQw4w9WgXcQ\" />" + entry.path().string().substr(entry.path().string().find_last_of("/") + 1) + "/</a></li>\n";
+		else
+			dirlist += "<li><a href=\"https://www.youtube.com/watch?v=dQw4w9WgXcQ\" >" + entry.path().string().substr(entry.path().string().find_last_of("/") + 1) + "</a></li>\n";
+	}
+	dirlist += "</ul>\n</body>\n</html>\n";
+	addBody(dirlist);
 }
 
 void ResponseHandler::formErrorPage() {
-	std::cout << "Forming response: Error Page\n";
 	addHeader("Content-Type", "text/html");
 	if (_client.resourceString.empty()) {
 		std::string code = std::to_string(_client.responseCode);
 		std::string message = ServerException::statusMessage(_client.responseCode);
 
-		_client.resourceString =  "<!DOCTYPE html>\n<html>\n<head>\n    <title>Error " + code + " - " + message + "</title>\n</head>\n<body>\n    <h1>" + code + "</h1>\n    <p>" + message + "</p>\n</body>\n</html>";
+		_client.resourceString =  "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <title>Error " + code + " - " + message + "</title>\n</head>\n<body>\n    <h1>" + code + "</h1>\n    <p>" + message + "</p>\n</body>\n</html>\n";
 	}
 	addBody(_client.resourceString);
 }
