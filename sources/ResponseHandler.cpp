@@ -102,12 +102,16 @@ void ResponseHandler::formDirectoryListing() {
 	dirlist = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n</head>\n<body>\n<h1>Index of " + _client.requestHandler->getUriPath() +  "</h1>\n<hr>\n<ul>\n";
 	for (const std::filesystem::__cxx11::directory_entry& entry : std::filesystem::directory_iterator(_client.resourcePath))
 	{
+		std::cout << entry.path().string() << "\n";
+		size_t rootLen = ServerConfigData::getRoot(*_client.serverConfig, _client.resourcePath).size();
+		std::string entryName = entry.path().string().substr(entry.path().string().find_last_of("/") + 1);
+		std::string rootLessPath = entry.path().string().substr(rootLen);
 		if (entry.is_directory())
-			dirlist += "<li><a href=\"https://www.youtube.com/watch?v=dQw4w9WgXcQ\" />" + entry.path().string().substr(entry.path().string().find_last_of("/") + 1) + "/</a></li>\n";
+			dirlist += "<li><a href=\"" + rootLessPath + "\" />" + entryName + "/</a></li>\n";
 		else
-			dirlist += "<li><a href=\"https://www.youtube.com/watch?v=dQw4w9WgXcQ\" >" + entry.path().string().substr(entry.path().string().find_last_of("/") + 1) + "</a></li>\n";
+			dirlist += "<li><a href=\"" + rootLessPath + "\" >" + entryName + "</a></li>\n";
 	}
-	dirlist += "</ul>\n</body>\n</html>\n";
+	dirlist += "</ul>\n<hr>\n</body>\n</html>\n";
 	addBody(dirlist);
 }
 
