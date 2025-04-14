@@ -1,6 +1,7 @@
 // Response.hpp
 #pragma once
 
+#include <filesystem>
 #include <iostream>
 #include <iomanip>
 #include <ctime>
@@ -29,6 +30,8 @@ private:
 	void addStatus();
 	void addHeader(const std::string& key, const std::string& value);
 	void addBody(const std::string& bodyString);
+	static std::string timeToString(const std::filesystem::file_time_type& time);
+	static std::string sizeToString(const size_t& size);
 	static std::string getTimeStamp();
 public:
 	ResponseHandler(Client& client);
