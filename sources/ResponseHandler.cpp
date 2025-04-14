@@ -106,7 +106,7 @@ void ResponseHandler::formDirectoryListing() {
 	std::string entryLastWritten;
 	dirlistStream << "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n</head>\n";
 	dirlistStream << "<body>\n<h1>Index of " << _client.requestHandler->getUriPath() <<  "</h1>\n<hr>\n";
-	dirlistStream << "\n<table\n<tr>\n<td>Name</td>\n<td>Last Modified</td>\n<td>Size</td>\n</tr>\n";
+	dirlistStream << "\n<table\n<tr>\n<th>Name</th>\n<th>Last Modified</th>\n<th>Size</th>\n</tr>\n";
 
 	// Add link to parent directory
 	std::string rootlessPath = _client.resourcePath.substr(rootLen);
@@ -114,7 +114,7 @@ void ResponseHandler::formDirectoryListing() {
 		if (rootlessPath.back() == '/')
 			rootlessPath.erase(rootlessPath.back());
 		rootlessPath.erase(rootlessPath.find_last_of('/') + 1);
-		dirlistStream << "<tr>\n<td><a href=\"" << rootlessPath << "\" />../</a></td>\n<td>\n<td>-</td>\n</td>\n</tr>\n";
+		dirlistStream << "<tr>\n<td><a href=\"" << rootlessPath << "\" />../</a></td>\n<td></td>\n<td>-</td>\n</tr>\n";
 	}
 
 	// Add links to each file and subdirectory in current directory
