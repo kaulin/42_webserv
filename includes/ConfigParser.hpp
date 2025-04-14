@@ -98,6 +98,7 @@ public:
 	static void								setDefaultErrorPages(Config &blockInstance);
 	static void								setRoot(Config *blockInstance);
 	static void								checkDuplicates(std::map<std::string, Config> configs, Config *blockInstance);
+	static void								checkRequired(Config *blockInstance);
 
 	class ConfigParserException : public std::exception
 		{

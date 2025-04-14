@@ -357,6 +357,7 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				++it; break; 
 			}
 			case ConfigKey::UNKNOWN:
+				std::cout << "Config: Skipped over unknown directive: " << *it << std::endl;
 				break; // default handling
 			default:
 				break;
@@ -395,6 +396,14 @@ void ConfigParser::checkDuplicates(std::map<std::string, Config> configs, Config
 	}
 }
 
+void ConfigParser::checkRequired(Config *blockInstance)
+{
+	if (blockInstance->host.empty())
+		throw ConfigParserException("Config: No host set in config file.");
+	if (blockInstance->root.empty())
+		throw ConfigParserException("Config: No root set in config file.");
+}
+
 std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 {
 	std::map<std::string, Config> configs;
@@ -415,6 +424,7 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 			setDefaultErrorPages(blockInstance);
 			setRoot(&blockInstance);
 			
+			checkRequired(&blockInstance);
 			checkDuplicates(configs, &blockInstance);
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}
