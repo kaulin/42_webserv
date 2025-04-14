@@ -106,7 +106,7 @@ void ServerHandler::resetClient(Client& client) {
 bool ServerHandler::checkTimeout(const Client& client)
 {
 	const std::time_t now = std::time(nullptr);
-	const int timeout = 30;
+	const int timeout = 10;
 	if (now - client.lastRequest > timeout)
 		return false;
 	return true;
@@ -129,7 +129,10 @@ void ServerHandler::checkClient(size_t& i) {
 			closeConnection(i);
 	}
 	else if (!checkTimeout(client))
+	{
+		std::cout << "Client " << client.fd << " timed out, closing connection.\n";
 		closeConnection(i);
+	}
 }
 
 void ServerHandler::addConnection(size_t& i) {
@@ -156,6 +159,7 @@ void ServerHandler::addConnection(size_t& i) {
 		client.keep_alive = false;
 		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
 		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
+		client.lastRequest = std::time(nullptr);
 		resetClient(client);
 	} catch (std::exception& e) {
 		// these should be logged, no response can be made, as there is no connection
@@ -181,10 +185,10 @@ void	ServerHandler::pollLoop()
 					continue;
 				}
 				Client& client = *_clients[_pollFds[i].fd].get();
-				client.lastRequest = std::time(nullptr);
 				if (_pollFds[i].revents & POLLIN)
 				{
 					client.requestHandler->readRequest();
+					client.lastRequest = std::time(nullptr);
 				}
 				else if (_pollFds[i].revents & POLLOUT)
 				{
