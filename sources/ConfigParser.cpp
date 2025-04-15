@@ -211,6 +211,17 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 			tokens.push_back(";");
 		previous = token;
 	}
+	int opening = 0;
+	int closing = 0;
+	for (auto &token : tokens)
+	{
+		if (token == "{")
+			opening++;
+		if (token == "}")
+			closing++;
+	}
+	if (opening != closing)
+		throw ConfigParserException("Config: Mismatched brackets in config file.");
 	for (auto token : tokens)
 		std::cout << token << std::endl;
 	return tokens;
@@ -302,7 +313,7 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 			throw ConfigParserException("Config: Server block cannot contain another server block.");
 		auto keywordIt = keywordMap.find(*it);
 		ConfigKey keyEnum = (keywordIt != keywordMap.end()) ? keywordIt->second : ConfigKey::UNKNOWN;
-
+		
 		if (isErrorCode(keyEnum))
 		{
 			assignErrorPage(it, end, blockInstance, keyEnum);
@@ -422,6 +433,8 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 
 	std::vector<std::string>::const_iterator it = tokens.begin();
 	std::vector<std::string>::const_iterator end = tokens.end();
+	if (std::find(tokens.begin(), tokens.end(), "server") == tokens.end())
+		throw ConfigParserException("Config: No 'server' block in config file.");
 
 	while (it != end)
 	{
