@@ -222,8 +222,8 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 	}
 	if (opening != closing)
 		throw ConfigParserException("Config: Mismatched brackets in config file.");
-	for (auto token : tokens)
-		std::cout << token << std::endl;
+	// for (auto token : tokens)
+	// 	std::cout << token << std::endl;
 	return tokens;
 }
 
