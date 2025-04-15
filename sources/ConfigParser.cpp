@@ -1,5 +1,6 @@
 #include "LocationParser.hpp"
 #include "ConfigParser.hpp"
+#include "DNS.hpp"
 #include <filesystem>
 
 
@@ -84,10 +85,11 @@ bool isValidPort(const std::string &port)
 }
 
 // helper function to validate IP address
-bool isValidIP(const std::string &ip)
+bool isValidIP(std::string &ip)
 {
 	std::regex ipRegex(R"((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}))");
 	std::smatch match;
+	std::string ip_address;
 	if (std::regex_match(ip, match, ipRegex))
 	{
 		for (int i = 1; i <= 4; ++i)
@@ -98,6 +100,11 @@ bool isValidIP(const std::string &ip)
 				return false;
 			}
 		}
+		return true;
+	}
+	else if (DNS::resolveDNS(ip, ip_address))
+	{
+		ip = ip_address;
 		return true;
 	}
 	return false;
@@ -402,6 +409,8 @@ void ConfigParser::checkRequired(Config *blockInstance)
 		throw ConfigParserException("Config: No host set in config file.");
 	if (blockInstance->root.empty())
 		throw ConfigParserException("Config: No root set in config file.");
+	if (blockInstance->port.empty())
+		throw ConfigParserException("Config: No port set in config file.");
 }
 
 std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)

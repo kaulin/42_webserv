@@ -1,12 +1,11 @@
+#include "DNS.hpp" 
 #include <iostream>
 #include <cstring> // For memset
-#include <netdb.h> // For getaddrinfo and freeaddrinfo
 #include <sys/socket.h> // For AF_INET, SOCK_STREAM
 #include <netinet/in.h> // For sockaddr_in
-#include <arpa/inet.h> // For htons (if needed)
 
 
-std::string convertBinaryToIPv4(uint32_t ip_binary)
+std::string DNS::convertBinaryToIPv4(uint32_t ip_binary)
 {
 	// Convert from network byte order to host byte order
 	ip_binary = ntohl(ip_binary);
@@ -24,7 +23,7 @@ std::string convertBinaryToIPv4(uint32_t ip_binary)
 	return std::string(ip_str);
 }
 
-bool resolveDNS(const std::string& hostname, std::string& ip_address)
+bool DNS::resolveDNS(const std::string& hostname, std::string& ip_address)
 {
 	struct addrinfo hints, *res;
 
@@ -36,7 +35,7 @@ bool resolveDNS(const std::string& hostname, std::string& ip_address)
 	int status = getaddrinfo(hostname.c_str(), nullptr, &hints, &res);
 	if (status != 0)
 	{
-		std::cerr << "DNS resolution failed: " << gai_strerror(status) << std::endl;
+		std::cout << "DNS resolution failed: " << gai_strerror(status) << std::endl;
 		return false;
 	}
 
@@ -50,16 +49,4 @@ bool resolveDNS(const std::string& hostname, std::string& ip_address)
 	// Free the linked list
 	freeaddrinfo(res);
 	return true;
-}
-
-int main(void)
-{
-	std::string hostname = "google.com";
-	std::string ip_address;
-
-	if (resolveDNS(hostname, ip_address))
-		std::cout << "Resolved " << hostname << " to IP: " << ip_address << std::endl;
-	else
-		std::cerr << "Failed to resolve hostname: " << hostname << std::endl;
-	return 0;
 }
