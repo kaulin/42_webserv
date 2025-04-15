@@ -92,7 +92,6 @@ void RequestHandler::processGet() {
 	// 	throw ServerException(STATUS_NOT_ACCEPTABLE);
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, path) + path;
 	FileHandler::openForRead(_client.fileReadFd, _client.resourcePath);
-	std::cout << "Requested file path: " << _client.resourcePath << "\n";
 }
 
 void RequestHandler::processPost() {
@@ -102,11 +101,16 @@ void RequestHandler::processPost() {
 		throw ServerException(STATUS_BAD_REQUEST);
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
 	FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
-	std::cout << "Requested file path: " << _client.resourcePath << "\n";
 }
 
 void RequestHandler::processDelete() {
-	throw ServerException(STATUS_METHOD_UNSUPPORTED);
+	std::string file = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
+	if (!std::filesystem::exists(file))
+		throw ServerException(STATUS_NOT_FOUND);
+	if (!std::filesystem::is_regular_file(file))
+		throw ServerException(STATUS_FORBIDDEN);
+	_client.resourcePath = file;
+	_client.requestReady = true;
 }
 
 // GETTERS
