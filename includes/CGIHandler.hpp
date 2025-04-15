@@ -31,6 +31,7 @@ private:
 	// Private class methods
 	void 				closeFds(const std::vector<int> fdsToclose);
 	void 				handleChildProcess(int clientFd);
+	void				handleParentProcess(Client& client);
 	std::vector<char*>	setCGIEnv(const HttpRequest& request, const Client& client);
 public:
 	CGIHandler();

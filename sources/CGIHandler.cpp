@@ -30,7 +30,8 @@ std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request, const Clien
 		if (contentType != request.headers.end())
 			strEnv.emplace_back("CONTENT_TYPE=" + request.headers.at("Content-Type"));
 		auto contentLength = request.headers.find("Content-Length");
-		strEnv.emplace_back("CONTENT_LENGTH=" + request.headers.at("Content-Length"));
+		if (contentLength != request.headers.end())
+			strEnv.emplace_back("CONTENT_LENGTH=" + request.headers.at("Content-Length"));
 	}
 	strEnv.emplace_back("QUERY_STRING=" + request.uriQuery);
 	strEnv.emplace_back("PATH_INFO=" + request.uri);
@@ -102,6 +103,13 @@ void	CGIHandler::setupCGI(Client &client)
 	_requests.emplace(client.fd, std::move(cgiInst));
 }
 
+void CGIHandler::handleParentProcess(Client& client)
+{
+	close(_requests[client.fd]->pipe[WRITE]); // Close child end
+	client.fileReadFd = dup(_requests[client.fd]->pipe[READ]); // Dup read end to client
+	close(_requests[client.fd]->pipe[READ]); // Close dupped read end
+}
+
 void	CGIHandler::runCGIScript(Client& client)
 {
 	setupCGI(client);
@@ -113,8 +121,10 @@ void	CGIHandler::runCGIScript(Client& client)
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		}
 		pid_t pid = fork();
-		if (pid < 0)
+		if (pid == -1)
 		{
+			kill(pid, SIGTERM);
+			_requests[client.fd]->status = CGI_ERROR;
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		}
 		if (pid == 0)
@@ -123,12 +133,10 @@ void	CGIHandler::runCGIScript(Client& client)
 		}
 		else
 		{
-			close(_requests[client.fd]->pipe[WRITE]); // Close child end
-			client.fileReadFd = dup(_requests[client.fd]->pipe[READ]); // Dup read end to client
-			close(_requests[client.fd]->pipe[READ]); // Close dupped read end
+			handleParentProcess(client);
 		}
-		_requests[client.fd]->status = CGI_FORKED;
 		_requests[client.fd]->childPid = pid;
+		_requests[client.fd]->status = CGI_FORKED;
 	}
 	else if (_requests[client.fd]->status == CGI_ERROR)
 	{
