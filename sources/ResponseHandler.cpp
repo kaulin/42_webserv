@@ -59,8 +59,6 @@ void ResponseHandler::formResponse()
 		return;
 	const HttpRequest& request = _client.requestHandler->getRequest();
 	_response = std::make_unique<HttpResponse>();
-	addStatus();
-	addHeader("Date", getTimeStamp());
 	if (_client.responseCode >= 300)
 		formErrorPage();
 	else if (_client.cgiRequested)
@@ -77,19 +75,33 @@ void ResponseHandler::formResponse()
 }
 
 void ResponseHandler::formGET() {
+	addStatus();
+	addHeader("Date", getTimeStamp());
 	addHeader("Content-Type", FileHandler::getMIMEType(_client.resourcePath));
 	addBody(_client.resourceString);
 }
 
 void ResponseHandler::formPOST() {
+	addStatus();
+	addHeader("Date", getTimeStamp());
 	addHeader("Content-Type", "application/json");
 	addHeader("Location", _client.requestHandler->getUri());
 	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully created\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
 }
 
 void ResponseHandler::formDELETE() {
-	addHeader("Content-Type", "application/json");
-	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully deleted\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
+	std::filesystem::path file(_client.resourcePath);
+	std::error_code ec;
+	if (std::filesystem::exists(file)) {
+		if (!remove(file, ec))
+			throw ServerException(STATUS_INTERNAL_ERROR);
+	}
+	if (ec.value() != 0 && std::filesystem::exists(file)) // can log ec if needed
+		throw ServerException(STATUS_INTERNAL_ERROR);
+	_client.responseCode = 204;
+	addStatus();
+	addHeader("Date", getTimeStamp());
+	addBody("");
 }
 
 void ResponseHandler::formCGI() {
@@ -97,6 +109,8 @@ void ResponseHandler::formCGI() {
 }
 
 void ResponseHandler::formDirectoryListing() {
+	addStatus();
+	addHeader("Date", getTimeStamp());
 	addHeader("Content-Type", "text/html");
 	size_t rootLen = ServerConfigData::getRoot(*_client.serverConfig, _client.resourcePath).size();
 	std::ostringstream dirlistStream;
@@ -141,6 +155,8 @@ void ResponseHandler::formDirectoryListing() {
 }
 
 void ResponseHandler::formErrorPage() {
+	addStatus();
+	addHeader("Date", getTimeStamp());
 	addHeader("Content-Type", "text/html");
 	if (_client.resourceString.empty()) {
 		std::string code = std::to_string(_client.responseCode);

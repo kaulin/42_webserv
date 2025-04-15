@@ -219,6 +219,7 @@ void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 {
 	Client& client = *_clients[_pollFds[fd].fd].get();
 	client.responseCode = statusCode;
+	client.responseReady = false;
 	if (client.serverConfig->error_pages.empty()) {
 		std::cout << "no error pages defined in config" << std::endl;
 		return;
