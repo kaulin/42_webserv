@@ -33,6 +33,7 @@ private:
 	void 				handleChildProcess(int clientFd);
 	void				handleParentProcess(Client& client);
 	std::vector<char*>	setCGIEnv(const HttpRequest& request, const Client& client);
+	std::string			setCgiPath(const HttpRequest& request);
 public:
 	CGIHandler();
 

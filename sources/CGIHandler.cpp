@@ -80,7 +80,18 @@ void	CGIHandler::handleChildProcess(int clientFd)
 	std::exit(EXIT_FAILURE);
 }
 
-void	CGIHandler::setupCGI(Client &client)
+std::string CGIHandler::setCgiPath(const HttpRequest& request)
+{
+	std::string parsedUri = request.uri;
+	if (!request.uriQuery.empty() && parsedUri.find('?') != std::string::npos)
+	{
+		parsedUri = request.uri.substr(0, request.uri.find('?'));
+	}
+	std::string cgiUri = std::filesystem::current_path().string() + "/var/www" + parsedUri;
+	return cgiUri;
+}
+
+void	CGIHandler::setupCGI(Client& client)
 {
 	const HttpRequest&  request = client.requestHandler->getRequest();
 	
@@ -93,9 +104,10 @@ void	CGIHandler::setupCGI(Client &client)
 		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
 		return;
 	}
-	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
 
-	cgiInst->CGIPath = std::filesystem::current_path().string() + request.uri;
+	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
+	
+	cgiInst->CGIPath = setCgiPath(request);
 	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
 	cgiInst->argv.emplace_back(nullptr);
 	cgiInst->envp = setCGIEnv(request, client);
@@ -142,4 +154,5 @@ void	CGIHandler::runCGIScript(Client& client)
 	{
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
+	_requests.erase(client.fd);
 }
