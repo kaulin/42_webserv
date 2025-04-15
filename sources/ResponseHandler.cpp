@@ -1,4 +1,4 @@
-#include <filesystem>
+#include <chrono>
 #include <sys/socket.h>
 #include "FileHandler.hpp"
 #include "ResponseHandler.hpp"
@@ -98,17 +98,46 @@ void ResponseHandler::formCGI() {
 
 void ResponseHandler::formDirectoryListing() {
 	addHeader("Content-Type", "text/html");
-	std::string dirlist;
-	dirlist = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n</head>\n<body>\n<h1>Index of " + _client.requestHandler->getUriPath() +  "</h1>\n<hr>\n<ul>\n";
+	size_t rootLen = ServerConfigData::getRoot(*_client.serverConfig, _client.resourcePath).size();
+	std::ostringstream dirlistStream;
+	std::ostringstream regularFileStream;
+	std::string entryName;
+	std::string entrySize;
+	std::string entryLastWritten;
+	dirlistStream << "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n</head>\n";
+	dirlistStream << "<body>\n<h1>Index of " << _client.requestHandler->getUriPath() <<  "</h1>\n<hr>\n";
+	dirlistStream << "\n<table\n<tr>\n<th>Name</th>\n<th>Last Modified</th>\n<th>Size</th>\n</tr>\n";
+
+	// Add link to parent directory
+	std::string rootlessPath = _client.resourcePath.substr(rootLen);
+	if (rootlessPath != "/") {
+		if (rootlessPath.back() == '/')
+			rootlessPath.erase(rootlessPath.back());
+		rootlessPath.erase(rootlessPath.find_last_of('/') + 1);
+		dirlistStream << "<tr>\n<td><a href=\"" << rootlessPath << "\" />../</a></td>\n<td></td>\n<td>-</td>\n</tr>\n";
+	}
+
+	// Add links to each file and subdirectory in current directory
 	for (const std::filesystem::__cxx11::directory_entry& entry : std::filesystem::directory_iterator(_client.resourcePath))
 	{
-		if (entry.is_directory())
-			dirlist += "<li><a href=\"https://www.youtube.com/watch?v=dQw4w9WgXcQ\" />" + entry.path().string().substr(entry.path().string().find_last_of("/") + 1) + "/</a></li>\n";
-		else
-			dirlist += "<li><a href=\"https://www.youtube.com/watch?v=dQw4w9WgXcQ\" >" + entry.path().string().substr(entry.path().string().find_last_of("/") + 1) + "</a></li>\n";
+		entryName = entry.path().string().substr(entry.path().string().find_last_of("/") + 1);
+		entrySize = entry.is_regular_file() ? sizeToString(entry.file_size()) : "-";
+		entryLastWritten = timeToString(entry.last_write_time());
+		rootlessPath = entry.path().string().substr(rootLen);
+		
+		if (entry.is_directory()) {
+			dirlistStream << "<tr>\n<td><a href=\"" << rootlessPath << "\" />" << entryName << "/</a></td>\n";
+			dirlistStream << "<td>" << entryLastWritten << "</td>\n";
+			dirlistStream << "<td>" << entrySize << "</td>\n</tr>\n";
+		}
+		else {
+			regularFileStream << "<tr>\n<td><a href=\"" << rootlessPath << "\" >" << entryName << "</a></td>\n";
+			regularFileStream << "<td>" << entryLastWritten << "</td>\n";
+			regularFileStream << "<td>" << entrySize << "</td>\n</td>\n</tr>\n";
+		}
 	}
-	dirlist += "</ul>\n</body>\n</html>\n";
-	addBody(dirlist);
+	dirlistStream << regularFileStream.str() << "</table>\n</body>\n</html>\n";
+	addBody(dirlistStream.str());
 }
 
 void ResponseHandler::formErrorPage() {
@@ -117,9 +146,32 @@ void ResponseHandler::formErrorPage() {
 		std::string code = std::to_string(_client.responseCode);
 		std::string message = ServerException::statusMessage(_client.responseCode);
 
-		_client.resourceString =  "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <title>Error " + code + " - " + message + "</title>\n</head>\n<body>\n    <h1>" + code + "</h1>\n    <p>" + message + "</p>\n</body>\n</html>\n";
+		_client.resourceString =  "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n	<title>Error " + code + " - " + message + "</title>\n</head>\n<body>\n	<h1>" + code + "</h1>\n	<p>" + message + "</p>\n</body>\n</html>\n";
 	}
 	addBody(_client.resourceString);
+}
+
+std::string ResponseHandler::timeToString(const std::filesystem::file_time_type& time) {
+	auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+		time - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()
+	);
+	std::time_t tt = std::chrono::system_clock::to_time_t(sctp);
+	std::ostringstream timeStream;
+	timeStream << std::put_time(std::localtime(&tt), "%Y-%m-%d %H:%M");
+	return timeStream.str();
+}
+
+std::string ResponseHandler::sizeToString(const size_t& size) {
+	const char* units[] = {"B", "KB", "MB", "GB"};
+	int i = 0;
+	double displaySize = static_cast<double>(size);
+	while (displaySize > 1024 && i < 3) {
+		displaySize /= 1024;
+		++i;
+	}
+	std::ostringstream sizeStream;
+	sizeStream << std::fixed << std::setprecision(1) << displaySize << " " << units[i];
+	return sizeStream.str();
 }
 
 /*
@@ -129,9 +181,9 @@ std::string ResponseHandler::getTimeStamp()
 {
 	auto t = std::time(nullptr);
 	auto tm = *std::localtime(&t);
-	std::ostringstream oss;
-	oss << std::put_time(&tm, "%a, %d %b %Y %H:%M:%S %Z");
-	return oss.str();
+	std::ostringstream timeStream;
+	timeStream << std::put_time(&tm, "%a, %d %b %Y %H:%M:%S %Z");
+	return timeStream.str();
 }
 
 const char* ResponseHandler::SendError::what() const noexcept {
