@@ -112,7 +112,7 @@ void ResponseHandler::formDirectoryListing() {
 	std::string rootlessPath = _client.resourcePath.substr(rootLen);
 	if (rootlessPath != "/") {
 		if (rootlessPath.back() == '/')
-			rootlessPath.erase(rootlessPath.back());
+			rootlessPath.erase(rootlessPath.end() - 1);
 		rootlessPath.erase(rootlessPath.find_last_of('/') + 1);
 		dirlistStream << "<tr>\n<td><a href=\"" << rootlessPath << "\" />../</a></td>\n<td></td>\n<td>-</td>\n</tr>\n";
 	}

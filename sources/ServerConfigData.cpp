@@ -69,9 +69,10 @@ bool ServerConfigData::checkMethod(const Config& config, const std::string& meth
 		if (path.size() > 1 && path.back() == '/')
 			path.erase(path.begin() + path.find_last_of('/'), path.end());
 		const Location* location = getLocation(config, path);
-		if (location != nullptr && location->methods.at(method)) {
+		if (location != nullptr && location->methods.at(method))
 			return true;
-		}
+		if (path == "/")
+			break;
 		path.erase(path.begin() + path.find_last_of('/') + 1, path.end());
 	}
 	return false;
