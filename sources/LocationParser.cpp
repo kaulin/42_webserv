@@ -1,4 +1,5 @@
 #include "LocationParser.hpp"
+#include "ConfigParser.hpp"
 #include <tuple>
 #include <regex>
 #include <utility>
@@ -28,7 +29,7 @@ std::pair<int, std::string>	LocationParser::set_redirect(std::vector<std::string
 	}
 	catch(const std::exception& e) 
 	{
-		std::cerr << "Invalid/No redirection code, using default" << '\n';
+		std::cout << "Invalid/No redirection code, using default" << '\n';
 	}
 	return std::pair<int, std::string> (redir_code, *(++it));
 }
@@ -87,7 +88,7 @@ std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<
 	{
 		auto found = directiveMap.find(*it);
 		if (found == directiveMap.end() || it == end)
-			throw std::runtime_error("Invalid location block");
+			throw ConfigParser::ConfigParserException("Invalid location block");
 		switch (found->second)
 		{
 			case LocationConfigKey::METHODS:
@@ -114,7 +115,7 @@ std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<
 			case LocationConfigKey::BREAK:
 				break;
 			default:
-				throw std::runtime_error("Invalid directive"); // fatal
+				throw ConfigParser::ConfigParserException("Invalid directive"); // fatal
 		}
 		it++;
 	}

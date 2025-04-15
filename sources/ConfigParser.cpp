@@ -44,7 +44,7 @@
 // 			std::cout << "  CGI Path: " << location.cgi_path << "\n";
 // 			std::cout << "  CGI Param: " << location.cgi_param << "\n";
 // 			std::cout << "  Redirect: " << location.redirect.first << " -> " << location.redirect.second << "\n";
-// 			std::cout << "  Directory Listing: " << (location._dir_listing ? "Enabled" : "Disabled") << "\n";
+// 			//std::cout << "  Directory Listing: " << (location._dir_listing ? "Enabled" : "Disabled") << "\n";
 			
 // 			std::cout << "  Methods:\n";
 // 			for (const auto& method : location.methods)
@@ -401,7 +401,7 @@ void ConfigParser::checkDuplicates(std::map<std::string, Config> configs, Config
 		if (config.second.port == blockInstance->port)
 			throw ConfigParserException("Config: Duplicate ports not allowed.");
 	}
-}
+}	
 
 void ConfigParser::checkRequired(Config *blockInstance)
 {
