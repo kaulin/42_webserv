@@ -15,7 +15,8 @@ SOURCES				:= main.cpp \
 						ResponseHandler.cpp \
 						Logger.cpp \
 						CGIHandler.cpp \
-						FileHandler.cpp
+						FileHandler.cpp \
+						DNS.cpp
 						
 VPATH				+= sources/ sources/Config/
 
@@ -36,7 +37,8 @@ INCLUDES			:= webserv.hpp \
 						CGIHandler.hpp \
 						RequestHandler.hpp \
 						ResponseHandler.hpp \
-						FileHandler.hpp
+						FileHandler.hpp \
+						DNS.hpp
 
 INCLUDE_PATHS		:= $(addprefix $(INCLUDE_DIRECTORY), $(INCLUDES))
 INCLUDE_FLAGS		:= -I includes/

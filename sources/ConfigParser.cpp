@@ -1,5 +1,6 @@
 #include "LocationParser.hpp"
 #include "ConfigParser.hpp"
+#include "DNS.hpp"
 #include <filesystem>
 
 
@@ -43,7 +44,7 @@
 // 			std::cout << "  CGI Path: " << location.cgi_path << "\n";
 // 			std::cout << "  CGI Param: " << location.cgi_param << "\n";
 // 			std::cout << "  Redirect: " << location.redirect.first << " -> " << location.redirect.second << "\n";
-// 			std::cout << "  Directory Listing: " << (location._dir_listing ? "Enabled" : "Disabled") << "\n";
+// 			//std::cout << "  Directory Listing: " << (location._dir_listing ? "Enabled" : "Disabled") << "\n";
 			
 // 			std::cout << "  Methods:\n";
 // 			for (const auto& method : location.methods)
@@ -84,10 +85,11 @@ bool isValidPort(const std::string &port)
 }
 
 // helper function to validate IP address
-bool isValidIP(const std::string &ip)
+bool isValidIP(std::string &ip)
 {
 	std::regex ipRegex(R"((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}))");
 	std::smatch match;
+	std::string ip_address;
 	if (std::regex_match(ip, match, ipRegex))
 	{
 		for (int i = 1; i <= 4; ++i)
@@ -98,6 +100,11 @@ bool isValidIP(const std::string &ip)
 				return false;
 			}
 		}
+		return true;
+	}
+	else if (DNS::resolveDNS(ip, ip_address))
+	{
+		ip = ip_address;
 		return true;
 	}
 	return false;
@@ -204,6 +211,19 @@ std::vector<std::string> ConfigParser::tokenize(std::string &file_content)
 			tokens.push_back(";");
 		previous = token;
 	}
+	int opening = 0;
+	int closing = 0;
+	for (auto &token : tokens)
+	{
+		if (token == "{")
+			opening++;
+		if (token == "}")
+			closing++;
+	}
+	if (opening != closing)
+		throw ConfigParserException("Config: Mismatched brackets in config file.");
+	// for (auto token : tokens)
+	// 	std::cout << token << std::endl;
 	return tokens;
 }
 
@@ -289,9 +309,11 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 	// content starts here
 	while (it != end)
 	{
+		if (*it == "server")
+			throw ConfigParserException("Config: Server block cannot contain another server block.");
 		auto keywordIt = keywordMap.find(*it);
 		ConfigKey keyEnum = (keywordIt != keywordMap.end()) ? keywordIt->second : ConfigKey::UNKNOWN;
-
+		
 		if (isErrorCode(keyEnum))
 		{
 			assignErrorPage(it, end, blockInstance, keyEnum);
@@ -353,6 +375,7 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				++it; break; 
 			}
 			case ConfigKey::UNKNOWN:
+				std::cout << "Config: Skipped over unknown directive: " << *it << std::endl;
 				break; // default handling
 			default:
 				break;
@@ -382,6 +405,25 @@ void	ConfigParser::setRoot(Config *blockInstance)
 	}
 }
 
+void ConfigParser::checkDuplicates(std::map<std::string, Config> configs, Config *blockInstance)
+{
+	for (auto config : configs)
+	{
+		if (config.second.port == blockInstance->port)
+			throw ConfigParserException("Config: Duplicate ports not allowed.");
+	}
+}	
+
+void ConfigParser::checkRequired(Config *blockInstance)
+{
+	if (blockInstance->host.empty())
+		throw ConfigParserException("Config: No host set in config file.");
+	if (blockInstance->root.empty())
+		throw ConfigParserException("Config: No root set in config file.");
+	if (blockInstance->port.empty())
+		throw ConfigParserException("Config: No port set in config file.");
+}
+
 std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 {
 	std::map<std::string, Config> configs;
@@ -391,6 +433,8 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 
 	std::vector<std::string>::const_iterator it = tokens.begin();
 	std::vector<std::string>::const_iterator end = tokens.end();
+	if (std::find(tokens.begin(), tokens.end(), "server") == tokens.end())
+		throw ConfigParserException("Config: No 'server' block in config file.");
 
 	while (it != end)
 	{
@@ -402,6 +446,8 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 			setDefaultErrorPages(blockInstance);
 			setRoot(&blockInstance);
 			
+			checkRequired(&blockInstance);
+			checkDuplicates(configs, &blockInstance);
 			configs.insert({"Server" + std::to_string(server_count++), blockInstance});
 		}
 		++it;
