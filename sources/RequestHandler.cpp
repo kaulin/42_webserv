@@ -96,9 +96,18 @@ void RequestHandler::processGet() {
 
 void RequestHandler::processPost() {
 	// Check if requested resource file type matches with Content-Type header
+	for (auto header : _request->headers) {
+		std::cout << header.first << " - " << header.second << "\n";
+	}
+	std::cout << "URI: " << _request->uri << "\n";
+	std::cout << "URIpath: " << _request->uriPath << "\n";
+	std::cout << "URIquery: " << _request->uriQuery << "\n";
+	std::cout << "Body:\n" << _request->body << "\n";
 	auto itContentTypeHeader = _request->headers.find("Content-Type");
-	if (itContentTypeHeader == _request->headers.end() || (*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
+	if (itContentTypeHeader == _request->headers.end())
 		throw ServerException(STATUS_BAD_REQUEST);
+	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
+	// 	throw ServerException(STATUS_BAD_REQUEST);
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
 	FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
 }
