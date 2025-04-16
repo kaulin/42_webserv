@@ -135,7 +135,17 @@ void RequestHandler::processMultipartForm() {
 	if (type.find(prefix) == std::string::npos)
 		throw ServerException(STATUS_BAD_REQUEST);
 	std::string boundary = type.substr(prefix.size());
-	
+	// if (std::count(_request->body.begin(), _request->body.end(), boundary) != 2)
+	// 	throw ServerException(STATUS_TYPE_UNSUPPORTED);
+	processMultipartFormBody(boundary);
+}
+
+void RequestHandler::processMultipartFormBody(const std::string& boundary) {
+		std::istringstream bodyStream(_request->body);
+		std::string line = boundary;
+		while (getline(bodyStream, line)) {
+			break;
+		}
 }
 
 // GETTERS
@@ -146,3 +156,4 @@ const std::string& RequestHandler::getUriQuery() const { return _request->uriQue
 const std::string& RequestHandler::getUriPath() const { return _request->uriPath; }
 const std::string& RequestHandler::getHttpVersion() const { return _request->httpVersion; }
 const std::string& RequestHandler::getBody() const { return _request->body; }
+

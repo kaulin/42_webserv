@@ -17,8 +17,9 @@ class RequestHandler
 		void processGet();
 		void processPost();
 		void processDelete();
-		bool RequestHandler::isMultipartForm() const;
-		void RequestHandler::processMultipartForm();
+		bool isMultipartForm() const;
+		void processMultipartForm();
+		void processMultipartFormBody(const std::string& boundary);
 		// bool _chunkedRequest;
 		// std::string _chunkedBodyString;
 		// // bool _chunkedRequestReady;
