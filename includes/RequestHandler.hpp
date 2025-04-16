@@ -33,8 +33,9 @@ class RequestHandler
 		bool _chunkedBodyStarted;
 		ChunkParseState _chunkState;
 		size_t _expectedChunkSize = 0;
-		bool RequestHandler::isMultipartForm() const;
-		void RequestHandler::processMultipartForm();
+		bool isMultipartForm() const;
+		void processMultipartForm();
+		void processMultipartFormBody(const std::string& boundary);
 	public:
 		RequestHandler(Client& client);
 		~RequestHandler();
