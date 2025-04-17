@@ -27,12 +27,15 @@ std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request, const Clien
 	if (request.method == "POST")
 	{
 		strEnv.emplace_back("CONTENT_TYPE=application/x-www-form-urlencoded");
-		strEnv.emplace_back("CONTENT_LENGTH="); // needs method to search by header
+		auto contentLength = request.headers.find("Content-Length");
+		if (contentLength != request.headers.end())
+			strEnv.emplace_back("CONTENT_LENGTH=" + request.headers.at("Content-Length"));
 	}
 	strEnv.emplace_back("QUERY_STRING=" + request.uriQuery);
 	strEnv.emplace_back("PATH_INFO=" + request.uri);
 	strEnv.emplace_back("SERVER_PORT=" + client.serverConfig->port);
 	strEnv.emplace_back("REMOTE_ADDR=");	// not necessarily needed
+	strEnv.emplace_back("GATEWAY_INTERFACE=CGI/1.1");
 
 	std::vector<char*> env;
 	for (const auto &var : strEnv)
@@ -41,6 +44,13 @@ std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request, const Clien
 	}
 	env.emplace_back(nullptr);
 	return env;
+}
+
+void CGIHandler::handleParentProcess(Client& client)
+{
+	close(_requests[client.fd]->pipe[WRITE]); // Close child end
+	client.fileReadFd = dup(_requests[client.fd]->pipe[READ]); // Dup read end to client
+	close(_requests[client.fd]->pipe[READ]); // Close dupped read end
 }
 
 void	CGIHandler::handleChildProcess(int clientFd)
@@ -76,6 +86,17 @@ void	CGIHandler::handleChildProcess(int clientFd)
 	std::exit(EXIT_FAILURE);
 }
 
+std::string CGIHandler::setCgiPath(const HttpRequest& request)
+{
+	std::string parsedUri = request.uri;
+	if (!request.uriQuery.empty() && parsedUri.find('?') != std::string::npos)
+	{
+		parsedUri = request.uri.substr(0, request.uri.find('?'));
+	}
+	std::string cgiUri = std::filesystem::current_path().string() + "/var/www" + parsedUri;
+	return cgiUri;
+}
+
 void	CGIHandler::setupCGI(Client &client)
 {
 	const HttpRequest&  request = client.requestHandler->getRequest();
@@ -91,7 +112,7 @@ void	CGIHandler::setupCGI(Client &client)
 	}
 	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
 
-	cgiInst->CGIPath = std::filesystem::current_path().string() + request.uri;
+	cgiInst->CGIPath = setCgiPath(request);
 	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
 	cgiInst->argv.emplace_back(nullptr);
 	cgiInst->envp = setCGIEnv(request, client);
@@ -112,6 +133,8 @@ void	CGIHandler::runCGIScript(Client& client)
 		pid_t pid = fork();
 		if (pid < 0)
 		{
+			kill(pid, SIGTERM);
+			_requests[client.fd]->status = CGI_ERROR;
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		}
 		if (pid == 0)
@@ -120,9 +143,7 @@ void	CGIHandler::runCGIScript(Client& client)
 		}
 		else
 		{
-			close(_requests[client.fd]->pipe[WRITE]); // Close child end
-			client.fileReadFd = dup(_requests[client.fd]->pipe[READ]); // Dup read end to client
-			close(_requests[client.fd]->pipe[READ]); // Close dupped read end
+			handleParentProcess(client);
 		}
 		_requests[client.fd]->status = CGI_FORKED;
 		_requests[client.fd]->childPid = pid;
@@ -131,4 +152,5 @@ void	CGIHandler::runCGIScript(Client& client)
 	{
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
+	_requests.erase(client.fd);
 }
