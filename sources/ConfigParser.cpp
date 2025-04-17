@@ -148,7 +148,7 @@ std::string ConfigParser::read_file(std::string path)
 	
 	if (!file.is_open())
 	{
-		ConfigParserException("Config: Could not open config file.");
+		throw ConfigParserException("Config: Could not open config file.");
 	}
 	
 	while (std::getline(file, line))
