@@ -1,34 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Coffee Order Form</title>
-</head>
-<body>
-  <h1>Order Coffee</h1>
-  <form action="/cgi-bin/order_coffee.py" method="post">
-    <label for="name">Name:</label>
-    <input type="text" id="name" name="name" required><br><br>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Coffee Order Form</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="stylesheet" type="text/css" href="/style/coffee.css" />
+  </head>
+  <body>
+    <h1>Order Coffee</h1>
+    <form action="/cgi-bin/order_coffee.py" method="post">
+      <label for="name">Name:</label>
+      <input type="text" id="name" name="name" required /><br /><br />
 
-    <label for="coffee">Coffee Type:</label>
-    <select id="coffee" name="coffee">
-      <option value="Espresso">Espresso</option>
-      <option value="Latte">Latte</option>
-      <option value="Cappuccino">Cappuccino</option>
-      <option value="Americano">Americano</option>
-    </select><br><br>
+      <label for="coffee">Coffee Type:</label>
+      <select id="coffee" name="coffee">
+        <option value="Espresso">Espresso</option>
+        <option value="Latte">Latte</option>
+        <option value="Cappuccino">Cappuccino</option>
+        <option value="Americano">Americano</option></select
+      ><br /><br />
 
-    <label for="size">Size:</label>
-    <select id="size" name="size">
-      <option value="Small">Small</option>
-      <option value="Medium">Medium</option>
-      <option value="Large">Large</option>
-    </select><br><br>
+      <label for="size">Size:</label>
+      <select id="size" name="size">
+        <option value="Small">Small</option>
+        <option value="Medium">Medium</option>
+        <option value="Large">Large</option></select
+      ><br /><br />
 
-    <input type="submit" value="Place Order">
-  </form>
+      <input type="submit" value="Place Order" />
+    </form>
 
-  <h2>All Orders</h2>
-  <iframe src="/cgi-bin/display_orders.py" width="100%" height="300px" style="border:1px solid #ccc;"></iframe>
-</body>
+    <h2>All Orders</h2>
+    <iframe
+      src="/cgi-bin/display_orders.py"
+      width="100%"
+      height="300px"
+      style="border: 1px solid #ccc"
+    ></iframe>
+    <a href="/"><p>Back</p></a>
+  </body>
 </html>
