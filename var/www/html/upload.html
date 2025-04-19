@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Upload</title>
+	<link rel="icon" type="image/png" href="/favicon.png">
+	<link rel="stylesheet" type="text/css" href="/style/coffee.css">
+</head>
+<body>
+	<h1>Upload</h1>
+	<p>Choose a file to upload.</p>
+	<form action="/uploads" method="POST" enctype="multipart/form-data">
+		<label for="file">Choose file:</label><br>
+		<input type="file" id="file" name="file" required><br><br>
+		<button type="submit">Upload</button>
+	</form>
+
+	<a href="/"><p>Back</p></a>
+</body>
+</html> 
