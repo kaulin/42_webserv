@@ -7,19 +7,21 @@
 #include "RequestParser.hpp"
 #include "ServerException.hpp"
 
-RequestHandler::RequestHandler(Client& client) : 
-	_client(client),
-	_requestString(""),
-	_readReady(false)
-	// _chunkedRequest(false)
-	// _chunkedRequestReady(false) 
-	{}
+RequestHandler::RequestHandler(Client& client) : _client(client) { resetHandler(); }
 
 RequestHandler::~RequestHandler() {}
 
 void RequestHandler::resetHandler() {
 	_requestString = "";
 	_readReady = false;
+	_multipart = false;
+}
+
+void RequestHandler::handleRequest() {
+	if (!_readReady)
+		readRequest();
+	else if (_multipart)
+		std::cout << "Select next file to be written from multipart struct?\n";
 }
 
 void RequestHandler::readRequest() {
@@ -97,8 +99,8 @@ void RequestHandler::processGet() {
 void RequestHandler::processPost() {
 	if (isMultipartForm())
 		processMultipartForm();
-	if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
-		throw ServerException(STATUS_BAD_REQUEST);
+	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
+	// 	throw ServerException(STATUS_BAD_REQUEST);
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
 	FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
 }

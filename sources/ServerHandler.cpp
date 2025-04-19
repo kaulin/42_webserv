@@ -187,7 +187,7 @@ void	ServerHandler::pollLoop()
 				Client& client = *_clients[_pollFds[i].fd].get();
 				if (_pollFds[i].revents & POLLIN)
 				{
-					client.requestHandler->readRequest();
+					client.requestHandler->handleRequest();
 					client.lastRequest = std::time(nullptr);
 				}
 				else if (_pollFds[i].revents & POLLOUT)
@@ -276,6 +276,7 @@ void	ServerHandler::writeToFd(size_t& i) {
 			std::cout << "Client [" << client.fd << "] POST request resource saved to disk\n";
 			close(client.fileWriteFd);
 			client.fileWriteFd = -1;
+			client.requestHandler->handleRequest();
 		}
 		else
 		{
