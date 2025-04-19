@@ -8,17 +8,7 @@
 #include "RequestParser.hpp"
 #include "ServerException.hpp"
 
-RequestHandler::RequestHandler(Client& client) : 
-	_client(client),
-	_requestString(""),
-	_headersRead(false),
-	_readReady(false),
-	_isChunked(false),
-	_chunkedBodyStarted(false),
-	_chunkState(READ_SIZE),
-	_expectedChunkSize(0)
-
-	{}
+RequestHandler::RequestHandler(Client& client) : _client(client) { resetHandler(); }
 
 RequestHandler::~RequestHandler() {}
 
@@ -30,6 +20,7 @@ void RequestHandler::resetHandler() {
 	_chunkedBodyStarted = false;
 	_chunkState = READ_SIZE;
 	_expectedChunkSize = 0;
+	_multipart = false;
 }
 
 void RequestHandler::readHeaders()
@@ -99,6 +90,13 @@ void RequestHandler::readChunkedRequest()
 			_chunkState = READ_SIZE;
 		}
 	}
+}
+
+void RequestHandler::handleRequest() {
+	if (!_readReady)
+		readRequest();
+	else if (_multipart)
+		std::cout << "Select next file to be written from multipart struct?\n";
 }
 
 void RequestHandler::readRequest() {
@@ -188,8 +186,8 @@ void RequestHandler::processGet() {
 void RequestHandler::processPost() {
 	if (isMultipartForm())
 		processMultipartForm();
-	if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
-		throw ServerException(STATUS_BAD_REQUEST);
+	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
+	// 	throw ServerException(STATUS_BAD_REQUEST);
 	_client.resourceOutString = _request->body;
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
 	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);

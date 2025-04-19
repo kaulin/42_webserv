@@ -23,6 +23,8 @@ class RequestHandler
 		std::string _decodedBody;
 		bool _headersRead;
 		bool _readReady;
+		bool _multipart;
+		void readRequest();
 		void processRequest();
 		void processGet();
 		void processPost();
@@ -40,7 +42,7 @@ class RequestHandler
 		RequestHandler(Client& client);
 		~RequestHandler();
 		void resetHandler();
-		void readRequest();
+		void handleRequest();
 
 		const HttpRequest& getRequest() const;
 		// Not sure if the getters below are needed, as most of the work will be done with the whole struct from above

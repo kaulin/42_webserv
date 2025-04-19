@@ -262,7 +262,7 @@ void	ServerHandler::pollLoop()
 
 					if (_pollFds[i].revents & POLLIN)
 					{
-						client.requestHandler->readRequest();
+						client.requestHandler->handleRequest();
 						client.lastRequest = std::time(nullptr);
 						if (client.cgiRequested)
 							client.resourceWriteFd = _CGIHandler.setupCGI(client);
@@ -379,6 +379,7 @@ void	ServerHandler::writeToFd(size_t& i) {
 			removeResourceFd(client.resourceWriteFd);
 			close(client.resourceWriteFd); // remove from pollFds and requestFds
 			client.resourceWriteFd = -1;
+			client.requestHandler->handleRequest();
 		}
 		else
 		{
