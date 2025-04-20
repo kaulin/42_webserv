@@ -16,12 +16,14 @@ enum CGIStatus {
 
 typedef struct s_CGIrequest {
 	int 						status;
-	int							pipe[2];
+	int							inPipe[2];
+	int							outPipe[2];
 	pid_t						childPid;
 	std::string					output;
 	std::vector<char*>			argv;
 	std::vector<char*>			envp;
 	std::string					CGIPath;
+	std::string					requestBody;
 } t_CGIrequest;
 
 class CGIHandler {

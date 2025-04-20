@@ -48,36 +48,60 @@ std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request, const Clien
 
 void CGIHandler::handleParentProcess(Client& client)
 {
-	close(_requests[client.fd]->pipe[WRITE]); // Close child end
-	client.fileReadFd = dup(_requests[client.fd]->pipe[READ]); // Dup read end to client
-	close(_requests[client.fd]->pipe[READ]); // Close dupped read end
+	int inPipe[2] = {_requests[client.fd]->inPipe[0], _requests[client.fd]->inPipe[1]};
+	int outPipe[2] = {_requests[client.fd]->outPipe[0], _requests[client.fd]->outPipe[1]};
+	
+	std::string requestBody = _requests[client.fd]->requestBody;
+
+	close(outPipe[WRITE]); // close unnecessary pipe end (child pipe)
+
+	// Write the request body for the child to read
+	close(inPipe[READ]);
+	int bytesWritten = write(inPipe[WRITE], requestBody.c_str(), requestBody.size());
+	if (bytesWritten == -1)
+	{
+		//kill process
+	}
+	close(inPipe[WRITE]);
+
+	client.fileReadFd = dup(outPipe[READ]); // Dup read end to client
+	close(outPipe[READ]); // Close dupped read end
 }
 
 void	CGIHandler::handleChildProcess(int clientFd)
 {
 	t_CGIrequest cgiRequest = *_requests[clientFd];
-	int pipedf[2] = {cgiRequest.pipe[0], cgiRequest.pipe[1]};
+	int inPipe[2] = {cgiRequest.inPipe[0], cgiRequest.inPipe[1]};
+	int outPipe[2] = {cgiRequest.outPipe[0], cgiRequest.outPipe[1]};
 	
-	// Redirect WRITE end of pipe to STDOUT
-	if (dup2(pipedf[WRITE], STDOUT_FILENO) == -1)
+	// Setup STDIN to write the necessary data to inpipe READ --> cgi script
+	if (dup2(inPipe[READ], STDIN_FILENO) == -1)
 	{
-		closeFds({clientFd, pipedf[WRITE]});
+		closeFds({clientFd, outPipe[WRITE], outPipe[READ], inPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
-	close(pipedf[READ]); // Closes parent end of pipe
+	close(inPipe[WRITE]);
+
+	// Setup STDOUT to write to pipe WRITE end of outpipe
+	if (dup2(outPipe[WRITE], STDOUT_FILENO) == -1)
+	{
+		closeFds({clientFd, outPipe[READ], inPipe[READ], inPipe[WRITE]});
+		std::exit(EXIT_FAILURE);
+	}
+	close(outPipe[READ]);
 
 	// Checks that file in CGIPath exists and is executable
 	struct stat buff;
 	if (stat(cgiRequest.CGIPath.c_str(), &buff) != 0)
 	{
-		closeFds({clientFd, pipedf[WRITE]});
 		perror("Child: File not found");
+		closeFds({clientFd, inPipe[READ], outPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
 	if (!(buff.st_mode & S_IXUSR))
 	{
-		closeFds({clientFd, pipedf[WRITE]});
 		perror("Child: File is not executable");
+		closeFds({clientFd, inPipe[READ], outPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
 	execve(cgiRequest.CGIPath.c_str(), cgiRequest.argv.data(), cgiRequest.envp.data());
@@ -116,6 +140,7 @@ void	CGIHandler::setupCGI(Client &client)
 	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
 	cgiInst->argv.emplace_back(nullptr);
 	cgiInst->envp = setCGIEnv(request, client);
+	cgiInst->requestBody = request.body;
 	cgiInst->status = CGI_READY;
 	_requests.emplace(client.fd, std::move(cgiInst));
 }
@@ -126,16 +151,16 @@ void	CGIHandler::runCGIScript(Client& client)
 
 	if (_requests[client.fd]->status == CGI_READY)
 	{
-		if (pipe(_requests[client.fd]->pipe) < 0)
+		if (pipe(_requests[client.fd]->inPipe) < 0 || pipe(_requests[client.fd]->outPipe))
 		{
-			throw ServerException(STATUS_INTERNAL_ERROR);
+			throw ServerException(STATUS_INTERNAL_ERROR); // fatal
 		}
 		pid_t pid = fork();
 		if (pid < 0)
 		{
 			kill(pid, SIGTERM);
 			_requests[client.fd]->status = CGI_ERROR;
-			throw ServerException(STATUS_INTERNAL_ERROR);
+			throw ServerException(STATUS_INTERNAL_ERROR); // fatal
 		}
 		if (pid == 0)
 		{

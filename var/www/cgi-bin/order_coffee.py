@@ -5,6 +5,8 @@ import cgitb
 import os
 import html
 from urllib.parse import parse_qs
+from datetime import datetime
+import email.utils
 
 cgitb.enable()
 
@@ -21,25 +23,45 @@ def read_orders():
         return f.readlines()
 
 def main():
-    print("Content-Type: text/html\n")
-
     # Get the query string
     query_string = os.environ.get("QUERY_STRING", "")
     params = parse_qs(query_string)
     
     # Process form data
     form = cgi.FieldStorage()
-    name = form.getvalue("name")
-    coffee = form.getvalue("coffee")
-    size = form.getvalue("size")
+    name = html.escape(form.getvalue("name", ""))
+    coffee = html.escape(form.getvalue("coffee", ""))
+    size = html.escape(form.getvalue("size", ""))
 
     if name and coffee and size:
         save_order(name, coffee, size)
 
-    # Confirmation and link back
-    print("<h1>Order received!</h1>")
-    print(f"<p>Thank you, {name}. You ordered a {size} {coffee}.</p>")
-    print('<p><a href="/index.html">Back to order form</a></p>')
+    # HTML response body
+    html_body = f"""<!DOCTYPE html>
+<html>
+  <head>
+    <title>Order Received</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="stylesheet" type="text/css" href="/style/coffee.css" />
+  </head>
+  <body>
+    <h1>Order received!</h1>
+    <p>Thank you, {name}. You ordered a {size} {coffee}.</p>
+    <p><a href="/index.html">Back to order form</a></p>
+  </body>
+</html>
+"""
+
+    # Generate headers
+    date_str = email.utils.formatdate(usegmt=True)
+    content_length = len(html_body.encode("utf-8"))
+
+    print(f"HTTP/1.1 200 OK\r\n"
+          f"Date: {date_str}\r\n"
+          f"Content-Type: text/html\r\n"
+          f"Content-Length: {content_length}\r\n"
+          f"\r\n"
+          f"{html_body}")
 
 if __name__ == "__main__":
     main()
