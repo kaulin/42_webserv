@@ -171,3 +171,11 @@ bool RequestParser::parseRequest(const std::string& raw_request, HttpRequest& re
 	}
 	return true;
 }
+
+void RequestParser::parseMultipart(const std::string& boundary, const std::string& body, std::vector <MultipartFormData>& parts) {
+	std::istringstream bodyStream(body);
+	std::string line = boundary;
+	while (getline(bodyStream, line)) {
+		break;
+	}
+}

@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 #include "HttpRequest.hpp"
+#include "RequestHandler.hpp"
 
 // The http request parser class
 class RequestParser
@@ -17,4 +18,5 @@ class RequestParser
 		// Parses raw HTTP request string into an HttpRequest object
 		static bool parseRequest(const std::string& raw_request, HttpRequest& request);
 		static std::string parseChunkedBody(const std::string& chunked);						// Function to parse a chunked body
+		static void parseMultipart(const std::string& boundary, const std::string& body, std::vector <MultipartFormData>& parts);
 };

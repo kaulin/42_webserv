@@ -46,7 +46,6 @@ class RequestHandler
 		size_t _expectedChunkSize = 0;
 		bool isMultipartForm() const;
 		void processMultipartForm();
-		void processMultipartFormBody(const std::string& boundary);
 	public:
 		RequestHandler(Client& client);
 		~RequestHandler();

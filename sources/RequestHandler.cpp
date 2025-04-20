@@ -223,7 +223,7 @@ void RequestHandler::processMultipartForm() {
 		throw ServerException(STATUS_BAD_REQUEST);
 	std::string boundary = type.substr(prefix.size());
 
-	// RequestParser::parseMultipart(boundary, _request->body, _parts); IMPLEMENT
+	RequestParser::parseMultipart(boundary, _request->body, _parts);
 
 	// Check that each part type matches file extension:
 	// if (std::count(_request->body.begin(), _request->body.end(), boundary) != 2)
@@ -231,14 +231,6 @@ void RequestHandler::processMultipartForm() {
 
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + _parts[_partIndex].filename;
 	FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
-}
-
-void RequestHandler::processMultipartFormBody(const std::string& boundary) {
-		std::istringstream bodyStream(_request->body);
-		std::string line = boundary;
-		while (getline(bodyStream, line)) {
-			break;
-		}
 }
 
 // GETTERS
