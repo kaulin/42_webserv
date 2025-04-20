@@ -18,9 +18,9 @@ void CGIHandler::closeFds(const std::vector<int> fdsToclose)
 		close(fd);
 }
 
-std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request, const Client& client) // takes request
+std::vector<std::string>	CGIHandler::setCGIEnv(const HttpRequest& request, const Client& client) // takes request
 {
-	std::vector<std::string> strEnv;
+	std::vector<std::string>	strEnv;
 
 	strEnv.emplace_back("REQUEST_METHOD=" + request.method);
 	strEnv.emplace_back("SERVER_NAME=" + request.headers.at("Host"));
@@ -35,15 +35,8 @@ std::vector<char*>	CGIHandler::setCGIEnv(const HttpRequest& request, const Clien
 	strEnv.emplace_back("PATH_INFO=" + request.uri);
 	strEnv.emplace_back("SERVER_PORT=" + client.serverConfig->port);
 	strEnv.emplace_back("REMOTE_ADDR=");	// not necessarily needed
-	strEnv.emplace_back("GATEWAY_INTERFACE=CGI/1.1");
 
-	std::vector<char*> env;
-	for (const auto &var : strEnv)
-	{
-		env.emplace_back(const_cast<char *>(var.c_str()));
-	}
-	env.emplace_back(nullptr);
-	return env;
+	return strEnv;
 }
 
 void CGIHandler::handleParentProcess(Client& client)
@@ -68,8 +61,12 @@ void CGIHandler::handleParentProcess(Client& client)
 	close(outPipe[READ]); // Close dupped read end
 }
 
-void	CGIHandler::handleChildProcess(int clientFd)
+void	CGIHandler::handleChildProcess(Client& client)
 {
+	int clientFd = client.fd;
+
+	std::vector<std::string> cgiStrEnv = setCGIEnv(client.requestHandler->getRequest(), client);
+
 	t_CGIrequest cgiRequest = *_requests[clientFd];
 	int inPipe[2] = {cgiRequest.inPipe[0], cgiRequest.inPipe[1]};
 	int outPipe[2] = {cgiRequest.outPipe[0], cgiRequest.outPipe[1]};
@@ -104,7 +101,16 @@ void	CGIHandler::handleChildProcess(int clientFd)
 		closeFds({clientFd, inPipe[READ], outPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
-	execve(cgiRequest.CGIPath.c_str(), cgiRequest.argv.data(), cgiRequest.envp.data());
+
+	// Set environment variables for execve call
+	std::vector<char*> envp;
+	for (const auto &var : cgiStrEnv)
+	{
+		envp.emplace_back(const_cast<char *>(var.c_str()));
+	}
+	envp.emplace_back(nullptr);
+
+	execve(cgiRequest.CGIPath.c_str(), cgiRequest.argv.data(), envp.data());
 
 	perror("Child: Execve failed");
 	std::exit(EXIT_FAILURE);
@@ -123,7 +129,7 @@ std::string CGIHandler::setCgiPath(const HttpRequest& request)
 
 void	CGIHandler::setupCGI(Client &client)
 {
-	const HttpRequest&  request = client.requestHandler->getRequest();
+	const HttpRequest& request = client.requestHandler->getRequest();
 	
 	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
 	{
@@ -139,7 +145,6 @@ void	CGIHandler::setupCGI(Client &client)
 	cgiInst->CGIPath = setCgiPath(request);
 	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
 	cgiInst->argv.emplace_back(nullptr);
-	cgiInst->envp = setCGIEnv(request, client);
 	cgiInst->requestBody = request.body;
 	cgiInst->status = CGI_READY;
 	_requests.emplace(client.fd, std::move(cgiInst));
@@ -164,7 +169,7 @@ void	CGIHandler::runCGIScript(Client& client)
 		}
 		if (pid == 0)
 		{
-			handleChildProcess(client.fd);
+			handleChildProcess(client);
 		}
 		else
 		{

@@ -31,11 +31,11 @@ private:
 	std::unordered_map<int, std::unique_ptr<t_CGIrequest>> _requests;
 
 	// Private class methods
-	void 				closeFds(const std::vector<int> fdsToclose);
-	void 				handleChildProcess(int clientFd);
-	void				handleParentProcess(Client& client);
-	std::vector<char*>	setCGIEnv(const HttpRequest& request, const Client& client);
-	std::string			setCgiPath(const HttpRequest& request);
+	void 						closeFds(const std::vector<int> fdsToclose);
+	void 						handleChildProcess(Client& client);
+	void						handleParentProcess(Client& client);
+	std::string					setCgiPath(const HttpRequest& request);
+	std::vector<std::string>	setCGIEnv(const HttpRequest& request, const Client& client);
 public:
 	CGIHandler();
 

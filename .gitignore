@@ -37,3 +37,6 @@ webserv
 
 # Log files
 *log.txt
+
+# Temp text files
+var/temp/*.txt
