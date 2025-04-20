@@ -12,10 +12,6 @@ cgitb.enable()
 
 orders_file = "var/temp/coffee_orders.txt"
 
-def save_order(name, coffee, size):
-    with open(orders_file, "a") as f:
-        f.write(f"{name} ordered a {size} {coffee}\n")
-
 def read_orders():
     if not os.path.exists(orders_file):
         return []
