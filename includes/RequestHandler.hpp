@@ -1,15 +1,22 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include "HttpRequest.hpp"
 #include "Client.hpp"
 
 struct Client;
 
 enum ChunkParseState {
-    READ_SIZE,
-    READ_DATA,
-    READ_CRLF
+	READ_SIZE,
+	READ_DATA,
+	READ_CRLF
+};
+
+struct MultipartFormData {
+	std::string filename;
+	std::string contentType;
+	std::string body;
 };
 
 class RequestHandler
@@ -24,6 +31,8 @@ class RequestHandler
 		bool _headersRead;
 		bool _readReady;
 		bool _multipart;
+		size_t	_partIndex;
+		std::vector <MultipartFormData> _parts;
 		void readRequest();
 		void processRequest();
 		void processGet();
@@ -52,5 +61,6 @@ class RequestHandler
 		const std::string& getUriPath() const;
 		const std::string& getHttpVersion() const;
 		const std::string& getBody() const;
+		const std::vector <MultipartFormData>& getParts() const;
 
 };

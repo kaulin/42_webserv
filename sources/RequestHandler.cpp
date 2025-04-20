@@ -21,6 +21,8 @@ void RequestHandler::resetHandler() {
 	_chunkState = READ_SIZE;
 	_expectedChunkSize = 0;
 	_multipart = false;
+	_partIndex = 0;
+	_parts.clear();
 }
 
 void RequestHandler::readHeaders()
@@ -95,8 +97,13 @@ void RequestHandler::readChunkedRequest()
 void RequestHandler::handleRequest() {
 	if (!_readReady)
 		readRequest();
-	else if (_multipart)
-		std::cout << "Select next file to be written from multipart struct?\n";
+	else if (_multipart && ++_partIndex < _parts.size()) {
+		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + _parts[_partIndex].filename;
+		FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
+	}
+	else
+		_client.requestReady = true;
+	
 }
 
 void RequestHandler::readRequest() {
@@ -215,9 +222,15 @@ void RequestHandler::processMultipartForm() {
 	if (type.find(prefix) == std::string::npos)
 		throw ServerException(STATUS_BAD_REQUEST);
 	std::string boundary = type.substr(prefix.size());
+
+	// RequestParser::parseMultipart(boundary, _request->body, _parts); IMPLEMENT
+
+	// Check that each part type matches file extension:
 	// if (std::count(_request->body.begin(), _request->body.end(), boundary) != 2)
 	// 	throw ServerException(STATUS_TYPE_UNSUPPORTED);
-	processMultipartFormBody(boundary);
+
+	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + _parts[_partIndex].filename;
+	FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
 }
 
 void RequestHandler::processMultipartFormBody(const std::string& boundary) {
@@ -236,4 +249,5 @@ const std::string& RequestHandler::getUriQuery() const { return _request->uriQue
 const std::string& RequestHandler::getUriPath() const { return _request->uriPath; }
 const std::string& RequestHandler::getHttpVersion() const { return _request->httpVersion; }
 const std::string& RequestHandler::getBody() const { return _request->body; }
+const std::vector <MultipartFormData>& RequestHandler::getParts() const { return _parts; }
 
