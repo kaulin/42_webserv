@@ -16,7 +16,7 @@ enum ChunkParseState {
 struct MultipartFormData {
 	std::string filename;
 	std::string contentType;
-	std::string body;
+	std::string content;
 };
 
 class RequestHandler
@@ -61,5 +61,4 @@ class RequestHandler
 		const std::string& getHttpVersion() const;
 		const std::string& getBody() const;
 		const std::vector <MultipartFormData>& getParts() const;
-
 };
