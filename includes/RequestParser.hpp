@@ -14,7 +14,7 @@ class RequestParser
 		static bool parseRequestLine(const std::string& request_line, HttpRequest& request);	// Function to parse the request line
 		static bool parseHeaders(const std::string& headers_part, HttpRequest& request);		// Function to parse headers (key: value)
 		static void parseBody(const std::string& body_part, HttpRequest& request);				// Function to parse the body
-		static std::map<std::string, std::string> parseMultipartHeaders(const std::string& headers);
+		static void parseMultipartHeaders(std::map<std::string, std::string>& headerMap, const std::string& headers);
 		static std::string getFilename(const std::string& contentDisposition);
 	public:
 		// Parses raw HTTP request string into an HttpRequest object

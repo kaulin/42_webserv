@@ -173,23 +173,23 @@ bool RequestParser::parseRequest(const std::string& raw_request, HttpRequest& re
 	return true;
 }
 
-std::map<std::string, std::string> RequestParser::parseMultipartHeaders(const std::string& headers) {
-	std::map<std::string, std::string> result;
+void RequestParser::parseMultipartHeaders(std::map<std::string, std::string>& headerMap, const std::string& headers) {
 	std::istringstream stream(headers);
 	std::string line;
 	while (std::getline(stream, line)) {
+		if (line == "\n" || line == "\r")
+			continue;
 		size_t colon = line.find(':');
 		if (colon != std::string::npos) {
 			std::string key = line.substr(0, colon);
 			std::string value = trimWhitespace(line.substr(colon + 1));
 			if (key.empty() || value.empty())
 				throw ServerException(STATUS_BAD_REQUEST);
-			result[key] = value;
+			headerMap[key] = value;
 		}
 		else
 			throw ServerException(STATUS_BAD_REQUEST);
-	}
-	return result;
+	};
 }
 
 std::string RequestParser::getFilename(const std::string& contentDisposition) {
@@ -206,22 +206,21 @@ std::string RequestParser::getFilename(const std::string& contentDisposition) {
 void RequestParser::parseMultipart(const std::string& boundary, const std::string& body, std::vector <MultipartFormData>& parts) {
 	std::string delimiter = "--" + boundary;
 	size_t pos = 0, next;
-
 	while ((next = body.find(delimiter, pos)) != std::string::npos) {
 		size_t end = body.find(delimiter, next + delimiter.length());
+		if (end == std::string::npos)
+			break;
 		std::string partString = body.substr(next + delimiter.length(), end - next - delimiter.length());
 		if (partString.empty())
 			throw ServerException(STATUS_BAD_REQUEST);
-		if (partString == "--")
-			break;
-
 		size_t headerEnd = partString.find("\r\n\r\n");
 		if (headerEnd == std::string::npos) continue;
 
 		MultipartFormData part;
 		std::string headers = partString.substr(0, headerEnd);
 		std::string content = partString.substr(headerEnd + 4);
-		std::map<std::string, std::string> headerMap = parseMultipartHeaders(headers);
+		std::map<std::string, std::string> headerMap;
+		parseMultipartHeaders(headerMap, headers);
 	
 		auto it = headerMap.find("Content-Disposition");
 		if (it != headerMap.end())
@@ -234,7 +233,6 @@ void RequestParser::parseMultipart(const std::string& boundary, const std::strin
 		else
 			throw ServerException(STATUS_BAD_REQUEST);
 
-		part.contentType = getContentType(headers);
 		part.content = content;
 
 		parts.push_back(part);

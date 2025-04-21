@@ -98,7 +98,8 @@ void RequestHandler::handleRequest() {
 	if (!_readReady)
 		readRequest();
 	else if (_multipart && ++_partIndex < _parts.size()) {
-		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + _parts[_partIndex].filename;
+		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
+		_client.resourceString = _parts[_partIndex].content;
 		FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
 	}
 	else
@@ -147,7 +148,6 @@ void RequestHandler::processRequest() {
 
 	// TODO Check redirects
 
-	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
 	if (!ServerConfigData::checkMethod(*_client.serverConfig, _request->method, _request->uriPath))
 		throw ServerException(STATUS_NOT_ALLOWED);
 	if (_request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
@@ -223,13 +223,11 @@ void RequestHandler::processMultipartForm() {
 		throw ServerException(STATUS_BAD_REQUEST);
 	std::string boundary = type.substr(prefix.size());
 
-	RequestParser::parseMultipart(boundary, _request->body, _parts);
-
-	// Check that each part type matches file extension:
-	// if (std::count(_request->body.begin(), _request->body.end(), boundary) != 2)
-	// 	throw ServerException(STATUS_TYPE_UNSUPPORTED);
-
-	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + _parts[_partIndex].filename;
+	RequestParser::parseMultipart(boundary, _request.get()->body, _parts);
+	if (_parts.empty())
+		throw ServerException(STATUS_BAD_REQUEST);
+	_client.resourceString = _parts[_partIndex].content;
+	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
 	FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
 }
 
