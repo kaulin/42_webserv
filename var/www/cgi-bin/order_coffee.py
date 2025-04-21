@@ -13,6 +13,8 @@ cgitb.enable()
 orders_file = "var/temp/coffee_orders.txt"
 
 def save_order(name, coffee, size):
+    if not os.path.exists("var/temp/"):
+        os.makedirs("var/temp/")
     with open(orders_file, "a") as f:
         f.write(f"{name} is waiting for a {size} {coffee}\n")
 
