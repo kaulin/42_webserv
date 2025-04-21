@@ -51,18 +51,18 @@ std::vector<std::string>	CGIHandler::setCGIEnv(const HttpRequest& request, const
 	return strEnv;
 }
 
-void	CGIHandler::setupCGI(Client &client)
+int	CGIHandler::setupCGI(Client &client)
 {
 	const HttpRequest& request = client.requestHandler->getRequest();
 	
 	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
 	{
-		return;
+		return (-1);
 	}
 	if (this->_requests.size() >= 10)
 	{
 		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
-		return;
+		return (-1);
 	}
 	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
 
@@ -71,7 +71,28 @@ void	CGIHandler::setupCGI(Client &client)
 	cgiInst->argv.emplace_back(nullptr);
 	cgiInst->requestBody = request.body;
 	cgiInst->status = CGI_READY;
+
+	// Prepare pipes
+	if (pipe(_requests[client.fd]->inPipe) < 0 || pipe(_requests[client.fd]->outPipe))
+	{
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	}
+
+	int flags;
+
+	// Get current file status flags and add O_NONBLOCK to the flags
+	if ((flags = fcntl(_requests[client.fd]->inPipe[WRITE], F_GETFL)) == -1)
+	{
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	}
+	if (fcntl(_requests[client.fd]->inPipe[WRITE], F_SETFL, flags | O_NONBLOCK) == -1) 
+	{
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	}
+
 	_requests.emplace(client.fd, std::move(cgiInst));
+
+	return (_requests[client.fd]->inPipe[WRITE]);
 }
 
 void CGIHandler::handleParentProcess(Client& client)
@@ -154,37 +175,12 @@ void	CGIHandler::handleChildProcess(Client& client)
 	std::exit(EXIT_FAILURE);
 }
 
-void	CGIHandler::prepareFds(int clientFd)
-{
-	int flags;
-
-	// Prepare pipes
-	if (pipe(_requests[clientFd]->inPipe) < 0 || pipe(_requests[clientFd]->outPipe))
-	{
-		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
-	}
-
-	// Get current file status flags
-	if ((flags = fcntl(_requests[clientFd]->inPipe[WRITE], F_GETFL)) == -1)
-	{
-		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
-
-	}
-	// Add O_NONBLOCK to the flags
-	if (fcntl(_requests[clientFd]->inPipe[WRITE], F_SETFL, flags | O_NONBLOCK) == -1) 
-	{
-		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
-	}
-}
-
 void	CGIHandler::runCGIScript(Client& client)
 {
-	setupCGI(client);
+	// setupCGI(client);
 
 	if (_requests[client.fd]->status != CGI_READY)
 		return;
-
-	prepareFds(client.fd);
 	
 	pid_t pid = fork();
 	if (pid < 0)
