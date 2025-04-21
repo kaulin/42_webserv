@@ -158,12 +158,23 @@ void ServerHandler::checkClient(size_t& i) {
 }
 
 // Set pollin or pollout
-void ServerHandler::addToPollList(int fd)
+void ServerHandler::addToPollList(int fd, PollType pollType)
 {
 	struct pollfd new_pollfd;
 	
 	new_pollfd.fd = fd;
-	new_pollfd.events = POLLIN | POLLOUT;
+	switch (pollType)
+	{
+	case SET_POLLBOTH:
+		new_pollfd.events = POLLIN | POLLOUT;
+		break;
+	case SET_POLLIN:
+		new_pollfd.events = POLLIN;
+		break;
+	case SET_POLLOUT:
+		new_pollfd.events = POLLOUT;
+		break;
+	}
 	new_pollfd.revents = 0;
 	_pollFds.emplace_back(new_pollfd);
 	std::cout << "Added " << new_pollfd.fd << " to poll list\n";
@@ -181,7 +192,7 @@ void ServerHandler::addConnection(size_t& i) {
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		if (fcntl(clientFd, F_SETFL, O_NONBLOCK))
 			throw ServerException(STATUS_INTERNAL_ERROR);
-		addToPollList(clientFd);
+		addToPollList(clientFd, SET_POLLBOTH);
 		_clients[clientFd] = std::make_unique<Client>();
 		Client& client = *_clients[clientFd].get();
 		client.serverConfig = _servers.at(i)->getServerConfig();
@@ -232,7 +243,7 @@ void	ServerHandler::pollLoop()
 							resourceFd = _CGIHandler.setupCGI(client);
 							if (resourceFd > 0)
 							{
-								addToPollList(resourceFd);
+								addToPollList(resourceFd, SET_POLLOUT);
 								_requestFds.emplace(resourceFd, _clients[_pollFds[i].fd].get());
 							}
 						}
@@ -252,8 +263,8 @@ void	ServerHandler::pollLoop()
 							client.responseHandler->sendResponse();
 						}
 					}
+					checkClient(i);
 				}
-				checkClient(i);
 			} catch (const ServerException& e) {
 				handleServerException(e.statusCode(), i);
 				//closeConnection(i);
