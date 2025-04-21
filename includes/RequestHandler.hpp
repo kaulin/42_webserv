@@ -17,9 +17,12 @@ class RequestHandler
 		void processGet();
 		void processPost();
 		void processDelete();
-		// bool _chunkedRequest;
-		// std::string _chunkedBodyString;
-		// // bool _chunkedRequestReady;
+		void readChunkedBody(const char* buf, size_t bytesRead);
+		bool _chunkedRequest;
+		bool _chunkedRequestReady;
+		bool _readingChunkSize;
+		size_t _expectedChunkSize;
+		std::string _chunkBuffer;
 	public:
 		RequestHandler(Client& client);
 		~RequestHandler();

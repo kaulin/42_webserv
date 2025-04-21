@@ -10,9 +10,11 @@
 RequestHandler::RequestHandler(Client& client) : 
 	_client(client),
 	_requestString(""),
-	_readReady(false)
-	// _chunkedRequest(false)
-	// _chunkedRequestReady(false) 
+	_readReady(false),
+	_chunkedRequest(false),
+	_chunkedRequestReady(false),
+	_readingChunkSize(true),
+	_expectedChunkSize(0)
 	{}
 
 RequestHandler::~RequestHandler() {}
@@ -20,6 +22,11 @@ RequestHandler::~RequestHandler() {}
 void RequestHandler::resetHandler() {
 	_requestString = "";
 	_readReady = false;
+	_chunkedRequest = false;
+	_chunkedRequestReady = false;
+	_chunkBuffer.clear();
+	_readingChunkSize = true;
+	_expectedChunkSize = 0;
 }
 
 void RequestHandler::readRequest() {
@@ -27,7 +34,6 @@ void RequestHandler::readRequest() {
 	char buf[BUFFER_SIZE] = {};
 
 	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);
-	//throw ServerException(STATUS_INTERNAL_ERROR); // ServerException test
 	if (receivedBytes <= 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	// else if (receivedBytes == 0) // client disconnected? send no response and clean client data in server handler
@@ -48,6 +54,8 @@ void RequestHandler::processRequest() {
 	_request = std::make_unique<HttpRequest>();
 
 	RequestParser::parseRequest(_requestString, *_request.get());
+	if (_request->headers["Transfer-Encoding"] == "chunked")
+    	_chunkedRequest = true;
 
 	// TODO Check redirects
 
