@@ -1,6 +1,7 @@
 #include <sstream>
 #include <iostream>
 #include <cctype>
+#include <algorithm>
 #include "RequestParser.hpp"
 #include "HttpRequest.hpp"
 
@@ -80,12 +81,56 @@ bool RequestParser::parseHeaders(const std::string& headers_part, HttpRequest& r
 	return true;
 }
 
-// Function to parse the body (if any)
+std::string RequestParser::parseChunkedBody(const std::string& chunked)
+{
+	std::cout << "Raw input to parseChunkedBody:\n" << chunked << std::endl;
+    std::istringstream stream(chunked);
+    std::string decoded, line;
+
+    while (std::getline(stream, line)) {
+        std::string trimmed = trimWhitespace(line);
+
+        if (trimmed.empty()) continue;
+
+        size_t chunkSize = 0;
+        std::istringstream sizeStream(trimmed);
+        sizeStream >> std::hex >> chunkSize;
+
+        std::cout << "Chunk size: " << chunkSize << std::endl;
+
+        if (chunkSize == 0) {
+            std::cout << "[INFO] End of chunked body detected (size 0)" << std::endl;
+            break;
+        }
+
+        std::string chunk(chunkSize, '\0');
+        stream.read(&chunk[0], chunkSize);
+        std::cout << "Chunk data: " << chunk << std::endl;
+
+        decoded += chunk;
+    }
+
+    std::cout << "Final decoded body: " << decoded << std::endl;
+    return decoded;
+}
+
+
 void RequestParser::parseBody(const std::string& body_part, HttpRequest& request)
 {
-	// Currently just storing the body as is
+	auto it = request.headers.find("Transfer-Encoding");
+	if (it != request.headers.end()) {
+		std::string encoding = trimWhitespace(it->second);
+		std::transform(encoding.begin(), encoding.end(), encoding.begin(), ::tolower);
+
+		if (encoding == "chunked") {
+			request.body = parseChunkedBody(body_part);
+			return;
+		}
+	}
+
 	request.body = body_part;
 }
+
 
 // Parses the entire HTTP request string into the HttpRequest object
 bool RequestParser::parseRequest(const std::string& raw_request, HttpRequest& request)

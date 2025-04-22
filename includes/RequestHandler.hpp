@@ -6,23 +6,33 @@
 
 struct Client;
 
+enum ChunkParseState {
+    READ_SIZE,
+    READ_DATA,
+    READ_CRLF
+};
+
 class RequestHandler
 {
 	private:
 		std::unique_ptr<HttpRequest> _request;
 		Client& _client;
 		std::string _requestString;
+		std::string _headerPart;
+		std::string _chunkBuffer;
+		std::string _decodedBody;
+		bool _headersRead;
 		bool _readReady;
 		void processRequest();
 		void processGet();
 		void processPost();
 		void processDelete();
-		void readChunkedBody(const char* buf, size_t bytesRead);
-		bool _chunkedRequest;
-		bool _chunkedRequestReady;
-		bool _readingChunkSize;
-		size_t _expectedChunkSize;
-		std::string _chunkBuffer;
+		void searchForChunked();
+		void readChunkedRequest();
+		bool _isChunked;
+		bool _chunkedBodyStarted;
+		ChunkParseState _chunkState;
+		size_t _expectedChunkSize = 0;
 	public:
 		RequestHandler(Client& client);
 		~RequestHandler();
