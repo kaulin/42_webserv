@@ -46,7 +46,7 @@ INCLUDE_FLAGS		:= -I includes/
 all: $(NAME)
 
 $(NAME): $(OBJECT_DIRECTORY) $(OBJECT_PATHS) $(INCLUDE_PATHS) Makefile
-	@echo "Linking executable $(NAME)..."
+	@echo "Linking executable: $(NAME)..."
 	@$(CXX) $(CXX_FLAGS) $(INCLUDE_FLAGS) $(OBJECT_PATHS) -o $(NAME)
 	@echo "$(NAME) built with $(CXX) and flags $(CXX_FLAGS)!"
 
@@ -68,9 +68,11 @@ fclean: clean
 re: fclean all
 
 debug: CXX_FLAGS += -g
+debug: CXX := ${CXX:c++=g++}
 debug: fclean $(NAME)
 
 sanitize: CXX_FLAGS += -g -fsanitize=address
+sanitize: CXX := ${CXX:c++=g++}
 sanitize: fclean $(NAME)
 
 .PHONY: all clean fclean re debug sanitize
