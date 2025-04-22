@@ -89,22 +89,24 @@ void printClientInfo(const Client& client) {
 
 void ServerHandler::resetClient(Client& client) {
 	client.resourcePath = "";
-	client.resourceString = "";
+	client.resourceInString = "";
+	client.resourceOutString = "";
+	client.resourceReadFd = -1;
+	client.resourceBytesRead = 0;
+	client.resourceWriteFd = -1;
+	client.resourceBytesWritten = 0;
 	client.cgiRequested = false;
 	client.directoryListing = false;
 	client.requestReady = false;
 	client.responseReady = false;
 	client.responseSent = false;
 	client.responseCode = STATUS_OK;
-	client.fileReadFd = -1;
-	client.fileTotalBytesRead = 0;
-	client.fileWriteFd = -1;
-	client.fileTotalBytesWritten = 0;
 	client.requestHandler->resetHandler();
 }
 
 void ServerHandler::removeFromPollList(int fdToRemove)
 {
+	std::cout << "Removes " << fdToRemove << " from poll list\n";
 	for (auto it = _pollFds.begin(); it != _pollFds.end();) 
 	{
 		if (it->fd == fdToRemove)
@@ -133,11 +135,14 @@ void ServerHandler::closeConnection(size_t& i)
 		{
 			close(it.first);
 			removeFromPollList(it.first);
+			// _requestFds.erase(it.first);
 		}
 	}
 	close(clientFd);
+	clientFd = -1;
 	_pollFds.erase(_pollFds.begin() + i);
 	_clients.erase(clientFd);
+	std::cout << "Client " << i << " disconnected.\n";
 	
 }
 
@@ -197,11 +202,13 @@ void ServerHandler::addConnection(size_t& i) {
 		Client& client = *_clients[clientFd].get();
 		client.serverConfig = _servers.at(i)->getServerConfig();
 		client.fd = clientFd;
+		client.pollIndex = _pollFds.size() - 1;
 		client.keep_alive = false;
 		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
 		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
 		client.lastRequest = std::time(nullptr);
 		resetClient(client);
+		std::cout << "Client connected to server " << _servers.at(i)->getServerConfig()->port << " with fd " << client.fd << "\n";
 	} catch (std::exception& e) {
 		// these should be logged, no response can be made, as there is no connection
 	}
@@ -219,51 +226,52 @@ void	ServerHandler::pollLoop()
 		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
 			try {
-				if (i < _serverCount)
-				{
-					if (_pollFds[i].revents & POLLIN)
-						addConnection(i);
-					continue;
-				}
-				else if (_clients.find(_pollFds[i].fd) == _clients.end())
-				{
-					// handle I/O operations from ready resource
-				}
-				else
+				// Servers
+				if (i < _serverCount && _pollFds[i].revents & POLLIN)
+					addConnection(i);
+				// Clients
+				else if (_clients.find(_pollFds[i].fd) != _clients.end())
 				{
 					Client& client = *_clients[_pollFds[i].fd].get();
-					int resourceFd;
 
 					if (_pollFds[i].revents & POLLIN)
 					{
 						client.requestHandler->readRequest();
-						// ADD RESOURCES OR PIPES TO POLL LOOP
-						if (client.cgiRequested)
-						{
-							resourceFd = _CGIHandler.setupCGI(client);
-							if (resourceFd > 0)
-							{
-								addToPollList(resourceFd, SET_POLLOUT);
-								_requestFds.emplace(resourceFd, _clients[_pollFds[i].fd].get());
-							}
-						}
 						client.lastRequest = std::time(nullptr);
+						if (client.cgiRequested)
+							client.resourceWriteFd = _CGIHandler.setupCGI(client);
+
+						// ADD RESOURCES OR PIPES TO POLL LOOP
+						if (client.resourceWriteFd > 0)
+						{
+							addToPollList(client.resourceWriteFd, SET_POLLOUT);
+							_requestFds.emplace(client.resourceWriteFd, &client);
+						}
+						if (client.resourceReadFd > 0)
+						{
+							addToPollList(client.resourceReadFd, SET_POLLIN);
+							_requestFds.emplace(client.resourceReadFd, &client);
+						}
 					}
 					else if (_pollFds[i].revents & POLLOUT)
 					{
 						if (client.cgiRequested && !client.requestReady)
 							_CGIHandler.runCGIScript(client);
-						if (client.fileReadFd > 0)
-							readFromFd(i);
-						else if (client.fileWriteFd > 0)
-							writeToFd(i);
 						else if (client.requestReady)
 						{
 							client.responseHandler->formResponse();
 							client.responseHandler->sendResponse();
 						}
 					}
-					checkClient(i);
+					checkClient(i); // check timeouts
+				}
+				// Resources (pipes and files)
+				else
+				{
+					if (_pollFds[i].revents & POLLIN)
+						readFromFd(i);
+					else if (_pollFds[i].revents & POLLOUT)
+						writeToFd(i);
 				}
 			} catch (const ServerException& e) {
 				handleServerException(e.statusCode(), i);
@@ -287,28 +295,28 @@ void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 	std::map<int, std::string>::const_iterator it = client.serverConfig->error_pages.find(statusCode);
 	std::string path = "var/www/html" + it->second;
 	std::cout << path << std::endl; // test
-	//client.fileReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
-	FileHandler::openForRead(client.fileReadFd, path);
+	//client.resourceReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+	FileHandler::openForRead(client.resourceReadFd, path);
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
-	Client& client = *_clients[_pollFds[i].fd].get();
+	Client& client = *_requestFds.at(_pollFds[i].fd);
 	int bytesRead;
 	char buf[BUFFER_SIZE] = {};
 
-	bytesRead = read(client.fileReadFd, buf, BUFFER_SIZE);
+	bytesRead = read(client.resourceReadFd, buf, BUFFER_SIZE);
 	if (bytesRead <= 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	else {
-		client.resourceString.append(buf, bytesRead);
-		client.fileTotalBytesRead += bytesRead;
-		// std::cout << "Total bytes read: " << client.fileTotalBytesRead << "\n";
+		client.resourceInString.append(buf, bytesRead);
+		client.resourceBytesRead += bytesRead;
+		// std::cout << "Total bytes read: " << client.resourceBytesRead << "\n";
 		if (bytesRead < BUFFER_SIZE)
 		{
 			client.requestReady = true;
 			std::cout << "Client " << client.fd << " resource read complete!\n";
-			close(client.fileReadFd);
-			client.fileReadFd = -1;
+			close(client.resourceReadFd);
+			client.resourceReadFd = -1;
 		}
 		else
 		{
@@ -319,27 +327,25 @@ void	ServerHandler::readFromFd(size_t& i) {
 }
 
 void	ServerHandler::writeToFd(size_t& i) {
-	Client& client = *_clients[_pollFds[i].fd].get();
-	const HttpRequest& request = client.requestHandler->getRequest();
+	Client& client = *_requestFds.at(_pollFds[i].fd);
 	size_t bytesWritten;
-	size_t leftToWrite = request.body.size();
 
-	bytesWritten = write(client.fileWriteFd, request.body.c_str() + client.fileTotalBytesWritten, leftToWrite);
+	bytesWritten = write(client.resourceWriteFd, client.resourceOutString.c_str() + client.resourceBytesWritten, BUFFER_SIZE);
 	if (bytesWritten <= 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	else {
-		client.fileTotalBytesWritten += bytesWritten;
-		if (bytesWritten < BUFFER_SIZE)
+		client.resourceBytesWritten += bytesWritten;
+		if (client.resourceBytesWritten == client.resourceOutString.size())
 		{
 			client.requestReady = true;
 			client.responseCode = STATUS_CREATED;
-			std::cout << "Client [" << client.fd << "] POST request resource saved to disk\n";
-			close(client.fileWriteFd);
-			client.fileWriteFd = -1;
+			std::cout << "Client " << client.fd << " resource written to fd " << _pollFds[i].fd << "\n";
+			close(client.resourceWriteFd);
+			client.resourceWriteFd = -1;
 		}
 		else
 		{
-			std::cout << "Client [" << client.fd << "] wrote " << bytesWritten << " bytes to disk, continuing...\n";
+			std::cout << "Client " << client.fd << " wrote " << bytesWritten << " bytes to fd " << _pollFds[i].fd << ", continuing...\n";
 			_pollFds[i].revents = POLL_OUT;
 		}
 	}
