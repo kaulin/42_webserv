@@ -78,7 +78,7 @@ void ResponseHandler::formGET() {
 	addStatus();
 	addHeader("Date", getTimeStamp());
 	addHeader("Content-Type", FileHandler::getMIMEType(_client.resourcePath));
-	addBody(_client.resourceString);
+	addBody(_client.resourceInString);
 }
 
 void ResponseHandler::formPOST() {
@@ -105,7 +105,7 @@ void ResponseHandler::formDELETE() {
 }
 
 void ResponseHandler::formCGI() {
-	_response->response = _client.resourceString;
+	_response->response = _client.resourceInString;
 }
 
 void ResponseHandler::formDirectoryListing() {
@@ -158,13 +158,13 @@ void ResponseHandler::formErrorPage() {
 	addStatus();
 	addHeader("Date", getTimeStamp());
 	addHeader("Content-Type", "text/html");
-	if (_client.resourceString.empty()) {
+	if (_client.resourceInString.empty()) {
 		std::string code = std::to_string(_client.responseCode);
 		std::string message = ServerException::statusMessage(_client.responseCode);
 
-		_client.resourceString =  "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n	<title>Error " + code + " - " + message + "</title>\n</head>\n<body>\n	<h1>" + code + "</h1>\n	<p>" + message + "</p>\n</body>\n</html>\n";
+		_client.resourceInString =  "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n	<title>Error " + code + " - " + message + "</title>\n</head>\n<body>\n	<h1>" + code + "</h1>\n	<p>" + message + "</p>\n</body>\n</html>\n";
 	}
-	addBody(_client.resourceString);
+	addBody(_client.resourceInString);
 }
 
 std::string ResponseHandler::timeToString(const std::filesystem::file_time_type& time) {
