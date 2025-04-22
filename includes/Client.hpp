@@ -15,7 +15,6 @@ class ResponseHandler;
 struct Client {
 	const Config*						serverConfig;
 	int									fd;
-	int									pollIndex;
 	std::time_t							lastRequest;
 	std::unique_ptr<ResponseHandler>	responseHandler;
 	std::unique_ptr<RequestHandler>		requestHandler;
