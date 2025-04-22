@@ -107,7 +107,8 @@ void ServerHandler::resetClient(Client& client) {
 void ServerHandler::removeFromPollList(int fdToRemove)
 {
 	std::cout << "Removes " << fdToRemove << " from poll list\n";
-	for (auto it = _pollFds.begin(); it != _pollFds.end();) 
+	auto it = _pollFds.begin();
+	while (it != _pollFds.end())
 	{
 		if (it->fd == fdToRemove)
 			it = _pollFds.erase(it);
@@ -133,16 +134,16 @@ void ServerHandler::closeConnection(size_t& i)
 	{
 		if (it.second->fd == clientFd)
 		{
-			close(it.first);
 			removeFromPollList(it.first);
+			close(it.first);
 			// _requestFds.erase(it.first);
 		}
 	}
-	close(clientFd);
-	clientFd = -1;
+	std::cout << "Client " << _pollFds[i].fd << " disconnected.\n";
 	_pollFds.erase(_pollFds.begin() + i);
 	_clients.erase(clientFd);
-	std::cout << "Client " << i << " disconnected.\n";
+	close(clientFd);
+	clientFd = -1;
 	
 }
 
@@ -150,9 +151,9 @@ void ServerHandler::checkClient(size_t& i) {
 	Client& client = *_clients[_pollFds[i].fd].get();
 	if (client.responseSent)
 	{
-		if (client.keep_alive)
-			resetClient(client);
-		else
+		// if (client.keep_alive) Commented out to close all connections after response sent, as timeouts are not working
+		// 	resetClient(client);
+		// else
 			closeConnection(i);
 	}
 	else if (!checkTimeout(client))
@@ -202,15 +203,15 @@ void ServerHandler::addConnection(size_t& i) {
 		Client& client = *_clients[clientFd].get();
 		client.serverConfig = _servers.at(i)->getServerConfig();
 		client.fd = clientFd;
-		client.pollIndex = _pollFds.size() - 1;
 		client.keep_alive = false;
 		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
 		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
 		client.lastRequest = std::time(nullptr);
 		resetClient(client);
 		std::cout << "Client connected to server " << _servers.at(i)->getServerConfig()->port << " with fd " << client.fd << "\n";
-	} catch (std::exception& e) {
+	} catch (const ServerException& e) {
 		// these should be logged, no response can be made, as there is no connection
+		return;
 	}
 }
 
@@ -227,8 +228,10 @@ void	ServerHandler::pollLoop()
 		{
 			try {
 				// Servers
-				if (i < _serverCount && _pollFds[i].revents & POLLIN)
-					addConnection(i);
+				if (i < _serverCount) {
+					if (_pollFds[i].revents & POLLIN)
+						addConnection(i);
+				}
 				// Clients
 				else if (_clients.find(_pollFds[i].fd) != _clients.end())
 				{
@@ -242,15 +245,15 @@ void	ServerHandler::pollLoop()
 							client.resourceWriteFd = _CGIHandler.setupCGI(client);
 
 						// ADD RESOURCES OR PIPES TO POLL LOOP
-						if (client.resourceWriteFd > 0)
-						{
-							addToPollList(client.resourceWriteFd, SET_POLLOUT);
-							_requestFds.emplace(client.resourceWriteFd, &client);
-						}
 						if (client.resourceReadFd > 0)
 						{
 							addToPollList(client.resourceReadFd, SET_POLLIN);
 							_requestFds.emplace(client.resourceReadFd, &client);
+						}
+						if (client.resourceWriteFd > 0)
+						{
+							addToPollList(client.resourceWriteFd, SET_POLLOUT);
+							_requestFds.emplace(client.resourceWriteFd, &client);
 						}
 					}
 					else if (_pollFds[i].revents & POLLOUT)
@@ -285,18 +288,30 @@ void	ServerHandler::pollLoop()
 
 void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 {
-	Client& client = *_clients[_pollFds[fd].fd].get();
+	Client& client = (_clients.find(_pollFds[fd].fd) != _clients.end()) ? *_clients[_pollFds[fd].fd].get() : *_requestFds.at(_pollFds[fd].fd);
 	client.responseCode = statusCode;
 	client.responseReady = false;
-	if (client.serverConfig->error_pages.empty()) {
-		std::cout << "no error pages defined in config" << std::endl;
-		return;
+	client.resourceOutString = "";
+	if (client.resourceReadFd != -1) {
+		close(client.resourceReadFd); // TODO: need to also remove from poll list and _resourceFds
+		client.resourceReadFd = -1;
 	}
-	std::map<int, std::string>::const_iterator it = client.serverConfig->error_pages.find(statusCode);
-	std::string path = "var/www/html" + it->second;
-	std::cout << path << std::endl; // test
-	//client.resourceReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
-	FileHandler::openForRead(client.resourceReadFd, path);
+	auto it = client.serverConfig->error_pages.find(statusCode);
+	if (it != client.serverConfig->error_pages.end()) {
+		std::string path = ServerConfigData::getRoot(*client.serverConfig, "/") + it->second;
+		//client.resourceReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+		try {
+			FileHandler::openForRead(client.resourceReadFd, path);
+			addToPollList(client.resourceReadFd, SET_POLLIN);
+			_requestFds.emplace(client.resourceReadFd, &client);
+		} catch (const ServerException& e) {
+			// log error page missing
+			// proceed with generating error page
+			client.requestReady = true;
+		}
+	}
+	else
+		client.requestReady = true;
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
@@ -306,6 +321,8 @@ void	ServerHandler::readFromFd(size_t& i) {
 
 	bytesRead = read(client.resourceReadFd, buf, BUFFER_SIZE);
 	if (bytesRead <= 0)
+	addToPollList(client.resourceReadFd, SET_POLLIN);
+	_requestFds.emplace(client.resourceReadFd, &client);
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	else {
 		client.resourceInString.append(buf, bytesRead);
@@ -314,14 +331,13 @@ void	ServerHandler::readFromFd(size_t& i) {
 		if (bytesRead < BUFFER_SIZE)
 		{
 			client.requestReady = true;
-			std::cout << "Client " << client.fd << " resource read complete!\n";
-			close(client.resourceReadFd);
+			std::cout << "Client " << client.fd << " resource read from fd " << _pollFds[i].fd << "\n";
+			close(client.resourceReadFd); // remove from pollFds and requestFds
 			client.resourceReadFd = -1;
 		}
 		else
 		{
-			// std::cout << "Client " << client.fd << " read " << bytesRead << " bytes, continuing...\n";
-			_pollFds[i].revents = POLL_OUT;
+			std::cout << "Client " << client.fd << " read " << bytesRead << " bytes from fd " << _pollFds[i].fd << ", continuing...\n";
 		}
 	}
 }
@@ -340,13 +356,12 @@ void	ServerHandler::writeToFd(size_t& i) {
 			client.requestReady = true;
 			client.responseCode = STATUS_CREATED;
 			std::cout << "Client " << client.fd << " resource written to fd " << _pollFds[i].fd << "\n";
-			close(client.resourceWriteFd);
+			close(client.resourceWriteFd); // remove from pollFds and requestFds
 			client.resourceWriteFd = -1;
 		}
 		else
 		{
 			std::cout << "Client " << client.fd << " wrote " << bytesWritten << " bytes to fd " << _pollFds[i].fd << ", continuing...\n";
-			_pollFds[i].revents = POLL_OUT;
 		}
 	}
 }
