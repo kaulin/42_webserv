@@ -15,6 +15,13 @@ class HttpServer;
 #define DEFAULT_CONFIG_FILE "config/default.conf"
 #define BACKLOG 10 // how many pending connections queue will hold
 
+enum PollType 
+{
+	SET_POLLBOTH,
+	SET_POLLOUT,
+	SET_POLLIN
+};
+
 class ServerHandler
 {
 private:
@@ -22,6 +29,7 @@ private:
 	size_t					 							_serverCount;
 	std::vector<int>									_ports;
 	std::unordered_map<int, std::unique_ptr<Client>>	_clients;
+	std::unordered_map<int, Client*>					_requestFds;
 	std::vector<struct pollfd>							_pollFds;
 	bool												_running;
 	ServerConfigData									_config;
@@ -31,6 +39,8 @@ private:
 	static void	resetClient(Client& client);
 	void		readFromFd(size_t& i);
 	void		writeToFd(size_t& i);
+	void		addToPollList(int fd, PollType pollType);
+	void		removeFromPollList(int fd);
 public:
 	ServerHandler(std::string path);
 	~ServerHandler();
@@ -43,7 +53,6 @@ public:
 	void		addConnection(size_t& i);
 	void		checkClient(size_t& i);
 	void		closeConnection(size_t& i);
-	void		cleanupServers();
 	bool		checkTimeout(const Client& client);
 	void		handleServerException(int statusCode, size_t& fd);
 	

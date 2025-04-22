@@ -36,9 +36,10 @@ private:
 	void						handleParentProcess(Client& client);
 	std::string					setCgiPath(const HttpRequest& request);
 	std::vector<std::string>	setCGIEnv(const HttpRequest& request, const Client& client);
+	void						prepareFds(Client &client);
 public:
 	CGIHandler();
 
-	void			setupCGI(Client& client);
-	void			runCGIScript(Client& client);
+	int		setupCGI(Client& client);
+	void	runCGIScript(Client& client);
 };

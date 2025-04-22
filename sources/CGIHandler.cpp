@@ -3,6 +3,7 @@
 #include <exception>
 #include <iostream>
 #include <filesystem>
+#include <fcntl.h>
 #include "CGIHandler.hpp"
 #include "HttpRequest.hpp"
 #include "ServerException.hpp"
@@ -16,6 +17,17 @@ void CGIHandler::closeFds(const std::vector<int> fdsToclose)
 {
 	for (const auto & fd : fdsToclose)
 		close(fd);
+}
+
+std::string CGIHandler::setCgiPath(const HttpRequest& request)
+{
+	std::string parsedUri = request.uri;
+	if (!request.uriQuery.empty() && parsedUri.find('?') != std::string::npos)
+	{
+		parsedUri = request.uri.substr(0, request.uri.find('?'));
+	}
+	std::string cgiUri = std::filesystem::current_path().string() + "/var/www" + parsedUri;
+	return cgiUri;
 }
 
 std::vector<std::string>	CGIHandler::setCGIEnv(const HttpRequest& request, const Client& client) // takes request
@@ -39,6 +51,50 @@ std::vector<std::string>	CGIHandler::setCGIEnv(const HttpRequest& request, const
 	return strEnv;
 }
 
+int	CGIHandler::setupCGI(Client &client)
+{
+	const HttpRequest& request = client.requestHandler->getRequest();
+	
+	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
+	{
+		return (-1);
+	}
+	if (this->_requests.size() >= 10)
+	{
+		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
+		return (-1);
+	}
+	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
+
+	cgiInst->CGIPath = setCgiPath(request);
+	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
+	cgiInst->argv.emplace_back(nullptr);
+	cgiInst->requestBody = request.body;
+	cgiInst->status = CGI_READY;
+
+	// Prepare pipes
+	if (pipe(_requests[client.fd]->inPipe) < 0 || pipe(_requests[client.fd]->outPipe))
+	{
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	}
+
+	int flags;
+
+	// Get current file status flags and add O_NONBLOCK to the flags
+	if ((flags = fcntl(_requests[client.fd]->inPipe[WRITE], F_GETFL)) == -1)
+	{
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	}
+	if (fcntl(_requests[client.fd]->inPipe[WRITE], F_SETFL, flags | O_NONBLOCK) == -1) 
+	{
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	}
+
+	_requests.emplace(client.fd, std::move(cgiInst));
+
+	return (_requests[client.fd]->inPipe[WRITE]);
+}
+
 void CGIHandler::handleParentProcess(Client& client)
 {
 	int inPipe[2] = {_requests[client.fd]->inPipe[0], _requests[client.fd]->inPipe[1]};
@@ -46,14 +102,17 @@ void CGIHandler::handleParentProcess(Client& client)
 	
 	std::string requestBody = _requests[client.fd]->requestBody;
 
-	close(outPipe[WRITE]); // close unnecessary pipe end (child pipe)
-
-	// Write the request body for the child to read
+	// Write the request body for the child to read and close unnecessary pipes
+	close(outPipe[WRITE]);
 	close(inPipe[READ]);
-	int bytesWritten = write(inPipe[WRITE], requestBody.c_str(), requestBody.size());
-	if (bytesWritten == -1)
+	if (requestBody.length() > 0)
 	{
-		//kill process
+		int bytesWritten = write(inPipe[WRITE], requestBody.c_str(), requestBody.size());
+		if (bytesWritten == -1)
+		{
+			perror("Write failed");
+			throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+		}
 	}
 	close(inPipe[WRITE]);
 
@@ -116,69 +175,32 @@ void	CGIHandler::handleChildProcess(Client& client)
 	std::exit(EXIT_FAILURE);
 }
 
-std::string CGIHandler::setCgiPath(const HttpRequest& request)
-{
-	std::string parsedUri = request.uri;
-	if (!request.uriQuery.empty() && parsedUri.find('?') != std::string::npos)
-	{
-		parsedUri = request.uri.substr(0, request.uri.find('?'));
-	}
-	std::string cgiUri = std::filesystem::current_path().string() + "/var/www" + parsedUri;
-	return cgiUri;
-}
-
-void	CGIHandler::setupCGI(Client &client)
-{
-	const HttpRequest& request = client.requestHandler->getRequest();
-	
-	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
-	{
-		return;
-	}
-	if (this->_requests.size() >= 10)
-	{
-		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
-		return;
-	}
-	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
-
-	cgiInst->CGIPath = setCgiPath(request);
-	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
-	cgiInst->argv.emplace_back(nullptr);
-	cgiInst->requestBody = request.body;
-	cgiInst->status = CGI_READY;
-	_requests.emplace(client.fd, std::move(cgiInst));
-}
-
 void	CGIHandler::runCGIScript(Client& client)
 {
-	setupCGI(client);
+	// setupCGI(client);
 
-	if (_requests[client.fd]->status == CGI_READY)
+	if (_requests[client.fd]->status != CGI_READY)
+		return;
+	
+	pid_t pid = fork();
+	if (pid < 0)
 	{
-		if (pipe(_requests[client.fd]->inPipe) < 0 || pipe(_requests[client.fd]->outPipe))
-		{
-			throw ServerException(STATUS_INTERNAL_ERROR); // fatal
-		}
-		pid_t pid = fork();
-		if (pid < 0)
-		{
-			kill(pid, SIGTERM);
-			_requests[client.fd]->status = CGI_ERROR;
-			throw ServerException(STATUS_INTERNAL_ERROR); // fatal
-		}
-		if (pid == 0)
-		{
-			handleChildProcess(client);
-		}
-		else
-		{
-			handleParentProcess(client);
-		}
-		_requests[client.fd]->status = CGI_FORKED;
-		_requests[client.fd]->childPid = pid;
+		kill(pid, SIGTERM);
+		_requests[client.fd]->status = CGI_ERROR;
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
 	}
-	else if (_requests[client.fd]->status == CGI_ERROR)
+	if (pid == 0)
+	{
+		handleChildProcess(client);
+	}
+	else
+	{
+		handleParentProcess(client);
+	}
+	_requests[client.fd]->status = CGI_FORKED;
+	_requests[client.fd]->childPid = pid;
+
+	if (_requests[client.fd]->status == CGI_ERROR)
 	{
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}

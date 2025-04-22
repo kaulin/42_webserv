@@ -103,6 +103,17 @@ void ServerHandler::resetClient(Client& client) {
 	client.requestHandler->resetHandler();
 }
 
+void ServerHandler::removeFromPollList(int fdToRemove)
+{
+	for (auto it = _pollFds.begin(); it != _pollFds.end();) 
+	{
+		if (it->fd == fdToRemove)
+			it = _pollFds.erase(it);
+		else
+			++it;
+	}
+}
+
 bool ServerHandler::checkTimeout(const Client& client)
 {
 	const std::time_t now = std::time(nullptr);
@@ -112,11 +123,22 @@ bool ServerHandler::checkTimeout(const Client& client)
 	return true;
 }
 
-void ServerHandler::closeConnection(size_t& i) {
+void ServerHandler::closeConnection(size_t& i) 
+{
 	int clientFd = _pollFds[i].fd;
+
+	for (const auto& it : _requestFds)
+	{
+		if (it.second->fd == clientFd)
+		{
+			close(it.first);
+			removeFromPollList(it.first);
+		}
+	}
 	close(clientFd);
 	_pollFds.erase(_pollFds.begin() + i);
 	_clients.erase(clientFd);
+	
 }
 
 void ServerHandler::checkClient(size_t& i) {
@@ -135,12 +157,34 @@ void ServerHandler::checkClient(size_t& i) {
 	}
 }
 
+// Set pollin or pollout
+void ServerHandler::addToPollList(int fd, PollType pollType)
+{
+	struct pollfd new_pollfd;
+	
+	new_pollfd.fd = fd;
+	switch (pollType)
+	{
+	case SET_POLLBOTH:
+		new_pollfd.events = POLLIN | POLLOUT;
+		break;
+	case SET_POLLIN:
+		new_pollfd.events = POLLIN;
+		break;
+	case SET_POLLOUT:
+		new_pollfd.events = POLLOUT;
+		break;
+	}
+	new_pollfd.revents = 0;
+	_pollFds.emplace_back(new_pollfd);
+	std::cout << "Added " << new_pollfd.fd << " to poll list\n";
+}
+
 void ServerHandler::addConnection(size_t& i) {
 	int clientFd;
 	socklen_t addrlen;
 	struct sockaddr_storage remoteaddr_in;
-	struct pollfd new_pollfd;
-
+	
 	try {
 		addrlen = sizeof(remoteaddr_in);
 		clientFd = accept(_pollFds[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
@@ -148,10 +192,7 @@ void ServerHandler::addConnection(size_t& i) {
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		if (fcntl(clientFd, F_SETFL, O_NONBLOCK))
 			throw ServerException(STATUS_INTERNAL_ERROR);
-		new_pollfd.fd = clientFd;
-		new_pollfd.events = POLLIN | POLLOUT;
-		new_pollfd.revents = 0;
-		_pollFds.emplace_back(new_pollfd);
+		addToPollList(clientFd, SET_POLLBOTH);
 		_clients[clientFd] = std::make_unique<Client>();
 		Client& client = *_clients[clientFd].get();
 		client.serverConfig = _servers.at(i)->getServerConfig();
@@ -184,27 +225,46 @@ void	ServerHandler::pollLoop()
 						addConnection(i);
 					continue;
 				}
-				Client& client = *_clients[_pollFds[i].fd].get();
-				if (_pollFds[i].revents & POLLIN)
+				else if (_clients.find(_pollFds[i].fd) == _clients.end())
 				{
-					client.requestHandler->readRequest();
-					client.lastRequest = std::time(nullptr);
+					// handle I/O operations from ready resource
 				}
-				else if (_pollFds[i].revents & POLLOUT)
+				else
 				{
-					if (client.cgiRequested && !client.requestReady)
-						_CGIHandler.runCGIScript(client);
-					if (client.fileReadFd > 0)
-						readFromFd(i);
-					else if (client.fileWriteFd > 0)
-						writeToFd(i);
-					else if (client.requestReady)
+					Client& client = *_clients[_pollFds[i].fd].get();
+					int resourceFd;
+
+					if (_pollFds[i].revents & POLLIN)
 					{
-						client.responseHandler->formResponse();
-						client.responseHandler->sendResponse();
+						client.requestHandler->readRequest();
+						// ADD RESOURCES OR PIPES TO POLL LOOP
+						if (client.cgiRequested)
+						{
+							resourceFd = _CGIHandler.setupCGI(client);
+							if (resourceFd > 0)
+							{
+								addToPollList(resourceFd, SET_POLLOUT);
+								_requestFds.emplace(resourceFd, _clients[_pollFds[i].fd].get());
+							}
+						}
+						client.lastRequest = std::time(nullptr);
 					}
+					else if (_pollFds[i].revents & POLLOUT)
+					{
+						if (client.cgiRequested && !client.requestReady)
+							_CGIHandler.runCGIScript(client);
+						if (client.fileReadFd > 0)
+							readFromFd(i);
+						else if (client.fileWriteFd > 0)
+							writeToFd(i);
+						else if (client.requestReady)
+						{
+							client.responseHandler->formResponse();
+							client.responseHandler->sendResponse();
+						}
+					}
+					checkClient(i);
 				}
-				checkClient(i);
 			} catch (const ServerException& e) {
 				handleServerException(e.statusCode(), i);
 				//closeConnection(i);
@@ -242,7 +302,7 @@ void	ServerHandler::readFromFd(size_t& i) {
 	else {
 		client.resourceString.append(buf, bytesRead);
 		client.fileTotalBytesRead += bytesRead;
-		std::cout << "Total bytes read: " << client.fileTotalBytesRead << "\n";
+		// std::cout << "Total bytes read: " << client.fileTotalBytesRead << "\n";
 		if (bytesRead < BUFFER_SIZE)
 		{
 			client.requestReady = true;
@@ -252,7 +312,7 @@ void	ServerHandler::readFromFd(size_t& i) {
 		}
 		else
 		{
-			std::cout << "Client " << client.fd << " read " << bytesRead << " bytes, continuing...\n";
+			// std::cout << "Client " << client.fd << " read " << bytesRead << " bytes, continuing...\n";
 			_pollFds[i].revents = POLL_OUT;
 		}
 	}
@@ -300,5 +360,4 @@ void	ServerHandler::runServers()
 
 	_running = true;
 	pollLoop();
-	// cleanupServers();
 }
