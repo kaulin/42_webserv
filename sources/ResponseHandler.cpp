@@ -13,7 +13,7 @@ ResponseHandler::~ResponseHandler() {}
 void ResponseHandler::sendResponse() {
 	if (!_client.responseReady)
 		return;
-	size_t bytesSent;
+	int bytesSent;
 	size_t toSend = _response->response.size() - _totalBytesSent;
 	if (toSend > BUFFER_SIZE)
 		toSend = BUFFER_SIZE;
@@ -29,8 +29,6 @@ void ResponseHandler::sendResponse() {
 		std::cout << "Client " << _client.fd << " response sent!\n";
 		_client.responseSent = true;
 	}
-	else
-		std::cout << "Client [" << _client.fd << "] sent " << bytesSent << " bytes, continuing...\n";
 }
 
 /*
