@@ -50,12 +50,18 @@ const char* ServerException::statusMessage(int statusCode) {
 			return "I'm a teapot";
 		case 431:
 			return "Request Header Fields Too Large";
+		case 499:
+			return "Client Disconnected";
 		case 500:
 			return "Internal Server Error";
 		case 501:
 			return "Unsupported Method";
 		case 503:
 			return "Service Unavailable";
+		case 665:
+			return "Recv Error";
+		case 666:
+			return "Send Error";
 	}
 	return "Internal Server Error";
 }
