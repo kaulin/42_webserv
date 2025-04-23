@@ -29,7 +29,7 @@ private:
 	size_t					 							_serverCount;
 	std::vector<int>									_ports;
 	std::unordered_map<int, std::unique_ptr<Client>>	_clients;
-	std::unordered_map<int, Client*>					_requestFds;
+	std::unordered_map<int, Client*>					_resourceFds;
 	std::vector<struct pollfd>							_pollFds;
 	bool												_running;
 	ServerConfigData									_config;
