@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <sys/socket.h>
+#include <algorithm>
 #include "FileHandler.hpp"
 #include "RequestHandler.hpp"
 #include "RequestParser.hpp"
@@ -10,16 +11,94 @@
 RequestHandler::RequestHandler(Client& client) : 
 	_client(client),
 	_requestString(""),
-	_readReady(false)
-	// _chunkedRequest(false)
-	// _chunkedRequestReady(false) 
+	_headersRead(false),
+	_readReady(false),
+	_isChunked(false),
+	_chunkedBodyStarted(false),
+	_chunkState(READ_SIZE),
+	_expectedChunkSize(0)
+
 	{}
 
 RequestHandler::~RequestHandler() {}
 
 void RequestHandler::resetHandler() {
 	_requestString = "";
+	_headersRead = false;
 	_readReady = false;
+	_isChunked = false;
+	_chunkedBodyStarted = false;
+	_chunkState = READ_SIZE;
+	_expectedChunkSize = 0;
+}
+
+void RequestHandler::readHeaders()
+{
+	size_t headersEnd = _requestString.find("\r\n\r\n");
+	if (headersEnd == std::string::npos)
+		return;
+
+	_headersRead = true;
+	_headerPart = _requestString.substr(0, headersEnd + 4);
+
+	std::string headerLower = _headerPart;
+	std::transform(headerLower.begin(), headerLower.end(), headerLower.begin(), ::tolower);
+	if (headerLower.find("transfer-encoding: chunked") != std::string::npos)
+		_isChunked = true;
+}
+
+void RequestHandler::readChunkedRequest()
+{
+	size_t headersEnd = _requestString.find("\r\n\r\n");
+	if (!_chunkedBodyStarted) {
+		if (headersEnd == std::string::npos)
+			return;
+
+		_chunkedBodyStarted = true;
+		_chunkBuffer = _requestString.substr(headersEnd + 4);
+		_requestString.clear();
+	}
+
+	while (true) {
+		if (_chunkState == READ_SIZE) {
+			size_t pos = _chunkBuffer.find("\r\n");
+			if (pos == std::string::npos)
+				return; // need more data
+
+			std::string sizeLine = _chunkBuffer.substr(0, pos);
+			_chunkBuffer.erase(0, pos + 2);
+
+			std::istringstream sizeStream(sizeLine);
+			sizeStream >> std::hex >> _expectedChunkSize;
+
+			if (_expectedChunkSize == 0) {
+				_readReady = true;
+				processRequest();
+				return;
+			}
+			_chunkState = READ_DATA;
+		}
+
+		if (_chunkState == READ_DATA) {
+			if (_chunkBuffer.size() < _expectedChunkSize)
+				return;
+
+			_decodedBody += _chunkBuffer.substr(0, _expectedChunkSize);
+			_chunkBuffer.erase(0, _expectedChunkSize);
+
+			_chunkState = READ_CRLF;
+		}
+
+		if (_chunkState == READ_CRLF) {
+			if (_chunkBuffer.size() < 2)
+				return; // wait for trailing line break
+			if (_chunkBuffer.substr(0, 2) != "\r\n")
+				throw ServerException(STATUS_BAD_REQUEST);
+
+			_chunkBuffer.erase(0, 2);
+			_chunkState = READ_SIZE;
+		}
+	}
 }
 
 void RequestHandler::readRequest() {
@@ -27,27 +106,39 @@ void RequestHandler::readRequest() {
 	char buf[BUFFER_SIZE] = {};
 
 	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);
-	//throw ServerException(STATUS_INTERNAL_ERROR); // ServerException test
 	if (receivedBytes <= 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
-	// else if (receivedBytes == 0) // client disconnected? send no response and clean client data in server handler
-	//	throw ServerException(STATUS_CLIENT_DISCONNECTED); // <- not yet implemented
-	else {
-		_requestString.append(buf, receivedBytes);
-		if (receivedBytes < BUFFER_SIZE) { // whole request read
-			_readReady = true;
-			std::cout << "Client " << _client.fd << " complete request received!\n";
-			processRequest();
-		}
-		else // more incoming
-			std::cout << "Client " << _client.fd << " received request portion:\n" << buf << "\n";
+	if (receivedBytes == 0 && _isChunked && !_readReady)
+		throw ServerException(STATUS_BAD_REQUEST);
+
+	_requestString.append(buf, receivedBytes);
+
+	if (!_headersRead)
+		readHeaders();
+
+	if (_isChunked) {
+		if (!_request)
+			_request = std::make_unique<HttpRequest>();
+		readChunkedRequest();
+		return;
+	}
+
+	if (receivedBytes < BUFFER_SIZE) {
+		_readReady = true;
+		std::cout << "Client " << _client.fd << " complete request received!\n";
+		processRequest();
 	}
 }
 
-void RequestHandler::processRequest() {
-	_request = std::make_unique<HttpRequest>();
 
-	RequestParser::parseRequest(_requestString, *_request.get());
+void RequestHandler::processRequest() {
+	if (!_request)
+		_request = std::make_unique<HttpRequest>();
+
+	if (_isChunked)
+		RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get());
+	else
+		RequestParser::parseRequest(_requestString, *_request.get());
 
 	// TODO Check redirects
 

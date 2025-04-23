@@ -1,8 +1,10 @@
 #include <sstream>
 #include <iostream>
 #include <cctype>
+#include <algorithm>
 #include "RequestParser.hpp"
 #include "HttpRequest.hpp"
+#include "ServerException.hpp"
 
 // Helper function to trim whitespace
 std::string trimWhitespace(const std::string& str)
@@ -80,12 +82,64 @@ bool RequestParser::parseHeaders(const std::string& headers_part, HttpRequest& r
 	return true;
 }
 
-// Function to parse the body (if any)
+std::string RequestParser::parseChunkedBody(const std::string& chunked)
+{
+	std::istringstream stream(chunked);
+	std::string decoded;
+
+	while (true) {
+		std::string sizeLine;
+		if (!std::getline(stream, sizeLine))
+			throw ServerException(STATUS_BAD_REQUEST); // incomplete chunk header
+
+		sizeLine = trimWhitespace(sizeLine);
+		if (sizeLine.empty())
+			continue;
+
+		size_t chunkSize = 0;
+		std::istringstream sizeStream(sizeLine);
+		sizeStream >> std::hex >> chunkSize;
+
+		if (chunkSize == 0)
+			break;
+
+		std::string chunk(chunkSize, '\0');
+		stream.read(&chunk[0], chunkSize);
+
+		if (stream.gcount() != static_cast<std::streamsize>(chunkSize))
+			throw ServerException(STATUS_BAD_REQUEST);
+
+		// validate trailing CRLF
+		char cr, lf;
+		stream.get(cr);
+		stream.get(lf);
+
+		if (cr != '\r' || lf != '\n')
+			throw ServerException(STATUS_BAD_REQUEST);
+
+		decoded += chunk;
+	}
+	return decoded;
+}
+
+
+
 void RequestParser::parseBody(const std::string& body_part, HttpRequest& request)
 {
-	// Currently just storing the body as is
+	auto it = request.headers.find("Transfer-Encoding");
+	if (it != request.headers.end()) {
+		std::string encoding = trimWhitespace(it->second);
+		std::transform(encoding.begin(), encoding.end(), encoding.begin(), ::tolower);
+
+		if (encoding == "chunked") {
+			request.body = parseChunkedBody(body_part);
+			return;
+		}
+	}
+
 	request.body = body_part;
 }
+
 
 // Parses the entire HTTP request string into the HttpRequest object
 bool RequestParser::parseRequest(const std::string& raw_request, HttpRequest& request)
