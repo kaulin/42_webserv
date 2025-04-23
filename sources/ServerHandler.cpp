@@ -298,9 +298,10 @@ void	ServerHandler::pollLoop()
 	}
 }
 
-void	ServerHandler::handleServerException(int statusCode, size_t& fd)
+void	ServerHandler::handleServerException(int statusCode, size_t& i)
 {
-	Client& client = (_clients.find(_pollFds[fd].fd) != _clients.end()) ? *_clients[_pollFds[fd].fd].get() : *_requestFds.at(_pollFds[fd].fd);
+	// Set client from either _clients struct or from requestFds struct.
+	Client& client = (_clients.find(_pollFds[i].fd) != _clients.end()) ? *_clients[_pollFds[i].fd].get() : *_requestFds.at(_pollFds[i].fd);
 	if (client.responseCode == statusCode) {
 		client.requestReady = true;
 		client.resourceOutString = "";
