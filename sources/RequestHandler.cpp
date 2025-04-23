@@ -99,8 +99,8 @@ void RequestHandler::handleRequest() {
 		readRequest();
 	else if (_multipart && ++_partIndex < _parts.size()) {
 		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
-		_client.resourceString = _parts[_partIndex].content;
-		FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
+		_client.resourceOutString = _parts[_partIndex].content;
+		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 	}
 	else
 		_client.requestReady = true;
@@ -226,9 +226,9 @@ void RequestHandler::processMultipartForm() {
 	RequestParser::parseMultipart(boundary, _request.get()->body, _parts);
 	if (_parts.empty())
 		throw ServerException(STATUS_BAD_REQUEST);
-	_client.resourceString = _parts[_partIndex].content;
+	_client.resourceOutString = _parts[_partIndex].content;
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
-	FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
+	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 }
 
 // GETTERS
