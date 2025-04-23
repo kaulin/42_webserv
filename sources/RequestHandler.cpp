@@ -99,6 +99,7 @@ void RequestHandler::processPost() {
 	auto itContentTypeHeader = _request->headers.find("Content-Type");
 	if (itContentTypeHeader == _request->headers.end() || (*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
 		throw ServerException(STATUS_BAD_REQUEST);
+	_client.resourceOutString = _request->body;
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
 	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 }
