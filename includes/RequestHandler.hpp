@@ -27,7 +27,7 @@ class RequestHandler
 		void processGet();
 		void processPost();
 		void processDelete();
-		void searchForChunked();
+		void readHeaders();
 		void readChunkedRequest();
 		bool _isChunked;
 		bool _chunkedBodyStarted;

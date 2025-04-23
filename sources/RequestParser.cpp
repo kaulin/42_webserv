@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "RequestParser.hpp"
 #include "HttpRequest.hpp"
+#include "ServerException.hpp"
 
 // Helper function to trim whitespace
 std::string trimWhitespace(const std::string& str)
@@ -83,36 +84,44 @@ bool RequestParser::parseHeaders(const std::string& headers_part, HttpRequest& r
 
 std::string RequestParser::parseChunkedBody(const std::string& chunked)
 {
-	std::cout << "Raw input to parseChunkedBody:\n" << chunked << std::endl;
-    std::istringstream stream(chunked);
-    std::string decoded, line;
+	std::istringstream stream(chunked);
+	std::string decoded;
 
-    while (std::getline(stream, line)) {
-        std::string trimmed = trimWhitespace(line);
+	while (true) {
+		std::string sizeLine;
+		if (!std::getline(stream, sizeLine))
+			throw ServerException(STATUS_BAD_REQUEST); // incomplete chunk header
 
-        if (trimmed.empty()) continue;
+		sizeLine = trimWhitespace(sizeLine);
+		if (sizeLine.empty())
+			continue;
 
-        size_t chunkSize = 0;
-        std::istringstream sizeStream(trimmed);
-        sizeStream >> std::hex >> chunkSize;
+		size_t chunkSize = 0;
+		std::istringstream sizeStream(sizeLine);
+		sizeStream >> std::hex >> chunkSize;
 
-        std::cout << "Chunk size: " << chunkSize << std::endl;
+		if (chunkSize == 0)
+			break;
 
-        if (chunkSize == 0) {
-            std::cout << "[INFO] End of chunked body detected (size 0)" << std::endl;
-            break;
-        }
+		std::string chunk(chunkSize, '\0');
+		stream.read(&chunk[0], chunkSize);
 
-        std::string chunk(chunkSize, '\0');
-        stream.read(&chunk[0], chunkSize);
-        std::cout << "Chunk data: " << chunk << std::endl;
+		if (stream.gcount() != static_cast<std::streamsize>(chunkSize))
+			throw ServerException(STATUS_BAD_REQUEST);
 
-        decoded += chunk;
-    }
+		// validate trailing CRLF
+		char cr, lf;
+		stream.get(cr);
+		stream.get(lf);
 
-    std::cout << "Final decoded body: " << decoded << std::endl;
-    return decoded;
+		if (cr != '\r' || lf != '\n')
+			throw ServerException(STATUS_BAD_REQUEST);
+
+		decoded += chunk;
+	}
+	return decoded;
 }
+
 
 
 void RequestParser::parseBody(const std::string& body_part, HttpRequest& request)

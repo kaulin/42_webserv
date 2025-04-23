@@ -32,7 +32,7 @@ void RequestHandler::resetHandler() {
 	_expectedChunkSize = 0;
 }
 
-void RequestHandler::searchForChunked()
+void RequestHandler::readHeaders()
 {
 	size_t headersEnd = _requestString.find("\r\n\r\n");
 	if (headersEnd == std::string::npos)
@@ -108,11 +108,13 @@ void RequestHandler::readRequest() {
 	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);
 	if (receivedBytes <= 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
+	if (receivedBytes == 0 && _isChunked && !_readReady)
+		throw ServerException(STATUS_BAD_REQUEST);
 
 	_requestString.append(buf, receivedBytes);
 
 	if (!_headersRead)
-		searchForChunked();
+		readHeaders();
 
 	if (_isChunked) {
 		if (!_request)
