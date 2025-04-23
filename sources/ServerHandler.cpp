@@ -337,10 +337,9 @@ void	ServerHandler::readFromFd(size_t& i) {
 	char buf[BUFFER_SIZE] = {};
 
 	bytesRead = read(client.resourceReadFd, buf, BUFFER_SIZE);
-	if (bytesRead <= 0)
-	addToPollList(client.resourceReadFd, SET_POLLIN);
-	_requestFds.emplace(client.resourceReadFd, &client);
+	if (bytesRead <= 0) {
 		throw ServerException(STATUS_INTERNAL_ERROR);
+	}
 	else {
 		client.resourceInString.append(buf, bytesRead);
 		client.resourceBytesRead += bytesRead;
@@ -349,6 +348,7 @@ void	ServerHandler::readFromFd(size_t& i) {
 		{
 			client.requestReady = true;
 			std::cout << "Client " << client.fd << " resource read from fd " << _pollFds[i].fd << "\n";
+			removeResourceFd(client.resourceReadFd);
 			close(client.resourceReadFd); // remove from pollFds and requestFds
 			client.resourceReadFd = -1;
 		}
@@ -362,8 +362,11 @@ void	ServerHandler::readFromFd(size_t& i) {
 void	ServerHandler::writeToFd(size_t& i) {
 	Client& client = *_requestFds.at(_pollFds[i].fd);
 	size_t bytesWritten;
+	size_t bytesToWrite = client.resourceOutString.size() - client.resourceBytesWritten;
+	if (bytesToWrite > BUFFER_SIZE)
+		bytesToWrite = BUFFER_SIZE;
 
-	bytesWritten = write(client.resourceWriteFd, client.resourceOutString.c_str() + client.resourceBytesWritten, BUFFER_SIZE);
+	bytesWritten = write(client.resourceWriteFd, client.resourceOutString.c_str() + client.resourceBytesWritten, bytesToWrite);
 	if (bytesWritten <= 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	else {
@@ -373,6 +376,7 @@ void	ServerHandler::writeToFd(size_t& i) {
 			client.requestReady = true;
 			client.responseCode = STATUS_CREATED;
 			std::cout << "Client " << client.fd << " resource written to fd " << _pollFds[i].fd << "\n";
+			removeResourceFd(client.resourceWriteFd);
 			close(client.resourceWriteFd); // remove from pollFds and requestFds
 			client.resourceWriteFd = -1;
 		}
