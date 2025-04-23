@@ -299,6 +299,11 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 {
 	// Set client from either _clients struct or from requestFds struct.
 	Client& client = (_clients.find(_pollFds[i].fd) != _clients.end()) ? *_clients[_pollFds[i].fd].get() : *_resourceFds.at(_pollFds[i].fd);
+	if (statusCode == STATUS_DISCONNECTED || statusCode == STATUS_RECV_ERROR || statusCode == STATUS_SEND_ERROR) {
+		// TODO log error
+		closeConnection(i);
+		return;
+	}
 	if (client.responseCode == statusCode) {
 		client.requestReady = true;
 		client.resourceOutString = "";
@@ -312,12 +317,11 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	auto it = client.serverConfig->error_pages.find(statusCode);
 	if (it != client.serverConfig->error_pages.end()) {
 		std::string path = ServerConfigData::getRoot(*client.serverConfig, "/") + it->second;
-		//client.resourceReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
 		try {
 			FileHandler::openForRead(client.resourceReadFd, path);
 			addResourceFd(client);
 		} catch (const ServerException& e) {
-			// log error page missing
+			// TODO log error page missing
 			// proceed with generating error page
 			client.requestReady = true;
 		}
