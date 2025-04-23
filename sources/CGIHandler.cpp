@@ -37,7 +37,12 @@ bool	CGIHandler::readyForExecve(const Client& client)
 	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
 	{
 		auto it = _requests.find(client.fd);
-		if (it->second->status == CGI_EXECVE_READY)
+		if (it->second->postMethod && it->second->status == CGI_EXECVE_READY
+			&& client.resourceWriteFd == -1) // client has written
+		{
+			return true;
+		}
+		else if (!it->second->postMethod && it->second->status == CGI_EXECVE_READY)
 			return true;
 	}
 	return false;
