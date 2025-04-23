@@ -193,10 +193,12 @@ void RequestHandler::processGet() {
 void RequestHandler::processPost() {
 	if (isMultipartForm())
 		processMultipartForm();
-	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
-	// 	throw ServerException(STATUS_BAD_REQUEST);
-	_client.resourceOutString = _request->body;
-	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
+	else {
+		_client.resourceOutString = _request->body;
+		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
+		// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_client.resourcePath))
+		// throw ServerException(STATUS_BAD_REQUEST);
+	}
 	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 }
 
@@ -228,7 +230,6 @@ void RequestHandler::processMultipartForm() {
 		throw ServerException(STATUS_BAD_REQUEST);
 	_client.resourceOutString = _parts[_partIndex].content;
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
-	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 }
 
 // GETTERS
