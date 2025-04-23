@@ -8,22 +8,22 @@
 
 enum CGIStatus {
 	CGI_UNSET,
-	CGI_READY,
+	CGI_EXECVE_READY,
 	CGI_FORKED,
 	CGI_COMPLETE,
 	CGI_ERROR
 };
 
 typedef struct s_CGIrequest {
-	int 						status;
-	int							inPipe[2];
-	int							outPipe[2];
-	pid_t						childPid;
-	std::string					output;
-	std::vector<char*>			argv;
-	std::vector<char*>			envp;
-	std::string					CGIPath;
-	std::string					requestBody;
+	int 				status;
+	bool				postMethod;	
+	int					inPipe[2];
+	int					outPipe[2];
+	pid_t				childPid;
+	std::string			output;
+	std::vector<char*>	argv;
+	std::vector<char*>	envp;
+	std::string			CGIPath;
 } t_CGIrequest;
 
 class CGIHandler {
@@ -36,10 +36,12 @@ private:
 	void						handleParentProcess(Client& client);
 	std::string					setCgiPath(const HttpRequest& request);
 	std::vector<std::string>	setCGIEnv(const HttpRequest& request, const Client& client);
-	void						prepareFds(Client &client);
+	void						setupCGI(Client& client);
+	void						runCGIScript(Client& client);
+	bool						readyForExecve(const Client& client);
 public:
 	CGIHandler();
+	~CGIHandler();
 
-	void	setupCGI(Client& client);
-	void	runCGIScript(Client& client);
+	void	handleCGI(Client& client);
 };

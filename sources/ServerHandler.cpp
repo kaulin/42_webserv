@@ -272,14 +272,12 @@ void	ServerHandler::pollLoop()
 						client.requestHandler->handleRequest();
 						client.lastRequest = std::time(nullptr);
 						if (client.cgiRequested)
-							_CGIHandler.setupCGI(client);
+							_CGIHandler.handleCGI(client);
 						addResourceFd(client);
 					}
 					else if (_pollFds[i].revents & POLLOUT)
 					{
-						if (client.cgiRequested && !client.requestReady)
-							_CGIHandler.runCGIScript(client);
-						else if (client.requestReady)
+						if (client.requestReady)
 						{
 							client.responseHandler->formResponse();
 							client.responseHandler->sendResponse();
@@ -379,6 +377,10 @@ void	ServerHandler::writeToFd(size_t& i) {
 		client.resourceWriteFd = -1;
 		client.resourceBytesWritten = 0;
 		client.requestHandler->handleRequest();
+		if (client.cgiRequested) { // check if POST
+				_CGIHandler.handleCGI(client);
+				addResourceFd(client);
+		}
 		addResourceFd(client);
 	}
 }
