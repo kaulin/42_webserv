@@ -5,6 +5,9 @@
 
 struct HttpRequest
 {
+	bool headersReady;
+	bool bodyReady;
+	size_t bodyStart;
 	std::string method;										// "GET", "POST", "DELETE"
 	std::string uri;										// e.g. "/index.html"
 	std::string uriQuery;									// query string portion of the URI
