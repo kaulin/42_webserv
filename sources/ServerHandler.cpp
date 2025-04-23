@@ -272,7 +272,7 @@ void	ServerHandler::pollLoop()
 						client.requestHandler->handleRequest();
 						client.lastRequest = std::time(nullptr);
 						if (client.cgiRequested)
-							client.resourceWriteFd = _CGIHandler.setupCGI(client);
+							_CGIHandler.setupCGI(client);
 						addResourceFd(client);
 					}
 					else if (_pollFds[i].revents & POLLOUT)
