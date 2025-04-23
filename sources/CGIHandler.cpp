@@ -51,18 +51,18 @@ std::vector<std::string>	CGIHandler::setCGIEnv(const HttpRequest& request, const
 	return strEnv;
 }
 
-int	CGIHandler::setupCGI(Client &client)
+void	CGIHandler::setupCGI(Client &client)
 {
 	const HttpRequest& request = client.requestHandler->getRequest();
 	
 	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
 	{
-		return (-1);
+		return;
 	}
 	if (this->_requests.size() >= 10)
 	{
 		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
-		return (-1);
+		return;
 	}
 	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
 
@@ -78,9 +78,8 @@ int	CGIHandler::setupCGI(Client &client)
 		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
 	}
 
+	// Get current file status flags and add O_NONBLOCK
 	int flags;
-
-	// Get current file status flags and add O_NONBLOCK to the flags
 	if ((flags = fcntl(_requests[client.fd]->inPipe[WRITE], F_GETFL)) == -1)
 	{
 		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
@@ -91,8 +90,7 @@ int	CGIHandler::setupCGI(Client &client)
 	}
 
 	_requests.emplace(client.fd, std::move(cgiInst));
-
-	return (_requests[client.fd]->inPipe[WRITE]);
+	client.fileWriteFd = _requests[client.fd]->inPipe[WRITE];
 }
 
 void CGIHandler::handleParentProcess(Client& client)
@@ -130,7 +128,7 @@ void	CGIHandler::handleChildProcess(Client& client)
 	int inPipe[2] = {cgiRequest.inPipe[0], cgiRequest.inPipe[1]};
 	int outPipe[2] = {cgiRequest.outPipe[0], cgiRequest.outPipe[1]};
 	
-	// Setup STDIN to write the necessary data to inpipe READ --> cgi script
+	// Dup inPipe[READ] to stdin (Client writes request body to other end of pipe) 
 	if (dup2(inPipe[READ], STDIN_FILENO) == -1)
 	{
 		closeFds({clientFd, outPipe[WRITE], outPipe[READ], inPipe[WRITE]});
@@ -138,7 +136,7 @@ void	CGIHandler::handleChildProcess(Client& client)
 	}
 	close(inPipe[WRITE]);
 
-	// Setup STDOUT to write to pipe WRITE end of outpipe
+	// Dup outPipe[WRITE] to STDOUT --> gets set to client read fd
 	if (dup2(outPipe[WRITE], STDOUT_FILENO) == -1)
 	{
 		closeFds({clientFd, outPipe[READ], inPipe[READ], inPipe[WRITE]});
@@ -170,7 +168,6 @@ void	CGIHandler::handleChildProcess(Client& client)
 	envp.emplace_back(nullptr);
 
 	execve(cgiRequest.CGIPath.c_str(), cgiRequest.argv.data(), envp.data());
-
 	perror("Child: Execve failed");
 	std::exit(EXIT_FAILURE);
 }

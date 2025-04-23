@@ -253,7 +253,7 @@ void	ServerHandler::pollLoop()
 	while (!_sigintReceived)
 	{
 		if ((poll_count = poll(_pollFds.data(), _pollFds.size(), -1)) == -1)
-			error_and_exit("Poll failed");
+			throw ServerException(STATUS_INTERNAL_ERROR);
 		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
 			if (!(_pollFds[i].revents & POLLIN) && !(_pollFds[i].revents & POLLOUT))
@@ -278,6 +278,7 @@ void	ServerHandler::pollLoop()
 					else if (_pollFds[i].revents & POLLOUT)
 					{
 						if (client.cgiRequested && !client.requestReady)
+						{
 							_CGIHandler.runCGIScript(client);
 						else if (client.requestReady)
 						{
