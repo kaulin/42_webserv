@@ -278,7 +278,6 @@ void	ServerHandler::pollLoop()
 					else if (_pollFds[i].revents & POLLOUT)
 					{
 						if (client.cgiRequested && !client.requestReady)
-						{
 							_CGIHandler.runCGIScript(client);
 						else if (client.requestReady)
 						{
