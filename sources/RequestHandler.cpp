@@ -112,8 +112,10 @@ void RequestHandler::readRequest() {
 	char buf[BUFFER_SIZE] = {};
 
 	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);
-	if (receivedBytes <= 0)
-		throw ServerException(STATUS_INTERNAL_ERROR);
+	if (receivedBytes == -1)
+		throw ServerException(STATUS_RECV_ERROR);
+	if (receivedBytes == 0)
+		throw ServerException(STATUS_DISCONNECTED);
 	if (receivedBytes == 0 && _isChunked && !_readReady)
 		throw ServerException(STATUS_BAD_REQUEST);
 
