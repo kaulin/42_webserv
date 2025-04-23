@@ -25,6 +25,19 @@ void RequestHandler::resetHandler() {
 	_parts.clear();
 }
 
+void RequestHandler::handleRequest() {
+	if (!_readReady)
+		readRequest();
+	else if (_multipart && ++_partIndex < _parts.size()) {
+		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
+		_client.resourceOutString = _parts[_partIndex].content;
+		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
+	}
+	else
+		_client.requestReady = true;
+	
+}
+
 void RequestHandler::readHeaders()
 {
 	size_t headersEnd = _requestString.find("\r\n\r\n");
@@ -92,19 +105,6 @@ void RequestHandler::readChunkedRequest()
 			_chunkState = READ_SIZE;
 		}
 	}
-}
-
-void RequestHandler::handleRequest() {
-	if (!_readReady)
-		readRequest();
-	else if (_multipart && ++_partIndex < _parts.size()) {
-		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
-		_client.resourceOutString = _parts[_partIndex].content;
-		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
-	}
-	else
-		_client.requestReady = true;
-	
 }
 
 void RequestHandler::readRequest() {
