@@ -84,9 +84,16 @@ void ResponseHandler::formGET() {
 void ResponseHandler::formPOST() {
 	addStatus();
 	addHeader("Date", getTimeStamp());
-	addHeader("Content-Type", "application/json");
-	addHeader("Location", _client.requestHandler->getUri());
-	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully created\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
+	// Add if you want to implement JSON response
+	// addHeader("Content-Type", "application/json");
+	// addHeader("Location", _client.requestHandler->getUri());
+	// std::ostringstream postBodyStream;
+	// if (_client.requestHandler->getMultipartStatus())
+	// 	;
+	// else
+	// 	postBodyStream << "{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully created\",\n  \"resource_id\": " << _client.requestHandler->getUri() << "\n}";
+	// addBody(postBodyStream.str());
+	addBody("");
 }
 
 void ResponseHandler::formDELETE() {
