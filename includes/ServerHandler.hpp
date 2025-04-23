@@ -37,26 +37,28 @@ private:
 	Logger												_consoleLogger;
 	CGIHandler											_CGIHandler;
 	static void	resetClient(Client& client);
+	static void	signalHandler(int);
 	void		readFromFd(size_t& i);
 	void		writeToFd(size_t& i);
+	void		addResourceFd(Client& client);
+	void		removeResourceFd(int fd);
 	void		addToPollList(int fd, PollType pollType);
 	void		removeFromPollList(int fd);
+	void		pollLoop();
+	void		setPollList();
+	void		error_and_exit(const char *msg);
+	void		addConnection(size_t& i);
+	void		closeConnection(size_t& i);
+	void		checkClient(size_t& i);
+	bool		checkTimeout(const Client& client);
+	void		handleServerException(int statusCode, size_t& fd);
 public:
 	ServerHandler(std::string path);
 	~ServerHandler();
 
 	void		runServers();
 	void		setupServers();
-	void		pollLoop();
-	void		setPollList();
-	void		error_and_exit(const char *msg);
-	void		addConnection(size_t& i);
-	void		checkClient(size_t& i);
-	void		closeConnection(size_t& i);
-	bool		checkTimeout(const Client& client);
-	void		handleServerException(int statusCode, size_t& fd);
 	
-	static void	signalHandler(int);
 
 	// Helper functions for debugging
 	// void	*get_in_addr(struct sockaddr *sa);
