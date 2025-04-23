@@ -301,11 +301,17 @@ void	ServerHandler::pollLoop()
 void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 {
 	Client& client = (_clients.find(_pollFds[fd].fd) != _clients.end()) ? *_clients[_pollFds[fd].fd].get() : *_requestFds.at(_pollFds[fd].fd);
+	if (client.responseCode == statusCode) {
+		client.requestReady = true;
+		client.resourceOutString = "";
+		return;
+	}
 	client.responseCode = statusCode;
 	client.responseReady = false;
 	client.resourceOutString = "";
 	if (client.resourceReadFd != -1) {
-		close(client.resourceReadFd); // TODO: need to also remove from poll list and _resourceFds
+		removeResourceFd(client.resourceReadFd);
+		close(client.resourceReadFd);
 		client.resourceReadFd = -1;
 	}
 	auto it = client.serverConfig->error_pages.find(statusCode);
@@ -314,8 +320,7 @@ void	ServerHandler::handleServerException(int statusCode, size_t& fd)
 		//client.resourceReadFd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
 		try {
 			FileHandler::openForRead(client.resourceReadFd, path);
-			addToPollList(client.resourceReadFd, SET_POLLIN);
-			_requestFds.emplace(client.resourceReadFd, &client);
+			addResourceFd(client);
 		} catch (const ServerException& e) {
 			// log error page missing
 			// proceed with generating error page
