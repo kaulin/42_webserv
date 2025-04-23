@@ -186,6 +186,28 @@ void ServerHandler::addToPollList(int fd, PollType pollType)
 	std::cout << "Added " << new_pollfd.fd << " to poll list\n";
 }
 
+void ServerHandler::addResourceFd(Client& client) {
+	// ADD RESOURCES OR PIPES TO POLL LOOP
+	if (client.resourceReadFd != -1)
+	{
+		addToPollList(client.resourceReadFd, SET_POLLIN);
+		_requestFds.emplace(client.resourceReadFd, &client);
+	}
+	if (client.resourceWriteFd != -1)
+	{
+		addToPollList(client.resourceWriteFd, SET_POLLOUT);
+		_requestFds.emplace(client.resourceWriteFd, &client);
+	}
+}
+
+void ServerHandler::removeResourceFd(int fd) {
+	if (fd != -1) {
+		removeFromPollList(fd);
+		close(fd);
+	}
+	_requestFds.erase(fd);
+}
+
 void ServerHandler::addConnection(size_t& i) {
 	int clientFd;
 	socklen_t addrlen;
