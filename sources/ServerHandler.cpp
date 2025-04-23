@@ -277,9 +277,7 @@ void	ServerHandler::pollLoop()
 					}
 					else if (_pollFds[i].revents & POLLOUT)
 					{
-						if (client.cgiRequested && !client.requestReady)
-							_CGIHandler.runCGIScript(client);
-						else if (client.requestReady)
+						if (client.requestReady)
 						{
 							client.responseHandler->formResponse();
 							client.responseHandler->sendResponse();
@@ -382,7 +380,6 @@ void	ServerHandler::writeToFd(size_t& i) {
 		client.requestHandler->handleRequest();
 		if (client.cgiRequested) {
 				_CGIHandler.handleCGI(client);
-				addResourceFd(client);
 		}
 		addResourceFd(client);
 	}
