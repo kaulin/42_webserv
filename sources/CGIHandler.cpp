@@ -120,18 +120,16 @@ void CGIHandler::handleParentProcess(Client& client)
 
 void	CGIHandler::handleChildProcess(Client& client)
 {
-	int clientFd = client.fd;
-
+	t_CGIrequest cgiRequest = *_requests[client.fd];
 	std::vector<std::string> cgiStrEnv = setCGIEnv(client.requestHandler->getRequest(), client);
-
-	t_CGIrequest cgiRequest = *_requests[clientFd];
+	
 	int inPipe[2] = {cgiRequest.inPipe[0], cgiRequest.inPipe[1]};
 	int outPipe[2] = {cgiRequest.outPipe[0], cgiRequest.outPipe[1]};
 	
 	// Dup inPipe[READ] to stdin (Client writes request body to other end of pipe) 
 	if (dup2(inPipe[READ], STDIN_FILENO) == -1)
 	{
-		closeFds({clientFd, outPipe[WRITE], outPipe[READ], inPipe[WRITE]});
+		closeFds({client.fd, outPipe[WRITE], outPipe[READ], inPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
 	close(inPipe[WRITE]);
@@ -139,7 +137,7 @@ void	CGIHandler::handleChildProcess(Client& client)
 	// Dup outPipe[WRITE] to STDOUT --> gets set to client read fd
 	if (dup2(outPipe[WRITE], STDOUT_FILENO) == -1)
 	{
-		closeFds({clientFd, outPipe[READ], inPipe[READ], inPipe[WRITE]});
+		closeFds({client.fd, outPipe[READ], inPipe[READ], inPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
 	close(outPipe[READ]);
@@ -149,13 +147,13 @@ void	CGIHandler::handleChildProcess(Client& client)
 	if (stat(cgiRequest.CGIPath.c_str(), &buff) != 0)
 	{
 		perror("Child: File not found");
-		closeFds({clientFd, inPipe[READ], outPipe[WRITE]});
+		closeFds({client.fd, inPipe[READ], outPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
 	if (!(buff.st_mode & S_IXUSR))
 	{
 		perror("Child: File is not executable");
-		closeFds({clientFd, inPipe[READ], outPipe[WRITE]});
+		closeFds({client.fd, inPipe[READ], outPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
 

@@ -40,6 +40,6 @@ private:
 public:
 	CGIHandler();
 
-	int		setupCGI(Client& client);
+	void	setupCGI(Client& client);
 	void	runCGIScript(Client& client);
 };
