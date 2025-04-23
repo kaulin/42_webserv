@@ -116,7 +116,7 @@ void CGIHandler::handleParentProcess(Client& client)
 	}
 	close(inPipe[WRITE]);
 
-	client.fileReadFd = dup(outPipe[READ]); // Dup read end to client
+	client.resourceReadFd = dup(outPipe[READ]); // Dup read end to client
 	close(outPipe[READ]); // Close dupped read end
 }
 

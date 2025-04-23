@@ -91,7 +91,7 @@ void RequestHandler::processGet() {
 	// if (itAcceptHeader != _request->headers.end() && (*itAcceptHeader).second.find(FileHandler::getMIMEType(_request->uriPath)) == std::string::npos)
 	// 	throw ServerException(STATUS_NOT_ACCEPTABLE);
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, path) + path;
-	FileHandler::openForRead(_client.fileReadFd, _client.resourcePath);
+	FileHandler::openForRead(_client.resourceReadFd, _client.resourcePath);
 }
 
 void RequestHandler::processPost() {
@@ -99,8 +99,9 @@ void RequestHandler::processPost() {
 	auto itContentTypeHeader = _request->headers.find("Content-Type");
 	if (itContentTypeHeader == _request->headers.end() || (*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
 		throw ServerException(STATUS_BAD_REQUEST);
+	_client.resourceOutString = _request->body;
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
-	FileHandler::openForWrite( _client.fileWriteFd, _client.resourcePath);
+	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 }
 
 void RequestHandler::processDelete() {
