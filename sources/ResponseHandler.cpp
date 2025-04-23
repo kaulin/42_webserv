@@ -22,7 +22,7 @@ void ResponseHandler::sendResponse() {
 	_response->response.erase(0, bytesSent);
 	if (bytesSent == leftToSend)
 	{
-		std::cout << "Client " << _client.fd << " response sent!\n" << "\n";
+		std::cout << "Client " << _client.fd << " response sent!\n";
 		_client.responseSent = true;
 	}
 	else

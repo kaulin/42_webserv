@@ -8,17 +8,7 @@
 #include "RequestParser.hpp"
 #include "ServerException.hpp"
 
-RequestHandler::RequestHandler(Client& client) : 
-	_client(client),
-	_requestString(""),
-	_headersRead(false),
-	_readReady(false),
-	_isChunked(false),
-	_chunkedBodyStarted(false),
-	_chunkState(READ_SIZE),
-	_expectedChunkSize(0)
-
-	{}
+RequestHandler::RequestHandler(Client& client) : _client(client) { resetHandler(); }
 
 RequestHandler::~RequestHandler() {}
 
@@ -30,6 +20,22 @@ void RequestHandler::resetHandler() {
 	_chunkedBodyStarted = false;
 	_chunkState = READ_SIZE;
 	_expectedChunkSize = 0;
+	_multipart = false;
+	_partIndex = 0;
+	_parts.clear();
+}
+
+void RequestHandler::handleRequest() {
+	if (!_readReady)
+		readRequest();
+	else if (_multipart && ++_partIndex < _parts.size()) {
+		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
+		_client.resourceOutString = _parts[_partIndex].content;
+		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
+	}
+	else
+		_client.requestReady = true;
+	
 }
 
 void RequestHandler::readHeaders()
@@ -142,7 +148,6 @@ void RequestHandler::processRequest() {
 
 	// TODO Check redirects
 
-	std::cout << "Client " << _client.fd << " request method " << _request->method << " and URI: " << _request->uri << "\n";
 	if (!ServerConfigData::checkMethod(*_client.serverConfig, _request->method, _request->uriPath))
 		throw ServerException(STATUS_NOT_ALLOWED);
 	if (_request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
@@ -186,10 +191,10 @@ void RequestHandler::processGet() {
 }
 
 void RequestHandler::processPost() {
-	// Check if requested resource file type matches with Content-Type header
-	auto itContentTypeHeader = _request->headers.find("Content-Type");
-	if (itContentTypeHeader == _request->headers.end() || (*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
-		throw ServerException(STATUS_BAD_REQUEST);
+	if (isMultipartForm())
+		processMultipartForm();
+	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
+	// 	throw ServerException(STATUS_BAD_REQUEST);
 	_client.resourceOutString = _request->body;
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
 	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
@@ -205,6 +210,27 @@ void RequestHandler::processDelete() {
 	_client.requestReady = true;
 }
 
+bool RequestHandler::isMultipartForm() const {
+	if (_request->headers.at("Content-Type").find("multipart/form-data") == 0)
+		return true;
+	return false;
+}
+
+void RequestHandler::processMultipartForm() {
+	std::string type = _request->headers.at("Content-Type");
+	std::string prefix = "multipart/form-data; boundary=";
+	if (type.find(prefix) == std::string::npos)
+		throw ServerException(STATUS_BAD_REQUEST);
+	std::string boundary = type.substr(prefix.size());
+
+	RequestParser::parseMultipart(boundary, _request.get()->body, _parts);
+	if (_parts.empty())
+		throw ServerException(STATUS_BAD_REQUEST);
+	_client.resourceOutString = _parts[_partIndex].content;
+	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
+	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
+}
+
 // GETTERS
 const HttpRequest& RequestHandler::getRequest() const { return *_request; }
 const std::string& RequestHandler::getMethod() const { return _request->method; }
@@ -213,3 +239,5 @@ const std::string& RequestHandler::getUriQuery() const { return _request->uriQue
 const std::string& RequestHandler::getUriPath() const { return _request->uriPath; }
 const std::string& RequestHandler::getHttpVersion() const { return _request->httpVersion; }
 const std::string& RequestHandler::getBody() const { return _request->body; }
+const std::vector <MultipartFormData>& RequestHandler::getParts() const { return _parts; }
+
