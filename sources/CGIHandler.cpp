@@ -154,7 +154,7 @@ void	CGIHandler::handleChildProcess(Client& client)
 	// Dup inPipe[READ] to stdin (Client writes request body to other end of pipe) 
 	if (dup2(inPipe[READ], STDIN_FILENO) == -1)
 	{
-		closeFds({clientFd, outPipe[WRITE], outPipe[READ], inPipe[WRITE]});
+		closeFds({client.fd, outPipe[WRITE], outPipe[READ], inPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
 	close(inPipe[WRITE]);
