@@ -13,20 +13,22 @@ ResponseHandler::~ResponseHandler() {}
 void ResponseHandler::sendResponse() {
 	if (!_client.responseReady)
 		return;
-	size_t bytesSent;
-	size_t leftToSend = _response->response.size();
+	int bytesSent;
+	size_t toSend = _response->response.size() - _totalBytesSent;
+	if (toSend > BUFFER_SIZE)
+		toSend = BUFFER_SIZE;
 
-	bytesSent= send(_client.fd, _response->response.c_str(), leftToSend, MSG_NOSIGNAL);
-	if (bytesSent <= 0)
-		throw SendError();
-	_response->response.erase(0, bytesSent);
-	if (bytesSent == leftToSend)
+	bytesSent= send(_client.fd, _response->response.c_str() + _totalBytesSent, toSend, MSG_NOSIGNAL);
+	if (bytesSent == -1)
+		throw ServerException(STATUS_SEND_ERROR);
+	if (bytesSent == 0)
+		throw ServerException(STATUS_DISCONNECTED);
+	_totalBytesSent += bytesSent;
+	if (_totalBytesSent == _response->response.size())
 	{
 		std::cout << "Client " << _client.fd << " response sent!\n";
 		_client.responseSent = true;
 	}
-	else
-		std::cout << "Client [" << _client.fd << "] sent " << bytesSent << " bytes, continuing...\n";
 }
 
 /*
@@ -200,8 +202,4 @@ std::string ResponseHandler::getTimeStamp()
 	std::ostringstream timeStream;
 	timeStream << std::put_time(&tm, "%a, %d %b %Y %H:%M:%S %Z");
 	return timeStream.str();
-}
-
-const char* ResponseHandler::SendError::what() const noexcept {
-	return "Send Failed";
 }

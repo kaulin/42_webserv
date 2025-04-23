@@ -20,6 +20,7 @@ class ResponseHandler
 {
 private:
 	Client& _client;
+	size_t _totalBytesSent;
 	std::unique_ptr<HttpResponse> _response;
 	void formGET();
 	void formPOST();
@@ -38,10 +39,5 @@ public:
 	~ResponseHandler();
 	void sendResponse();
 	void formResponse();
-	
-	class SendError : public std::exception {
-		public:
-			const char* what() const noexcept;
-	};
 };
 
