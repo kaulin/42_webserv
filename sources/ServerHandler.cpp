@@ -215,8 +215,10 @@ void ServerHandler::addConnection(size_t& i) {
 		clientFd = accept(_pollFds[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
 		if (clientFd == -1)
 			throw ServerException(STATUS_INTERNAL_ERROR);
-		if (fcntl(clientFd, F_SETFL, O_NONBLOCK))
+		if (fcntl(clientFd, F_SETFL, O_NONBLOCK) == -1) {
+			close(clientFd);
 			throw ServerException(STATUS_INTERNAL_ERROR);
+		}
 		addToPollList(clientFd, SET_POLLBOTH);
 		_clients[clientFd] = std::make_unique<Client>();
 		Client& client = *_clients[clientFd].get();
@@ -229,7 +231,7 @@ void ServerHandler::addConnection(size_t& i) {
 		resetClient(client);
 		std::cout << "Client connected to server " << _servers.at(i)->getServerConfig()->port << " with fd " << client.fd << "\n";
 	} catch (const ServerException& e) {
-		// these should be logged, no response can be made, as there is no connection
+		// TODO these should be logged, no response can be made, as there is no connection
 		return;
 	}
 }
