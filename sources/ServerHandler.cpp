@@ -128,16 +128,15 @@ bool ServerHandler::checkTimeout(const Client& client)
 
 void ServerHandler::closeConnection(size_t& i) 
 {
+	Client& client = *_clients[_pollFds[i].fd].get();
 	int clientFd = _pollFds[i].fd;
-
-	for (const auto& it : _requestFds)
+	auto it = _requestFds.begin();
+	while (it != _requestFds.end())
 	{
-		if (it.second->fd == clientFd)
-		{
-			removeFromPollList(it.first);
-			close(it.first);
-			// _requestFds.erase(it.first);
-		}
+		if (it->second == &client)
+			removeResourceFd(it->first);
+		else
+			++it;
 	}
 	std::cout << "Client " << _pollFds[i].fd << " disconnected.\n";
 	_pollFds.erase(_pollFds.begin() + i);
@@ -248,6 +247,8 @@ void	ServerHandler::pollLoop()
 			error_and_exit("Poll failed");
 		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
+			if (!(_pollFds[i].revents & POLLIN) && !(_pollFds[i].revents & POLLOUT))
+				continue;
 			try {
 				// Servers
 				if (i < _serverCount) {
@@ -265,18 +266,7 @@ void	ServerHandler::pollLoop()
 						client.lastRequest = std::time(nullptr);
 						if (client.cgiRequested)
 							client.resourceWriteFd = _CGIHandler.setupCGI(client);
-
-						// ADD RESOURCES OR PIPES TO POLL LOOP
-						if (client.resourceReadFd > 0)
-						{
-							addToPollList(client.resourceReadFd, SET_POLLIN);
-							_requestFds.emplace(client.resourceReadFd, &client);
-						}
-						if (client.resourceWriteFd > 0)
-						{
-							addToPollList(client.resourceWriteFd, SET_POLLOUT);
-							_requestFds.emplace(client.resourceWriteFd, &client);
-						}
+						addResourceFd(client);
 					}
 					else if (_pollFds[i].revents & POLLOUT)
 					{
