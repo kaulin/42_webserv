@@ -81,6 +81,48 @@ std::vector<std::string>	CGIHandler::setCGIEnv(const HttpRequest& request, const
 	return strEnv;
 }
 
+void	CGIHandler::setupCGI(Client &client)
+{
+	const HttpRequest& request = client.requestHandler->getRequest();
+	
+	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
+	{
+		return;
+	}
+	if (this->_requests.size() >= 10)
+	{
+		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
+		return;
+	}
+	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
+
+	cgiInst->CGIPath = setCgiPath(request);
+	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
+	cgiInst->argv.emplace_back(nullptr);
+	cgiInst->requestBody = request.body;
+	cgiInst->status = CGI_READY;
+
+	// Prepare pipes
+	if (pipe(_requests[client.fd]->inPipe) < 0 || pipe(_requests[client.fd]->outPipe))
+	{
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	}
+
+	// Get current file status flags and add O_NONBLOCK
+	int flags;
+	if ((flags = fcntl(_requests[client.fd]->inPipe[WRITE], F_GETFL)) == -1)
+	{
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	}
+	if (fcntl(_requests[client.fd]->inPipe[WRITE], F_SETFL, flags | O_NONBLOCK) == -1) 
+	{
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	}
+
+	_requests.emplace(client.fd, std::move(cgiInst));
+	client.fileWriteFd = _requests[client.fd]->inPipe[WRITE];
+}
+
 void CGIHandler::handleParentProcess(Client& client)
 {
 	t_CGIrequest cgiRequest = *_requests[client.fd];
@@ -109,18 +151,15 @@ void	CGIHandler::handleChildProcess(Client& client)
 	int inPipe[2] = {cgiRequest.inPipe[0], cgiRequest.inPipe[1]};
 	int outPipe[2] = {cgiRequest.outPipe[0], cgiRequest.outPipe[1]};
 	
-	if (cgiRequest.postMethod)
+	// Dup inPipe[READ] to stdin (Client writes request body to other end of pipe) 
+	if (dup2(inPipe[READ], STDIN_FILENO) == -1)
 	{
-		// Dup inPipe[READ] to stdin (Client writes request body to other end of pipe) 
-		if (dup2(inPipe[READ], STDIN_FILENO) == -1)
-		{
-			closeFds({client.fd, outPipe[WRITE], outPipe[READ], inPipe[WRITE]});
-			std::exit(EXIT_FAILURE);
-		}
-		close(inPipe[WRITE]);
+		closeFds({clientFd, outPipe[WRITE], outPipe[READ], inPipe[WRITE]});
+		std::exit(EXIT_FAILURE);
 	}
+	close(inPipe[WRITE]);
 
-	// Dup outPipe[WRITE] to STDOUT -> outPipe[READ] set to client readFd in parent process
+	// Dup outPipe[WRITE] to STDOUT --> gets set to client read fd
 	if (dup2(outPipe[WRITE], STDOUT_FILENO) == -1)
 	{
 		closeFds({client.fd, outPipe[READ], inPipe[READ], inPipe[WRITE]});
