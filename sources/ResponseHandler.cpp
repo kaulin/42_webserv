@@ -5,10 +5,14 @@
 #include "ServerException.hpp"
 
 // Constructor
-ResponseHandler::ResponseHandler(Client& client) : _client(client) {}
+ResponseHandler::ResponseHandler(Client& client) : _client(client), _totalBytesSent(0) {}
 
 // Deconstructor
 ResponseHandler::~ResponseHandler() {}
+
+void ResponseHandler::resetHandler() {
+	_totalBytesSent = 0;
+}
 
 void ResponseHandler::sendResponse() {
 	if (!_client.responseReady)

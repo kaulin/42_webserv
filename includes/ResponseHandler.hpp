@@ -37,6 +37,7 @@ private:
 public:
 	ResponseHandler(Client& client);
 	~ResponseHandler();
+	void resetHandler();
 	void sendResponse();
 	void formResponse();
 };

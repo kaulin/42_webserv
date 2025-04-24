@@ -102,6 +102,7 @@ void ServerHandler::resetClient(Client& client) {
 	client.responseSent = false;
 	client.responseCode = STATUS_OK;
 	client.requestHandler->resetHandler();
+	client.responseHandler->resetHandler();
 }
 
 void ServerHandler::removeFromPollList(int fdToRemove)
