@@ -33,7 +33,6 @@ private:
 	std::unordered_map<int, Client*>					_resourceFds;
 	std::vector<struct pollfd>							_pollFds;
 	ServerConfigData									_config;
-	Logger												_fileLogger;
 	Logger												_consoleLogger;
 	CGIHandler											_CGIHandler;
 	static void	resetClient(Client& client);
