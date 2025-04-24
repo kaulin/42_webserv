@@ -12,7 +12,14 @@
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
-std::vector<std::unique_ptr<HttpServer>> ServerHandler::_servers;
+bool ServerHandler::_sigintReceived = false;
+
+void	ServerHandler::signalHandler(int signal) 
+{
+	(void)signal;
+	std::cout << "SIGINT received, shutting down servers...\n"; // TODO log sigint received
+	_sigintReceived = true;
+}
 
 ServerHandler::ServerHandler(std::string path) : 
 	_config(ServerConfigData(path)), _fileLogger("test_log.txt"), _consoleLogger(std::cout),
@@ -22,7 +29,6 @@ ServerHandler::ServerHandler(std::string path) :
 	_servers.reserve(_serverCount);
 	_ports.reserve(_serverCount);
 	_pollFds.reserve(_serverCount); // reserves space for ports
-	_running = false;
 
 	std::cout << "Constructor Size of pollfd list: " << _pollFds.capacity() << "\n";
 }
@@ -30,7 +36,7 @@ ServerHandler::ServerHandler(std::string path) :
 ServerHandler::~ServerHandler() 
 {
 	_servers.clear();
-	_pollFds.clear();
+	_pollFds.clear(); 
 
 	std::cout << "Servers closed down\n";
 }
@@ -102,6 +108,7 @@ void ServerHandler::resetClient(Client& client) {
 	client.responseSent = false;
 	client.responseCode = STATUS_OK;
 	client.requestHandler->resetHandler();
+	client.responseHandler->resetHandler();
 }
 
 void ServerHandler::removeFromPollList(int fdToRemove)
@@ -240,8 +247,10 @@ void	ServerHandler::pollLoop()
 {
 	int	poll_count;
 
+	std::signal(SIGINT, ServerHandler::signalHandler);
+	std::signal(SIGPIPE, SIG_IGN);
 	setPollList();
-	while (_running)
+	while (!_sigintReceived)
 	{
 		if ((poll_count = poll(_pollFds.data(), _pollFds.size(), -1)) == -1)
 			error_and_exit("Poll failed");
@@ -293,6 +302,9 @@ void	ServerHandler::pollLoop()
 			}
 		}
 	}
+	//
+	for (pollfd p : _pollFds)
+		close(p.fd);
 }
 
 void	ServerHandler::handleServerException(int statusCode, size_t& i)
@@ -383,19 +395,10 @@ void	ServerHandler::writeToFd(size_t& i) {
 	}
 }
 
-void	ServerHandler::signalHandler(int signal) 
-{
-	// handle shutdown
-	std::cout << " Ctrl + C signal received, shutting down\n";
-	_servers.clear();
-	exit(signal);
-}
-
 void	ServerHandler::runServers()
 {
-	std::signal(SIGINT, ServerHandler::signalHandler);
-	std::signal(SIGPIPE, SIG_IGN);
-
-	_running = true;
 	pollLoop();
+	_resourceFds.clear();
+	_clients.clear();
+	_servers.clear();
 }
