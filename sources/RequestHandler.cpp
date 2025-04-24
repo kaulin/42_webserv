@@ -48,9 +48,11 @@ void RequestHandler::readHeaders()
 
 	_headersRead = true;
 	_headerPart = _requestString.substr(0, headersEnd + 4);
-	_request->headersReady = true;
-	if (!RequestParser::parseRequest(_headerPart, *_request))
-		throw ServerException(STATUS_BAD_REQUEST);
+	if (_headersRead)
+	{
+		if (!RequestParser::parseRequest(_headerPart, *_request))
+			throw ServerException(STATUS_BAD_REQUEST);
+	}
 
 	std::string headerLower = _headerPart;
 	std::transform(headerLower.begin(), headerLower.end(), headerLower.begin(), ::tolower);
@@ -84,7 +86,6 @@ void RequestHandler::handleChunkedRequest()
 
 			if (_expectedChunkSize == 0) {
 				_readReady = true;
-				_request->bodyReady = true;
 				processRequest();
 				return;
 			}
@@ -140,7 +141,6 @@ void RequestHandler::readRequest() {
 	if (receivedBytes < BUFFER_SIZE) {
 		_readReady = true;
 		std::cout << "Client " << _client.fd << " complete request received!\n";
-		_request->bodyReady = true;
 		processRequest();
 	}
 }

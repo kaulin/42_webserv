@@ -145,7 +145,7 @@ void RequestParser::parseBody(const std::string& body_part, HttpRequest& request
 // Parses the entire HTTP request string into the HttpRequest object
 bool RequestParser::parseRequest(const std::string& raw_request, HttpRequest& request)
 {
-	if (request.headersReady)
+	if (!request.headersReady)
 	{
 		// Split the raw request into request line, headers, and body
 		size_t pos = raw_request.find("\r\n");  // Find the first line break (request line)
@@ -166,9 +166,10 @@ bool RequestParser::parseRequest(const std::string& raw_request, HttpRequest& re
 		std::string headers_part = raw_request.substr(headers_start, headers_end - headers_start);
 		if (!parseHeaders(headers_part, request))
 			return false;
+		request.headersReady = true;
 	}
 
-	if (request.bodyReady)
+	else
 	{
 		// The body is the remaining part after headers
 		if (request.bodyStart < raw_request.size())
@@ -176,6 +177,7 @@ bool RequestParser::parseRequest(const std::string& raw_request, HttpRequest& re
 			std::string body_part = raw_request.substr(request.bodyStart);
 			parseBody(body_part, request);
 		}
+		request.bodyReady = true;
 	}
 	return true;
 }
