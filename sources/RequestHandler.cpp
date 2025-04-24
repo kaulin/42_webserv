@@ -147,7 +147,7 @@ void RequestHandler::processRequest() {
 			throw ServerException(STATUS_BAD_REQUEST);
 	}
 	else {
-		if (!RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get()))
+		if (!RequestParser::parseRequest(_requestString, *_request.get()))
 			throw ServerException(STATUS_BAD_REQUEST);
 	}
 
