@@ -208,9 +208,11 @@ void RequestHandler::processPost() {
 		processMultipartForm();
 	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
 	// 	throw ServerException(STATUS_BAD_REQUEST);
-	_client.resourceOutString = _request->body;
-	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
-	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
+	else {
+		_client.resourceOutString = _request->body;
+		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
+		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
+	}
 }
 
 void RequestHandler::processDelete() {
@@ -230,6 +232,7 @@ bool RequestHandler::isMultipartForm() const {
 }
 
 void RequestHandler::processMultipartForm() {
+	_multipart = true;
 	std::string type = _request->headers.at("Content-Type");
 	std::string prefix = "multipart/form-data; boundary=";
 	if (type.find(prefix) == std::string::npos)

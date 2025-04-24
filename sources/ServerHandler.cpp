@@ -360,6 +360,7 @@ void	ServerHandler::readFromFd(size_t& i) {
 			client.requestReady = true;
 			std::cout << "Client " << client.fd << " resource read from fd " << _pollFds[i].fd << "\n";
 			removeResourceFd(client.resourceReadFd);
+			client.resourceReadFd = -1;
 		}
 		else
 		{
@@ -382,11 +383,12 @@ void	ServerHandler::writeToFd(size_t& i) {
 		client.resourceBytesWritten += bytesWritten;
 		if (client.resourceBytesWritten == client.resourceOutString.size())
 		{
-			client.requestReady = true;
 			client.responseCode = STATUS_CREATED;
 			std::cout << "Client " << client.fd << " resource written to fd " << _pollFds[i].fd << "\n";
 			removeResourceFd(client.resourceWriteFd);
+			client.resourceWriteFd = -1;
 			client.requestHandler->handleRequest();
+			addResourceFd(client);
 		}
 		else
 		{
