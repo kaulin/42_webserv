@@ -27,7 +27,8 @@ void RequestHandler::resetHandler() {
 }
 
 void RequestHandler::handleRequest() {
-	_request = std::make_unique<HttpRequest>();
+	if (!_request)
+		_request = std::make_unique<HttpRequest>();
 	if (!_readReady)
 		readRequest();
 	else if (_multipart && ++_partIndex < _parts.size()) {
