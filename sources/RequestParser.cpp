@@ -222,7 +222,7 @@ void RequestParser::parseMultipart(const std::string& boundary, const std::strin
 	std::string delimiter = "--" + boundary;
 	size_t pos = 0, next;
 	while ((next = body.find(delimiter, pos)) != std::string::npos) {
-		size_t end = body.find(delimiter, next + delimiter.length());
+		size_t end = body.find("\r\n" + delimiter, next + delimiter.length());
 		if (end == std::string::npos)
 			break;
 		std::string partString = body.substr(next + delimiter.length(), end - next - delimiter.length());
