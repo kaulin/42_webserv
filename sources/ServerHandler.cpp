@@ -312,7 +312,6 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	// Set client from either _clients struct or from requestFds struct.
 	Client& client = (_clients.find(_pollFds[i].fd) != _clients.end()) ? *_clients[_pollFds[i].fd].get() : *_resourceFds.at(_pollFds[i].fd);
 	if (statusCode == STATUS_DISCONNECTED || statusCode == STATUS_RECV_ERROR || statusCode == STATUS_SEND_ERROR) {
-		// TODO log error
 		closeConnection(i);
 		return;
 	}
@@ -348,23 +347,16 @@ void	ServerHandler::readFromFd(size_t& i) {
 	char buf[BUFFER_SIZE] = {};
 
 	bytesRead = read(client.resourceReadFd, buf, BUFFER_SIZE);
-	if (bytesRead <= 0) {
+	if (bytesRead <= 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
-	}
-	else {
-		client.resourceInString.append(buf, bytesRead);
-		client.resourceBytesRead += bytesRead;
-		// std::cout << "Total bytes read: " << client.resourceBytesRead << "\n";
-		if (bytesRead < BUFFER_SIZE)
-		{
-			client.requestReady = true;
-			std::cout << "Client " << client.fd << " resource read from fd " << _pollFds[i].fd << "\n";
-			removeResourceFd(client.resourceReadFd);
-		}
-		else
-		{
-			std::cout << "Client " << client.fd << " read " << bytesRead << " bytes from fd " << _pollFds[i].fd << ", continuing...\n";
-		}
+	client.resourceInString.append(buf, bytesRead);
+	client.resourceBytesRead += bytesRead;
+	if (bytesRead < BUFFER_SIZE)
+	{
+		client.requestReady = true;
+		std::cout << "Client " << client.fd << " resource read from fd " << _pollFds[i].fd << "\n";
+		removeResourceFd(client.resourceReadFd);
+		client.resourceReadFd = -1;
 	}
 }
 
@@ -376,22 +368,18 @@ void	ServerHandler::writeToFd(size_t& i) {
 		bytesToWrite = BUFFER_SIZE;
 
 	bytesWritten = write(client.resourceWriteFd, client.resourceOutString.c_str() + client.resourceBytesWritten, bytesToWrite);
-	if (bytesWritten <= 0)
+	if (bytesWritten <= 0 && bytesToWrite != 0)
 		throw ServerException(STATUS_INTERNAL_ERROR);
-	else {
-		client.resourceBytesWritten += bytesWritten;
-		if (client.resourceBytesWritten == client.resourceOutString.size())
-		{
-			client.requestReady = true;
-			client.responseCode = STATUS_CREATED;
-			std::cout << "Client " << client.fd << " resource written to fd " << _pollFds[i].fd << "\n";
-			removeResourceFd(client.resourceWriteFd);
-			client.requestHandler->handleRequest();
-		}
-		else
-		{
-			std::cout << "Client " << client.fd << " wrote " << bytesWritten << " bytes to fd " << _pollFds[i].fd << ", continuing...\n";
-		}
+	client.resourceBytesWritten += bytesWritten;
+	if (client.resourceBytesWritten == client.resourceOutString.size())
+	{
+		client.responseCode = STATUS_CREATED;
+		std::cout << "Client " << client.fd << " resource written to fd " << _pollFds[i].fd << "\n";
+		removeResourceFd(client.resourceWriteFd);
+		client.resourceWriteFd = -1;
+		client.resourceBytesWritten = 0;
+		client.requestHandler->handleRequest();
+		addResourceFd(client);
 	}
 }
 

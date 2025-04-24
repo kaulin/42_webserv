@@ -27,7 +27,8 @@ void RequestHandler::resetHandler() {
 }
 
 void RequestHandler::handleRequest() {
-	_request = std::make_unique<HttpRequest>();
+	if (!_request)
+		_request = std::make_unique<HttpRequest>();
 	if (!_readReady)
 		readRequest();
 	else if (_multipart && ++_partIndex < _parts.size()) {
@@ -48,11 +49,8 @@ void RequestHandler::readHeaders()
 
 	_headersRead = true;
 	_headerPart = _requestString.substr(0, headersEnd + 4);
-	if (_headersRead)
-	{
-		if (!RequestParser::parseRequest(_headerPart, *_request))
-			throw ServerException(STATUS_BAD_REQUEST);
-	}
+	if (!RequestParser::parseRequest(_headerPart, *_request))
+		throw ServerException(STATUS_BAD_REQUEST);
 
 	std::string headerLower = _headerPart;
 	std::transform(headerLower.begin(), headerLower.end(), headerLower.begin(), ::tolower);
@@ -123,22 +121,15 @@ void RequestHandler::readRequest() {
 		throw ServerException(STATUS_RECV_ERROR);
 	if (receivedBytes == 0)
 		throw ServerException(STATUS_DISCONNECTED);
-	if (receivedBytes == 0 && _isChunked && !_readReady)
-		throw ServerException(STATUS_BAD_REQUEST);
-	if (receivedBytes <= 0)
-		throw ServerException(STATUS_INTERNAL_ERROR);
 
 	_requestString.append(buf, receivedBytes);
 
 	if (!_headersRead)
 		readHeaders();
 
-	if (_isChunked) {
+	if (_isChunked)
 		handleChunkedRequest();
-		return;
-	}
-
-	if (receivedBytes < BUFFER_SIZE) {
+	else if (receivedBytes < BUFFER_SIZE) {
 		_readReady = true;
 		std::cout << "Client " << _client.fd << " complete request received!\n";
 		processRequest();
@@ -147,9 +138,6 @@ void RequestHandler::readRequest() {
 
 
 void RequestHandler::processRequest() {
-	if (!_request)
-		_request = std::make_unique<HttpRequest>();
-
 	if (_isChunked) {
 		if (!RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get()))
 			throw ServerException(STATUS_BAD_REQUEST);
@@ -208,9 +196,11 @@ void RequestHandler::processPost() {
 		processMultipartForm();
 	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
 	// 	throw ServerException(STATUS_BAD_REQUEST);
-	_client.resourceOutString = _request->body;
-	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
-	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
+	else {
+		_client.resourceOutString = _request->body;
+		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
+		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
+	}
 }
 
 void RequestHandler::processDelete() {
@@ -230,6 +220,7 @@ bool RequestHandler::isMultipartForm() const {
 }
 
 void RequestHandler::processMultipartForm() {
+	_multipart = true;
 	std::string type = _request->headers.at("Content-Type");
 	std::string prefix = "multipart/form-data; boundary=";
 	if (type.find(prefix) == std::string::npos)
