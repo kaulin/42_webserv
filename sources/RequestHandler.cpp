@@ -7,6 +7,7 @@
 #include "RequestHandler.hpp"
 #include "RequestParser.hpp"
 #include "ServerException.hpp"
+#include "CGIHandler.hpp"
 
 RequestHandler::RequestHandler(Client& client) : _client(client) { resetHandler(); }
 
@@ -35,6 +36,9 @@ void RequestHandler::handleRequest() {
 		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
 		_client.resourceOutString = _parts[_partIndex].content;
 		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
+	}
+	else if (_client.cgiRequested && _client.cgiStatus != CGI_RESPONSE_READY) {
+		return;
 	}
 	else
 		_client.requestReady = true;

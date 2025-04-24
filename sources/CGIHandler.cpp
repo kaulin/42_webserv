@@ -32,6 +32,18 @@ std::string CGIHandler::setCgiPath(const HttpRequest& request)
 	return cgiUri;
 }
 
+void	CGIHandler::checkProcesses(int clientFd, pid_t pid)
+{
+	int i = clientFd;
+	for (const auto& it : _pids)
+	{
+		if (it == pid)
+			_pids.erase(_pids.begin() + i);
+		i++;
+	}
+	_requests.erase(clientFd);
+}
+
 bool	CGIHandler::readyForExecve(const Client& client)
 {
 	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
@@ -85,6 +97,7 @@ void CGIHandler::handleParentProcess(Client& client)
 
 	// Dup outpipe for client to read and close dupped fd
 	client.resourceReadFd = dup(outPipe[READ]);
+	client.cgiStatus = CGI_READ_READY;
 	close(outPipe[READ]);
 }
 
@@ -145,10 +158,10 @@ void	CGIHandler::handleChildProcess(Client& client)
 void	CGIHandler::runCGIScript(Client& client)
 {
 	pid_t pid = fork();
+	_pids.emplace_back(pid);
 	if (pid < 0)
 	{
 		kill(pid, SIGTERM);
-		_requests[client.fd]->status = CGI_ERROR;
 		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
 	}
 	if (pid == 0)
@@ -159,15 +172,7 @@ void	CGIHandler::runCGIScript(Client& client)
 	{
 		handleParentProcess(client);
 	}
-	_requests[client.fd]->status = CGI_FORKED;
-	_requests[client.fd]->childPid = pid;
-	
-	if (_requests[client.fd]->status == CGI_ERROR)
-	{
-		throw ServerException(STATUS_INTERNAL_ERROR);
-	}
-	_requests.erase(client.fd);
-	// client.cgiRequested = false;
+	checkProcesses(client.fd, pid);
 }
 
 void	CGIHandler::setupCGI(Client& client)
@@ -217,12 +222,10 @@ void	CGIHandler::handleCGI(Client& client)
 		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
 		return;
 	}
-	// If get method OR POST method and is not initialised yet
 	if (request.method == "GET" || ((request.method == "POST") && !readyForExecve(client)))
 	{
 		setupCGI(client);
 	}
-	// If either method and CGIRequest is initialised
 	if (readyForExecve(client))
 	{
 		runCGIScript(client);

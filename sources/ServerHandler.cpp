@@ -138,7 +138,7 @@ void ServerHandler::closeConnection(size_t& i)
 	Client& client = *_clients[_pollFds[i].fd].get();
 	int clientFd = _pollFds[i].fd;
 	auto it = _resourceFds.begin();
-	while (it != _resourceFds.end())
+	while (it != _resourceFds.end() && !_resourceFds.empty())
 	{
 		if (it->second == &client)
 			removeResourceFd(it->first);
@@ -352,6 +352,7 @@ void	ServerHandler::readFromFd(size_t& i) {
 	if (bytesRead < BUFFER_SIZE)
 	{
 		client.requestReady = true;
+		client.cgiStatus = CGI_RESPONSE_READY;
 		std::cout << "Client " << client.fd << " resource read from fd " << _pollFds[i].fd << "\n";
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
@@ -377,7 +378,7 @@ void	ServerHandler::writeToFd(size_t& i) {
 		client.resourceWriteFd = -1;
 		client.resourceBytesWritten = 0;
 		client.requestHandler->handleRequest();
-		if (client.cgiRequested) { // check if POST
+		if (client.cgiRequested) {
 				_CGIHandler.handleCGI(client);
 				addResourceFd(client);
 		}

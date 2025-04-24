@@ -7,11 +7,9 @@
 #define WRITE 1
 
 enum CGIStatus {
-	CGI_UNSET,
 	CGI_EXECVE_READY,
-	CGI_FORKED,
-	CGI_COMPLETE,
-	CGI_ERROR
+	CGI_RESPONSE_READY,
+	CGI_READ_READY
 };
 
 typedef struct s_CGIrequest {
@@ -28,7 +26,8 @@ typedef struct s_CGIrequest {
 
 class CGIHandler {
 private:
-	std::unordered_map<int, std::unique_ptr<t_CGIrequest>> _requests;
+	std::unordered_map<int, std::unique_ptr<t_CGIrequest>>	_requests;
+	std::vector<pid_t> 										_pids;
 
 	// Private class methods
 	void 						closeFds(const std::vector<int> fdsToclose);
@@ -39,6 +38,7 @@ private:
 	void						setupCGI(Client& client);
 	void						runCGIScript(Client& client);
 	bool						readyForExecve(const Client& client);
+	void						checkProcesses(int clientFd, pid_t pid);
 public:
 	CGIHandler();
 	~CGIHandler();
