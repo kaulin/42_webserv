@@ -90,9 +90,10 @@ void ResponseHandler::formGET() {
 void ResponseHandler::formPOST() {
 	addStatus();
 	addHeader("Date", getTimeStamp());
-	addHeader("Content-Type", "application/json");
-	addHeader("Location", _client.requestHandler->getUri());
-	addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully created\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
+	// addHeader("Content-Type", "application/json");
+	// addHeader("Location", _client.requestHandler->getUri());
+	// addBody("{\n  \"status\": \"success\",\n  \"message\": \"Resouce successfully created\",\n  \"resource_id\": " + _client.requestHandler->getUri() + "\n}");
+	addBody("");
 }
 
 void ResponseHandler::formDELETE() {
