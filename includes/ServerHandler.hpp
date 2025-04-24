@@ -25,13 +25,13 @@ enum PollType
 class ServerHandler
 {
 private:
-	static std::vector<std::unique_ptr<HttpServer>>		_servers;
-	size_t					 							_serverCount;
+	static bool											_sigintReceived;
+	size_t												_serverCount;
 	std::vector<int>									_ports;
+	std::vector<std::unique_ptr<HttpServer>>			_servers;
 	std::unordered_map<int, std::unique_ptr<Client>>	_clients;
 	std::unordered_map<int, Client*>					_resourceFds;
 	std::vector<struct pollfd>							_pollFds;
-	bool												_running;
 	ServerConfigData									_config;
 	Logger												_fileLogger;
 	Logger												_consoleLogger;
