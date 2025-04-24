@@ -17,8 +17,7 @@ class RequestParser
 		static void parseMultipartHeaders(std::map<std::string, std::string>& headerMap, const std::string& headers);
 		static std::string getFilename(const std::string& contentDisposition);
 	public:
-		// Parses raw HTTP request string into an HttpRequest object
-		static bool parseRequest(const std::string& raw_request, HttpRequest& request);
+		static bool parseRequest(const std::string& raw_request, HttpRequest& request);			// Parses raw HTTP request string into an HttpRequest object
 		static std::string parseChunkedBody(const std::string& chunked);						// Function to parse a chunked body
 		static void parseMultipart(const std::string& boundary, const std::string& body, std::vector <MultipartFormData>& parts);
 };

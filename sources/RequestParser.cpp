@@ -101,8 +101,14 @@ std::string RequestParser::parseChunkedBody(const std::string& chunked)
 		std::istringstream sizeStream(sizeLine);
 		sizeStream >> std::hex >> chunkSize;
 
-		if (chunkSize == 0)
+		if (chunkSize == 0) {
+			char cr, lf;
+			stream.get(cr);
+			stream.get(lf);
+			if (cr != '\r' || lf != '\n')
+				throw ServerException(STATUS_BAD_REQUEST);
 			break;
+		}
 
 		std::string chunk(chunkSize, '\0');
 		stream.read(&chunk[0], chunkSize);
@@ -145,30 +151,39 @@ void RequestParser::parseBody(const std::string& body_part, HttpRequest& request
 // Parses the entire HTTP request string into the HttpRequest object
 bool RequestParser::parseRequest(const std::string& raw_request, HttpRequest& request)
 {
-	// Split the raw request into request line, headers, and body
-	size_t pos = raw_request.find("\r\n");  // Find the first line break (request line)
-	if (pos == std::string::npos) return false;
-
-	// Parse the request line
-	std::string request_line = raw_request.substr(0, pos);
-	if (!parseRequestLine(request_line, request))
-		return false;
-
-	// Find the headers section (between request line and body)
-	size_t headers_start = pos + 2;  // Skip the \r\n
-	size_t headers_end = raw_request.find("\r\n\r\n", headers_start);
-	if (headers_end == std::string::npos) return false;
-
-	std::string headers_part = raw_request.substr(headers_start, headers_end - headers_start);
-	if (!parseHeaders(headers_part, request))
-		return false;
-
-	// The body is the remaining part after headers
-	size_t body_start = headers_end + 4;  // Skip the \r\n\r\n
-	if (body_start < raw_request.size())
+	if (!request.headersReady)
 	{
-		std::string body_part = raw_request.substr(body_start);
-		parseBody(body_part, request);
+		// Split the raw request into request line, headers, and body
+		size_t pos = raw_request.find("\r\n");  // Find the first line break (request line)
+		if (pos == std::string::npos) return false;
+
+		// Parse the request line
+		std::string request_line = raw_request.substr(0, pos);
+		if (!parseRequestLine(request_line, request))
+			return false;
+
+		// Find the headers section (between request line and body)
+		size_t headers_start = pos + 2;  // Skip the \r\n
+		size_t headers_end = raw_request.find("\r\n\r\n", headers_start);
+		if (headers_end == std::string::npos) return false;
+
+		request.bodyStart = headers_end + 4;
+
+		std::string headers_part = raw_request.substr(headers_start, headers_end - headers_start);
+		if (!parseHeaders(headers_part, request))
+			return false;
+		request.headersReady = true;
+	}
+
+	else
+	{
+		// The body is the remaining part after headers
+		if (request.bodyStart < raw_request.size())
+		{
+			std::string body_part = raw_request.substr(request.bodyStart);
+			parseBody(body_part, request);
+		}
+		request.bodyReady = true;
 	}
 	return true;
 }

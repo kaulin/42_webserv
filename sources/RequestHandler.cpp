@@ -18,14 +18,16 @@ void RequestHandler::resetHandler() {
 	_readReady = false;
 	_isChunked = false;
 	_chunkedBodyStarted = false;
-	_chunkState = READ_SIZE;
+	_chunkState = SIZE;
 	_expectedChunkSize = 0;
 	_multipart = false;
 	_partIndex = 0;
 	_parts.clear();
+	_request = nullptr;
 }
 
 void RequestHandler::handleRequest() {
+	_request = std::make_unique<HttpRequest>();
 	if (!_readReady)
 		readRequest();
 	else if (_multipart && ++_partIndex < _parts.size()) {
@@ -46,6 +48,11 @@ void RequestHandler::readHeaders()
 
 	_headersRead = true;
 	_headerPart = _requestString.substr(0, headersEnd + 4);
+	if (_headersRead)
+	{
+		if (!RequestParser::parseRequest(_headerPart, *_request))
+			throw ServerException(STATUS_BAD_REQUEST);
+	}
 
 	std::string headerLower = _headerPart;
 	std::transform(headerLower.begin(), headerLower.end(), headerLower.begin(), ::tolower);
@@ -53,7 +60,7 @@ void RequestHandler::readHeaders()
 		_isChunked = true;
 }
 
-void RequestHandler::readChunkedRequest()
+void RequestHandler::handleChunkedRequest()
 {
 	size_t headersEnd = _requestString.find("\r\n\r\n");
 	if (!_chunkedBodyStarted) {
@@ -66,7 +73,7 @@ void RequestHandler::readChunkedRequest()
 	}
 
 	while (true) {
-		if (_chunkState == READ_SIZE) {
+		if (_chunkState == SIZE) {
 			size_t pos = _chunkBuffer.find("\r\n");
 			if (pos == std::string::npos)
 				return; // need more data
@@ -82,27 +89,27 @@ void RequestHandler::readChunkedRequest()
 				processRequest();
 				return;
 			}
-			_chunkState = READ_DATA;
+			_chunkState = DATA;
 		}
 
-		if (_chunkState == READ_DATA) {
+		if (_chunkState == DATA) {
 			if (_chunkBuffer.size() < _expectedChunkSize)
 				return;
 
 			_decodedBody += _chunkBuffer.substr(0, _expectedChunkSize);
 			_chunkBuffer.erase(0, _expectedChunkSize);
 
-			_chunkState = READ_CRLF;
+			_chunkState = CRLF;
 		}
 
-		if (_chunkState == READ_CRLF) {
+		if (_chunkState == CRLF) {
 			if (_chunkBuffer.size() < 2)
 				return; // wait for trailing line break
 			if (_chunkBuffer.substr(0, 2) != "\r\n")
 				throw ServerException(STATUS_BAD_REQUEST);
 
 			_chunkBuffer.erase(0, 2);
-			_chunkState = READ_SIZE;
+			_chunkState = SIZE;
 		}
 	}
 }
@@ -118,6 +125,8 @@ void RequestHandler::readRequest() {
 		throw ServerException(STATUS_DISCONNECTED);
 	if (receivedBytes == 0 && _isChunked && !_readReady)
 		throw ServerException(STATUS_BAD_REQUEST);
+	if (receivedBytes <= 0)
+		throw ServerException(STATUS_INTERNAL_ERROR);
 
 	_requestString.append(buf, receivedBytes);
 
@@ -125,9 +134,7 @@ void RequestHandler::readRequest() {
 		readHeaders();
 
 	if (_isChunked) {
-		if (!_request)
-			_request = std::make_unique<HttpRequest>();
-		readChunkedRequest();
+		handleChunkedRequest();
 		return;
 	}
 
@@ -143,10 +150,14 @@ void RequestHandler::processRequest() {
 	if (!_request)
 		_request = std::make_unique<HttpRequest>();
 
-	if (_isChunked)
-		RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get());
-	else
-		RequestParser::parseRequest(_requestString, *_request.get());
+	if (_isChunked) {
+		if (!RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get()))
+			throw ServerException(STATUS_BAD_REQUEST);
+	}
+	else {
+		if (!RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get()))
+			throw ServerException(STATUS_BAD_REQUEST);
+	}
 
 	// TODO Check redirects
 

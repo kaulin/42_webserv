@@ -8,9 +8,9 @@
 struct Client;
 
 enum ChunkParseState {
-	READ_SIZE,
-	READ_DATA,
-	READ_CRLF
+	SIZE,
+	DATA,
+	CRLF
 };
 
 struct MultipartFormData {
@@ -39,7 +39,7 @@ class RequestHandler
 		void processPost();
 		void processDelete();
 		void readHeaders();
-		void readChunkedRequest();
+		void handleChunkedRequest();
 		bool _isChunked;
 		bool _chunkedBodyStarted;
 		ChunkParseState _chunkState;

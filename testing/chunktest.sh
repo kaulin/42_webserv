@@ -6,3 +6,5 @@ curl -v -X POST http://localhost:8080/uploads/chunktest.txt \
   -H "Transfer-Encoding: chunked" \
   -H "Content-Type: text/plain" \
   --data-binary @chunked_input.txt
+
+rm chunked_input.txt
