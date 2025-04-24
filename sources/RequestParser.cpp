@@ -101,8 +101,14 @@ std::string RequestParser::parseChunkedBody(const std::string& chunked)
 		std::istringstream sizeStream(sizeLine);
 		sizeStream >> std::hex >> chunkSize;
 
-		if (chunkSize == 0)
+		if (chunkSize == 0) {
+			char cr, lf;
+			stream.get(cr);
+			stream.get(lf);
+			if (cr != '\r' || lf != '\n')
+				throw ServerException(STATUS_BAD_REQUEST);
 			break;
+		}
 
 		std::string chunk(chunkSize, '\0');
 		stream.read(&chunk[0], chunkSize);
