@@ -123,22 +123,15 @@ void RequestHandler::readRequest() {
 		throw ServerException(STATUS_RECV_ERROR);
 	if (receivedBytes == 0)
 		throw ServerException(STATUS_DISCONNECTED);
-	if (receivedBytes == 0 && _isChunked && !_readReady)
-		throw ServerException(STATUS_BAD_REQUEST);
-	if (receivedBytes <= 0)
-		throw ServerException(STATUS_INTERNAL_ERROR);
 
 	_requestString.append(buf, receivedBytes);
 
 	if (!_headersRead)
 		readHeaders();
 
-	if (_isChunked) {
+	if (_isChunked)
 		handleChunkedRequest();
-		return;
-	}
-
-	if (receivedBytes < BUFFER_SIZE) {
+	else if (receivedBytes < BUFFER_SIZE) {
 		_readReady = true;
 		std::cout << "Client " << _client.fd << " complete request received!\n";
 		processRequest();
