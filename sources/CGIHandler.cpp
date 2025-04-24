@@ -13,6 +13,8 @@ CGIHandler::CGIHandler()
 	_requests.reserve(10);
 }
 
+CGIHandler::~CGIHandler() {};
+
 void CGIHandler::closeFds(const std::vector<int> fdsToclose)
 {
 	for (const auto & fd : fdsToclose)
@@ -28,6 +30,34 @@ std::string CGIHandler::setCgiPath(const HttpRequest& request)
 	}
 	std::string cgiUri = std::filesystem::current_path().string() + "/var/www" + parsedUri;
 	return cgiUri;
+}
+
+void	CGIHandler::checkProcesses(int clientFd, pid_t pid)
+{
+	int i = clientFd;
+	for (const auto& it : _pids)
+	{
+		if (it == pid)
+			_pids.erase(_pids.begin() + i);
+		i++;
+	}
+	_requests.erase(clientFd);
+}
+
+bool	CGIHandler::readyForExecve(const Client& client)
+{
+	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
+	{
+		auto it = _requests.find(client.fd);
+		if (it->second->postMethod && it->second->status == CGI_EXECVE_READY
+			&& client.resourceWriteFd == -1) // client has written
+		{
+			return true;
+		}
+		else if (!it->second->postMethod && it->second->status == CGI_EXECVE_READY)
+			return true;
+	}
+	return false;
 }
 
 std::vector<std::string>	CGIHandler::setCGIEnv(const HttpRequest& request, const Client& client) // takes request
@@ -51,113 +81,64 @@ std::vector<std::string>	CGIHandler::setCGIEnv(const HttpRequest& request, const
 	return strEnv;
 }
 
-int	CGIHandler::setupCGI(Client &client)
-{
-	const HttpRequest& request = client.requestHandler->getRequest();
-	
-	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
-	{
-		return (-1);
-	}
-	if (this->_requests.size() >= 10)
-	{
-		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
-		return (-1);
-	}
-	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
-
-	cgiInst->CGIPath = setCgiPath(request);
-	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
-	cgiInst->argv.emplace_back(nullptr);
-	cgiInst->requestBody = request.body;
-	cgiInst->status = CGI_READY;
-
-	// Prepare pipes
-	if (pipe(_requests[client.fd]->inPipe) < 0 || pipe(_requests[client.fd]->outPipe))
-	{
-		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
-	}
-
-	int flags;
-
-	// Get current file status flags and add O_NONBLOCK to the flags
-	if ((flags = fcntl(_requests[client.fd]->inPipe[WRITE], F_GETFL)) == -1)
-	{
-		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
-	}
-	if (fcntl(_requests[client.fd]->inPipe[WRITE], F_SETFL, flags | O_NONBLOCK) == -1) 
-	{
-		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
-	}
-
-	_requests.emplace(client.fd, std::move(cgiInst));
-
-	return (_requests[client.fd]->inPipe[WRITE]);
-}
-
 void CGIHandler::handleParentProcess(Client& client)
 {
+	t_CGIrequest cgiRequest = *_requests[client.fd];
+	
 	int inPipe[2] = {_requests[client.fd]->inPipe[0], _requests[client.fd]->inPipe[1]};
 	int outPipe[2] = {_requests[client.fd]->outPipe[0], _requests[client.fd]->outPipe[1]};
 	
-	std::string requestBody = _requests[client.fd]->requestBody;
-
-	// Write the request body for the child to read and close unnecessary pipes
-	close(outPipe[WRITE]);
-	close(inPipe[READ]);
-	if (requestBody.length() > 0)
+	if (cgiRequest.postMethod)
 	{
-		int bytesWritten = write(inPipe[WRITE], requestBody.c_str(), requestBody.size());
-		if (bytesWritten == -1)
-		{
-			perror("Write failed");
-			throw ServerException(STATUS_INTERNAL_ERROR); // fatal
-		}
-	}
-	close(inPipe[WRITE]);
+		close(inPipe[READ]);
+		close(inPipe[WRITE]);
+	} 
+	close(outPipe[WRITE]);
 
-	client.resourceReadFd = dup(outPipe[READ]); // Dup read end to client
-	close(outPipe[READ]); // Close dupped read end
+	// Dup outpipe for client to read and close dupped fd
+	client.resourceReadFd = dup(outPipe[READ]);
+	client.cgiStatus = CGI_READ_READY;
+	close(outPipe[READ]);
 }
 
 void	CGIHandler::handleChildProcess(Client& client)
 {
-	int clientFd = client.fd;
-
+	t_CGIrequest cgiRequest = *_requests[client.fd];
 	std::vector<std::string> cgiStrEnv = setCGIEnv(client.requestHandler->getRequest(), client);
-
-	t_CGIrequest cgiRequest = *_requests[clientFd];
+	
 	int inPipe[2] = {cgiRequest.inPipe[0], cgiRequest.inPipe[1]};
 	int outPipe[2] = {cgiRequest.outPipe[0], cgiRequest.outPipe[1]};
 	
-	// Setup STDIN to write the necessary data to inpipe READ --> cgi script
-	if (dup2(inPipe[READ], STDIN_FILENO) == -1)
+	if (cgiRequest.postMethod)
 	{
-		closeFds({clientFd, outPipe[WRITE], outPipe[READ], inPipe[WRITE]});
-		std::exit(EXIT_FAILURE);
+		// Dup inPipe[READ] to stdin (Client writes request body to other end of pipe) 
+		if (dup2(inPipe[READ], STDIN_FILENO) == -1)
+		{
+			closeFds({client.fd, outPipe[WRITE], outPipe[READ], inPipe[WRITE]});
+			std::exit(EXIT_FAILURE);
+		}
+		close(inPipe[WRITE]);
 	}
-	close(inPipe[WRITE]);
 
-	// Setup STDOUT to write to pipe WRITE end of outpipe
+	// Dup outPipe[WRITE] to STDOUT -> outPipe[READ] set to client readFd in parent process
 	if (dup2(outPipe[WRITE], STDOUT_FILENO) == -1)
 	{
-		closeFds({clientFd, outPipe[READ], inPipe[READ], inPipe[WRITE]});
+		closeFds({client.fd, outPipe[READ], inPipe[READ], inPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
 	close(outPipe[READ]);
 
-	// Checks that file in CGIPath exists and is executable
 	struct stat buff;
 	if (stat(cgiRequest.CGIPath.c_str(), &buff) != 0)
 	{
 		perror("Child: File not found");
-		closeFds({clientFd, inPipe[READ], outPipe[WRITE]});
+		closeFds({client.fd, inPipe[READ], outPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
 	if (!(buff.st_mode & S_IXUSR))
 	{
 		perror("Child: File is not executable");
-		closeFds({clientFd, inPipe[READ], outPipe[WRITE]});
+		closeFds({client.fd, inPipe[READ], outPipe[WRITE]});
 		std::exit(EXIT_FAILURE);
 	}
 
@@ -170,23 +151,17 @@ void	CGIHandler::handleChildProcess(Client& client)
 	envp.emplace_back(nullptr);
 
 	execve(cgiRequest.CGIPath.c_str(), cgiRequest.argv.data(), envp.data());
-
 	perror("Child: Execve failed");
 	std::exit(EXIT_FAILURE);
 }
 
 void	CGIHandler::runCGIScript(Client& client)
 {
-	// setupCGI(client);
-
-	if (_requests[client.fd]->status != CGI_READY)
-		return;
-	
 	pid_t pid = fork();
+	_pids.emplace_back(pid);
 	if (pid < 0)
 	{
 		kill(pid, SIGTERM);
-		_requests[client.fd]->status = CGI_ERROR;
 		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
 	}
 	if (pid == 0)
@@ -197,12 +172,62 @@ void	CGIHandler::runCGIScript(Client& client)
 	{
 		handleParentProcess(client);
 	}
-	_requests[client.fd]->status = CGI_FORKED;
-	_requests[client.fd]->childPid = pid;
+	checkProcesses(client.fd, pid);
+}
 
-	if (_requests[client.fd]->status == CGI_ERROR)
+void	CGIHandler::setupCGI(Client& client)
+{
+	const HttpRequest& request = client.requestHandler->getRequest();
+	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
+
+	cgiInst->CGIPath = setCgiPath(request);
+	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
+	cgiInst->argv.emplace_back(nullptr);
+
+	int flags;
+	if (request.method == "POST")
 	{
-		throw ServerException(STATUS_INTERNAL_ERROR);
+		cgiInst->postMethod = true;
+		client.resourceOutString = request.body;
+
+		if (pipe(cgiInst->inPipe) < 0)
+		{
+			throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+		}
+		if ((flags = fcntl(cgiInst->inPipe[WRITE], F_GETFL)) == -1)
+			throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+		if (fcntl(cgiInst->inPipe[WRITE], F_SETFL, flags | O_NONBLOCK) == -1) 
+			throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+			
+		client.resourceWriteFd = cgiInst->inPipe[WRITE]; // Set client to write to inpipe
 	}
-	_requests.erase(client.fd);
+	if (pipe(cgiInst->outPipe) < 0)
+	{
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	}
+	if ((flags = fcntl(cgiInst->outPipe[READ], F_GETFL)) == -1)
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+	if (fcntl(cgiInst->outPipe[READ], F_SETFL, flags | O_NONBLOCK) == -1) 
+		throw ServerException(STATUS_INTERNAL_ERROR); // fatal
+
+	cgiInst->status = CGI_EXECVE_READY;
+	_requests.emplace(client.fd, std::move(cgiInst));
+}
+
+void	CGIHandler::handleCGI(Client& client)
+{
+	const HttpRequest& request = client.requestHandler->getRequest();
+	if (_requests.size() >= 10)
+	{
+		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
+		return;
+	}
+	if (request.method == "GET" || ((request.method == "POST") && !readyForExecve(client)))
+	{
+		setupCGI(client);
+	}
+	if (readyForExecve(client))
+	{
+		runCGIScript(client);
+	}
 }

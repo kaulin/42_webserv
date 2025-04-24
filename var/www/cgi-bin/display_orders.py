@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
-
-import cgi
-import cgitb
 import os
 import html
 from urllib.parse import parse_qs
 import email.utils
 import sys
 
-cgitb.enable()
-
 orders_file = "var/temp/coffee_orders.txt"
+
 
 def read_orders():
     if not os.path.exists(orders_file):
@@ -18,7 +14,7 @@ def read_orders():
     with open(orders_file, "r") as f:
         return f.readlines()
 
-def main():  
+def main(): 
 
     html_body = f"""<!DOCTYPE html>
 <html>

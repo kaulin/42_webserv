@@ -138,7 +138,7 @@ void ServerHandler::closeConnection(size_t& i)
 	Client& client = *_clients[_pollFds[i].fd].get();
 	int clientFd = _pollFds[i].fd;
 	auto it = _resourceFds.begin();
-	while (it != _resourceFds.end())
+	while (it != _resourceFds.end() && !_resourceFds.empty())
 	{
 		if (it->second == &client)
 			removeResourceFd(it->first);
@@ -253,7 +253,7 @@ void	ServerHandler::pollLoop()
 	while (!_sigintReceived)
 	{
 		if ((poll_count = poll(_pollFds.data(), _pollFds.size(), -1)) == -1)
-			error_and_exit("Poll failed");
+			throw ServerException(STATUS_INTERNAL_ERROR);
 		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
 			if (!(_pollFds[i].revents & POLLIN) && !(_pollFds[i].revents & POLLOUT))
@@ -272,14 +272,12 @@ void	ServerHandler::pollLoop()
 						client.requestHandler->handleRequest();
 						client.lastRequest = std::time(nullptr);
 						if (client.cgiRequested)
-							client.resourceWriteFd = _CGIHandler.setupCGI(client);
+							_CGIHandler.handleCGI(client);
 						addResourceFd(client);
 					}
 					else if (_pollFds[i].revents & POLLOUT)
 					{
-						if (client.cgiRequested && !client.requestReady)
-							_CGIHandler.runCGIScript(client);
-						else if (client.requestReady)
+						if (client.requestReady)
 						{
 							client.responseHandler->formResponse();
 							client.responseHandler->sendResponse();
@@ -354,6 +352,7 @@ void	ServerHandler::readFromFd(size_t& i) {
 	if (bytesRead < BUFFER_SIZE)
 	{
 		client.requestReady = true;
+		client.cgiStatus = CGI_RESPONSE_READY;
 		std::cout << "Client " << client.fd << " resource read from fd " << _pollFds[i].fd << "\n";
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
@@ -379,6 +378,9 @@ void	ServerHandler::writeToFd(size_t& i) {
 		client.resourceWriteFd = -1;
 		client.resourceBytesWritten = 0;
 		client.requestHandler->handleRequest();
+		if (client.cgiRequested) {
+				_CGIHandler.handleCGI(client);
+		}
 		addResourceFd(client);
 	}
 }

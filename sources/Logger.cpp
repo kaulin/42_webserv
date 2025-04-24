@@ -13,10 +13,7 @@ std::string Logger::getCurrentTime() const
 Logger::Logger(std::ostream& out) : _out(&out) {}
 
 // destructor
-Logger::~Logger()
-{
-	delete _out;
-}
+Logger::~Logger() {}
 
 // overload << operator for stream manipulators (like std::endl)
 Logger& Logger::operator<<(std::ostream& (*func)(std::ostream&))
