@@ -45,7 +45,6 @@ private:
 	void		removeFromPollList(int fd);
 	void		pollLoop();
 	void		setPollList();
-	void		error_and_exit(const char *msg);
 	void		addConnection(size_t& i);
 	void		closeConnection(size_t& i);
 	void		checkClient(size_t& i);

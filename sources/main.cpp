@@ -15,14 +15,14 @@ int main(int argc, char **argv)
 		ConfigParser::checkConfigFilePath(configFilePath);
 		ServerHandler serverHandler(configFilePath);
 		serverHandler.setupServers();
-		serverHandler.runServers(); // comment out when only testing config
+		serverHandler.runServers();
 	}
 	catch (const ConfigParser::ConfigParserException& e)
 	{
 		std::cout << "Error: " << e.what() << '\n';
 		return 1;
 	}
-	catch(const std::exception& e)
+	catch (const std::exception& e)
 	{
 		std::cerr << "Caught unexpected exception: " << e.what() << '\n';
 	}
