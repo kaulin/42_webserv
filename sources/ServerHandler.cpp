@@ -22,7 +22,7 @@ void	ServerHandler::signalHandler(int signal)
 }
 
 ServerHandler::ServerHandler(std::string path) : 
-	_config(ServerConfigData(path)), _consoleLogger(std::cout),
+	_config(ServerConfigData(path)), _consoleLogger(),
 	_CGIHandler(CGIHandler())
 {
 	_serverCount = _config.getServerCount();

@@ -10,7 +10,7 @@ std::string Logger::getCurrentTime() const
 }
 
 // constructor for a console logger
-Logger::Logger(std::ostream& out) : _out(&out) {}
+Logger::Logger() {}
 
 // destructor
 Logger::~Logger() {}
