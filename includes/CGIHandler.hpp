@@ -7,14 +7,15 @@
 #define WRITE 1
 
 enum CGIStatus {
+	CGI_FORKED,
 	CGI_EXECVE_READY,
+	CGI_READ_READY,
 	CGI_RESPONSE_READY,
-	CGI_READ_READY
+	CGI_CHILD_KILLED,
+	CGI_ERROR
 };
 
 typedef struct s_CGIrequest {
-	int 				status;
-	bool				postMethod;	
 	int					inPipe[2];
 	int					outPipe[2];
 	pid_t				childPid;
@@ -38,7 +39,8 @@ private:
 	void						setupCGI(Client& client);
 	void						runCGIScript(Client& client);
 	bool						readyForExecve(const Client& client);
-	void						checkProcesses(int clientFd, pid_t pid);
+	int							checkProcess(int clientFd);
+	void						cleanupPid(pid_t pid);
 public:
 	CGIHandler();
 	~CGIHandler();

@@ -77,13 +77,6 @@ void	ServerHandler::setPollList()
 	}
 }
 
-void	ServerHandler::error_and_exit(const char *msg)
-{
-	std::string errmsg = "Webserver: " + std::string(msg);
-	perror(errmsg.c_str());
-	exit(errno);
-}
-
 void printClientInfo(const Client& client) {
 	std::cout << "Client fd " << client.fd << ":\n";
 	std::cout << "	bool cgiRequested: " << (client.cgiRequested ? "true" : "false") << "\n";
@@ -103,6 +96,7 @@ void ServerHandler::resetClient(Client& client) {
 	client.resourceBytesWritten = 0;
 	client.keep_alive = true;
 	client.cgiRequested = false;
+	client.cgiStatus = -1;
 	client.directoryListing = false;
 	client.requestReady = false;
 	client.responseReady = false;
@@ -302,7 +296,6 @@ void	ServerHandler::pollLoop()
 			}
 		}
 	}
-	//
 	for (pollfd p : _pollFds)
 		close(p.fd);
 }
