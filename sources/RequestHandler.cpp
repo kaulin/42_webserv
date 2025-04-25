@@ -45,7 +45,7 @@ void RequestHandler::handleRequest() {
 	
 }
 
-void RequestHandler::readHeaders()
+void RequestHandler::handleHeaders()
 {
 	size_t headersEnd = _requestString.find("\r\n\r\n");
 	if (headersEnd == std::string::npos)
@@ -125,12 +125,9 @@ void RequestHandler::readRequest() {
 		throw ServerException(STATUS_RECV_ERROR);
 	if (receivedBytes == 0)
 		throw ServerException(STATUS_DISCONNECTED);
-
 	_requestString.append(buf, receivedBytes);
-
 	if (!_headersRead)
-		readHeaders();
-
+		handleHeaders();
 	if (_isChunked)
 		handleChunkedRequest();
 	else if (receivedBytes < BUFFER_SIZE) {

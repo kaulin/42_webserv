@@ -38,7 +38,7 @@ class RequestHandler
 		void processGet();
 		void processPost();
 		void processDelete();
-		void readHeaders();
+		void handleHeaders();
 		void handleChunkedRequest();
 		bool _isChunked;
 		bool _chunkedBodyStarted;
