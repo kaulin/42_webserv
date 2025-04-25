@@ -101,6 +101,7 @@ void ServerHandler::resetClient(Client& client) {
 	client.resourceBytesRead = 0;
 	client.resourceWriteFd = -1;
 	client.resourceBytesWritten = 0;
+	client.keep_alive = true;
 	client.cgiRequested = false;
 	client.directoryListing = false;
 	client.requestReady = false;
@@ -155,10 +156,11 @@ void ServerHandler::checkClient(size_t& i) {
 	Client& client = *_clients[_pollFds[i].fd].get();
 	if (client.responseSent)
 	{
-		// if (client.keep_alive) Commented out to close all connections after response sent, as timeouts are not working
+		// if (client.keep_alive) // Commented out to close all connections after response sent, as timeouts are not working
 		// 	resetClient(client);
-		// else
+		// else 
 			closeConnection(i);
+		
 	}
 	else if (!checkTimeout(client))
 	{
@@ -267,7 +269,7 @@ void	ServerHandler::pollLoop()
 				{
 					Client& client = *_clients[_pollFds[i].fd].get();
 
-					if (_pollFds[i].revents & POLLIN)
+					if (_pollFds[i].revents & POLLIN && client.responseCode == 200)
 					{
 						client.requestHandler->handleRequest();
 						client.lastRequest = std::time(nullptr);
@@ -313,23 +315,33 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 		closeConnection(i);
 		return;
 	}
+
+	// If whole request has not been read before error occurs, connection must be closed after error response
+	if (!client.requestHandler->getReadReady()) {
+		client.keep_alive = false;
+	}
+
+	// If error occurs during error page creation, form response without error page to prevent looping
 	if (client.responseCode == statusCode) {
 		client.requestReady = true;
 		client.resourceOutString = "";
 		return;
 	}
+
 	client.responseCode = statusCode;
 	client.responseReady = false;
 	client.resourceOutString = "";
-	if (client.resourceReadFd != -1)
+	if (client.resourceReadFd != -1) {
 		removeResourceFd(client.resourceReadFd);
+		client.resourceReadFd = -1;
+	}
 	auto it = client.serverConfig->error_pages.find(statusCode);
 	if (it != client.serverConfig->error_pages.end()) {
 		std::string path = ServerConfigData::getRoot(*client.serverConfig, "/") + it->second;
 		try {
 			FileHandler::openForRead(client.resourceReadFd, path);
 			addResourceFd(client);
-		} catch (const ServerException& e) {
+		} catch (const ServerException& e) { // if an error occurs when opening error page resource
 			// TODO log error page missing
 			// proceed with generating error page
 			client.requestReady = true;

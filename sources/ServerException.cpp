@@ -41,7 +41,7 @@ const char* ServerException::statusMessage(int statusCode) {
 		case 411:
 			return "Length Required";
 		case 413:
-			return "Request Too Large";
+			return "Content Too Large";
 		case 414:
 			return "Request-URI Too Long";
 		case 415:

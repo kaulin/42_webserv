@@ -21,6 +21,7 @@ void RequestHandler::resetHandler() {
 	_chunkedBodyStarted = false;
 	_chunkState = SIZE;
 	_expectedChunkSize = 0;
+	_expectedContentLength = 0;
 	_multipart = false;
 	_partIndex = 0;
 	_parts.clear();
@@ -45,8 +46,51 @@ void RequestHandler::handleRequest() {
 	
 }
 
-void RequestHandler::readHeaders()
+void RequestHandler::readRequest() {
+	int receivedBytes;
+	char buf[BUFFER_SIZE] = {};
+
+	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);
+	if (receivedBytes == -1)
+		throw ServerException(STATUS_RECV_ERROR);
+	if (receivedBytes == 0)
+		throw ServerException(STATUS_DISCONNECTED);
+	_requestString.append(buf, receivedBytes);
+	handleHeaders();
+	if (!_headersRead)
+		return;
+	if (_requestString.size() - _headerPart.size() > _client.serverConfig->cli_max_bodysize)
+		throw ServerException(STATUS_TOO_LARGE);	
+	if (_isChunked)
+		handleChunkedRequest();
+	else {
+		if (_request->method == "POST" && _requestString.size() - _headerPart.size() > _expectedContentLength)
+			throw ServerException(STATUS_BAD_REQUEST);
+		if (_request->method != "POST" && _requestString.size() > _headerPart.size())
+			throw ServerException(STATUS_BAD_REQUEST);
+		if (receivedBytes < BUFFER_SIZE)
+			_readReady = true;
+	}
+	if (_readReady)
+		processRequest();
+}
+
+void RequestHandler::setContentLength() {
+	auto it = _request->headers.find("Content-Length");
+	if (it == _request->headers.end())
+		throw ServerException(STATUS_LENGTH_REQUIRED);
+	std::stringstream ss(it->second);
+	ss >> _expectedContentLength;
+	if (ss.fail() || !ss.eof())
+		throw ServerException(STATUS_BAD_REQUEST);
+	if (_expectedContentLength > _client.serverConfig->cli_max_bodysize)
+		throw ServerException(STATUS_TOO_LARGE);
+}
+
+void RequestHandler::handleHeaders()
 {
+	if (_headersRead)
+		return;
 	size_t headersEnd = _requestString.find("\r\n\r\n");
 	if (headersEnd == std::string::npos)
 		return;
@@ -60,6 +104,8 @@ void RequestHandler::readHeaders()
 	std::transform(headerLower.begin(), headerLower.end(), headerLower.begin(), ::tolower);
 	if (headerLower.find("transfer-encoding: chunked") != std::string::npos)
 		_isChunked = true;
+	if (!_isChunked && _request->method == "POST")
+		setContentLength();
 }
 
 void RequestHandler::handleChunkedRequest()
@@ -88,7 +134,6 @@ void RequestHandler::handleChunkedRequest()
 
 			if (_expectedChunkSize == 0) {
 				_readReady = true;
-				processRequest();
 				return;
 			}
 			_chunkState = DATA;
@@ -116,41 +161,21 @@ void RequestHandler::handleChunkedRequest()
 	}
 }
 
-void RequestHandler::readRequest() {
-	int receivedBytes;
-	char buf[BUFFER_SIZE] = {};
-
-	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);
-	if (receivedBytes == -1)
-		throw ServerException(STATUS_RECV_ERROR);
-	if (receivedBytes == 0)
-		throw ServerException(STATUS_DISCONNECTED);
-
-	_requestString.append(buf, receivedBytes);
-
-	if (!_headersRead)
-		readHeaders();
-
-	if (_isChunked)
-		handleChunkedRequest();
-	else if (receivedBytes < BUFFER_SIZE) {
-		_readReady = true;
-		std::cout << "Client " << _client.fd << " complete request received!\n";
-		processRequest();
-	}
-}
-
 
 void RequestHandler::processRequest() {
-	if (_isChunked) {
-		if (!RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get()))
+	if (_isChunked && !RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get()))
 			throw ServerException(STATUS_BAD_REQUEST);
-	}
-	else {
+	if (!_isChunked) {
 		if (!RequestParser::parseRequest(_requestString, *_request.get()))
+			throw ServerException(STATUS_BAD_REQUEST);
+		if (_request->method == "POST" && _requestString.length() - _headerPart.length() != _expectedContentLength)
 			throw ServerException(STATUS_BAD_REQUEST);
 	}
 
+	auto it = _request->headers.find("Connection");
+	if (it != _request->headers.end() && it->second == "close")
+		_client.keep_alive = false;
+	
 	// TODO Check redirects
 
 	if (!ServerConfigData::checkMethod(*_client.serverConfig, _request->method, _request->uriPath))
@@ -172,17 +197,15 @@ void RequestHandler::processGet() {
 	// Check if request is for a directory, check for default index, check for auto-index
 	if (FileHandler::isDirectory(_client.serverConfig->root + _request->uriPath)) {
 		const Location* location = ServerConfigData::getLocation(*_client.serverConfig, path);
-		if (location != nullptr) {
-			if (!location->index.empty())
-				path = location->path + location->index;
-			else if (location->dir_listing) {
-				_client.directoryListing = true;
-				_client.requestReady = true;
-				_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, path) + path;
-				return;
-			}
-			else
-				throw ServerException(STATUS_FORBIDDEN);
+		if (location == nullptr)
+			throw ServerException(STATUS_FORBIDDEN);
+		if (!location->index.empty())
+			path = location->path + location->index;
+		else if (location->dir_listing) {
+			_client.directoryListing = true;
+			_client.requestReady = true;
+			_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, path) + path;
+			return;
 		}
 		else
 			throw ServerException(STATUS_FORBIDDEN);
@@ -247,5 +270,6 @@ const std::string& RequestHandler::getUriQuery() const { return _request->uriQue
 const std::string& RequestHandler::getUriPath() const { return _request->uriPath; }
 const std::string& RequestHandler::getHttpVersion() const { return _request->httpVersion; }
 const std::string& RequestHandler::getBody() const { return _request->body; }
+bool RequestHandler::getReadReady() const { return _readReady; }
 const std::vector <MultipartFormData>& RequestHandler::getParts() const { return _parts; }
 

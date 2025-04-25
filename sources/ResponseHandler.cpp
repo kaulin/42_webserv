@@ -164,6 +164,8 @@ void ResponseHandler::formDirectoryListing() {
 void ResponseHandler::formErrorPage() {
 	addStatus();
 	addHeader("Date", getTimeStamp());
+	if (!_client.keep_alive)
+		addHeader("Connection", "close");
 	addHeader("Content-Type", "text/html");
 	if (_client.resourceInString.empty()) {
 		std::string code = std::to_string(_client.responseCode);

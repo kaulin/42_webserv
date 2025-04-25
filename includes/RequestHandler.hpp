@@ -31,15 +31,17 @@ class RequestHandler
 		bool _headersRead;
 		bool _readReady;
 		bool _multipart;
-		size_t	_partIndex;
+		size_t _expectedContentLength;
+		size_t _partIndex;
 		std::vector <MultipartFormData> _parts;
 		void readRequest();
 		void processRequest();
 		void processGet();
 		void processPost();
 		void processDelete();
-		void readHeaders();
+		void handleHeaders();
 		void handleChunkedRequest();
+		void setContentLength();
 		bool _isChunked;
 		bool _chunkedBodyStarted;
 		ChunkParseState _chunkState;
@@ -53,7 +55,6 @@ class RequestHandler
 		void handleRequest();
 
 		const HttpRequest& getRequest() const;
-		// Not sure if the getters below are needed, as most of the work will be done with the whole struct from above
 		const std::string& getMethod() const;
 		const std::string& getUri() const;
 		const std::string& getUriQuery() const;
@@ -61,4 +62,5 @@ class RequestHandler
 		const std::string& getHttpVersion() const;
 		const std::string& getBody() const;
 		const std::vector <MultipartFormData>& getParts() const;
+		bool getReadReady() const;
 };
