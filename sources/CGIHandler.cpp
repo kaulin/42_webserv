@@ -68,14 +68,14 @@ int	CGIHandler::checkProcess(int clientFd)
 		return CGI_FORKED;
 	else if (w_res == -1)
 	{
-		std::cerr << "Waitpid error" << strerror(errno) << "\n";
+		std::cerr << "Waitpid error " << strerror(errno) << "\n";
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
 	else
 	{
 		if (WIFEXITED(status))
 		{
-			std::cout << "Child exited with satus " << status << WEXITSTATUS(status) << "\n";
+			std::cout << "Child exited with satus " << WEXITSTATUS(status) << "\n";
 			_requests.erase(clientFd);
 			cleanupPid(pid);
 			return CGI_READ_READY;
@@ -96,7 +96,7 @@ bool	CGIHandler::readyForExecve(const Client& client)
 	{
 		if (client.cgiStatus == CGI_EXECVE_READY && client.resourceWriteFd == -1)
 			return true;
-		else if (client.cgiStatus == CGI_EXECVE_READY && client.requestHandler->getMethod() == "POST")
+		else if (client.cgiStatus == CGI_EXECVE_READY && client.requestHandler->getMethod() != "POST")
 			return true;
 	}
 	return false;
@@ -246,9 +246,11 @@ void	CGIHandler::runCGIScript(Client& client)
 	if (client.cgiStatus != CGI_FORKED)
 	{
 		pid_t pid = fork();
+		client.cgiStatus = CGI_FORKED;
 		_requests[client.fd]->childPid = pid;
 		_pids.emplace_back(pid);
-		std::cout << "Pid " << pid << " added to pids\n";
+
+		std::cout << "Process forked - pid " << pid << " added to pids\n";
 		
 		if (pid < 0)
 		{
@@ -283,5 +285,6 @@ void	CGIHandler::handleCGI(Client& client)
 		runCGIScript(client); // CGI status: READ_READY if processes are completed, FORKED if still running
 	}
 	// Check processes returns FORKED | READ_READY and removes CGI request instance
-	client.cgiStatus = checkProcess(client.fd);
+	if (client.cgiStatus == CGI_FORKED)
+		client.cgiStatus = checkProcess(client.fd);
 }
