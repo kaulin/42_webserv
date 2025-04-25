@@ -64,7 +64,9 @@ void RequestHandler::readRequest() {
 	if (_isChunked)
 		handleChunkedRequest();
 	else {
-		if (_requestString.size() - _headerPart.size() > _expectedContentLength)
+		if (_request->method == "POST" && _requestString.size() - _headerPart.size() > _expectedContentLength)
+			throw ServerException(STATUS_BAD_REQUEST);
+		if (_request->method != "POST" && _requestString.size() > _headerPart.size())
 			throw ServerException(STATUS_BAD_REQUEST);
 		if (receivedBytes < BUFFER_SIZE)
 			_readReady = true;
@@ -74,11 +76,12 @@ void RequestHandler::readRequest() {
 }
 
 void RequestHandler::setContentLength() {
-	auto it = _request->headers.find("ContentLengthSize");
+	auto it = _request->headers.find("Content-Length");
 	if (it == _request->headers.end())
 		throw ServerException(STATUS_LENGTH_REQUIRED);
 	std::stringstream ss(it->second);
-	if (!ss >> _expectedContentLength || ss.fail() || !ss.eof())
+	ss >> _expectedContentLength;
+	if (ss.fail() || !ss.eof())
 		throw ServerException(STATUS_BAD_REQUEST);
 	if (_expectedContentLength > _client.serverConfig->cli_max_bodysize)
 		throw ServerException(STATUS_TOO_LARGE);
@@ -101,7 +104,7 @@ void RequestHandler::handleHeaders()
 	std::transform(headerLower.begin(), headerLower.end(), headerLower.begin(), ::tolower);
 	if (headerLower.find("transfer-encoding: chunked") != std::string::npos)
 		_isChunked = true;
-	if (!_isChunked)
+	if (!_isChunked && _request->method == "POST")
 		setContentLength();
 }
 
@@ -160,19 +163,19 @@ void RequestHandler::handleChunkedRequest()
 
 
 void RequestHandler::processRequest() {
-	if (_isChunked) {
-		if (!RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get()))
+	if (_isChunked && !RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get()))
 			throw ServerException(STATUS_BAD_REQUEST);
-	}
-	else {
+	if (!_isChunked) {
 		if (!RequestParser::parseRequest(_requestString, *_request.get()))
 			throw ServerException(STATUS_BAD_REQUEST);
+		if (_request->method == "POST" && _requestString.length() - _headerPart.length() != _expectedContentLength)
+			throw ServerException(STATUS_BAD_REQUEST);
 	}
 
-
 	auto it = _request->headers.find("Connection");
-	if (it != _request->headers.end() && it->second == "keep-alive")
-		_client.keep_alive = true;
+	if (it != _request->headers.end() && it->second == "close")
+		_client.keep_alive = false;
+	
 	// TODO Check redirects
 
 	if (!ServerConfigData::checkMethod(*_client.serverConfig, _request->method, _request->uriPath))
@@ -267,5 +270,6 @@ const std::string& RequestHandler::getUriQuery() const { return _request->uriQue
 const std::string& RequestHandler::getUriPath() const { return _request->uriPath; }
 const std::string& RequestHandler::getHttpVersion() const { return _request->httpVersion; }
 const std::string& RequestHandler::getBody() const { return _request->body; }
+bool RequestHandler::getReadReady() const { return _readReady; }
 const std::vector <MultipartFormData>& RequestHandler::getParts() const { return _parts; }
 
