@@ -12,14 +12,13 @@
 class Logger
 {
 	private:
-		std::ostream*		_out;
 		std::stringstream	_buffer;
 
 		std::string getCurrentTime() const;
 
 	public:
 		// constructor for a console logger
-		Logger(std::ostream& out = std::cout);
+		Logger();
 
 		// destructor
 		~Logger();
