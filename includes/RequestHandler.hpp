@@ -31,7 +31,8 @@ class RequestHandler
 		bool _headersRead;
 		bool _readReady;
 		bool _multipart;
-		size_t	_partIndex;
+		size_t _expectedContentLength;
+		size_t _partIndex;
 		std::vector <MultipartFormData> _parts;
 		void readRequest();
 		void processRequest();
@@ -40,6 +41,7 @@ class RequestHandler
 		void processDelete();
 		void handleHeaders();
 		void handleChunkedRequest();
+		void setContentLength();
 		bool _isChunked;
 		bool _chunkedBodyStarted;
 		ChunkParseState _chunkState;
