@@ -248,7 +248,10 @@ void	ServerHandler::pollLoop()
 	setPollList();
 	while (!_sigintReceived)
 	{
-		if ((poll_count = poll(_pollFds.data(), _pollFds.size(), -1)) == -1)
+		poll_count = poll(_pollFds.data(), _pollFds.size(), -1);
+		if (_sigintReceived)
+				break;
+		if (poll_count == -1)
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
