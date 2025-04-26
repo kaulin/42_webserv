@@ -174,7 +174,7 @@ void RequestHandler::processRequest() {
 
 	auto it = _request->headers.find("Connection");
 	if (it != _request->headers.end() && it->second == "close")
-		_client.keep_alive = false;
+		_client.keepAlive = false;
 	
 	if (checkRedirect())
 		return;

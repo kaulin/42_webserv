@@ -94,7 +94,7 @@ void ServerHandler::resetClient(Client& client) {
 	client.resourceBytesRead = 0;
 	client.resourceWriteFd = -1;
 	client.resourceBytesWritten = 0;
-	client.keep_alive = true;
+	client.keepAlive = true;
 	client.cgiRequested = false;
 	client.cgiStatus = -1;
 	client.directoryListing = false;
@@ -151,7 +151,7 @@ void ServerHandler::checkClient(size_t& i) {
 	Client& client = *_clients[_pollFds[i].fd].get();
 	if (client.responseSent)
 	{
-		// if (client.keep_alive) // Commented out to close all connections after response sent, as timeouts are not working
+		// if (client.keepAlive) // Commented out to close all connections after response sent, as timeouts are not working
 		// 	resetClient(client);
 		// else 
 			closeConnection(i);
@@ -228,7 +228,7 @@ void ServerHandler::addConnection(size_t& i) {
 		Client& client = *_clients[clientFd].get();
 		client.serverConfig = _servers.at(i)->getServerConfig();
 		client.fd = clientFd;
-		client.keep_alive = false;
+		client.keepAlive = false;
 		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
 		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
 		client.lastRequest = std::time(nullptr);
@@ -310,7 +310,7 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 
 	// If whole request has not been read before error occurs, connection must be closed after error response
 	if (!client.requestHandler->getReadReady()) {
-		client.keep_alive = false;
+		client.keepAlive = false;
 	}
 
 	// If error occurs during error page creation, form response without error page to prevent looping
