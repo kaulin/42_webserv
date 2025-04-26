@@ -345,7 +345,7 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 
 void	ServerHandler::readFromFd(size_t& i) {
 	Client& client = *_resourceFds.at(_pollFds[i].fd);
-	int bytesRead;
+	ssize_t bytesRead;
 	char buf[BUFFER_SIZE] = {};
 
 	bytesRead = read(client.resourceReadFd, buf, BUFFER_SIZE);
@@ -366,7 +366,7 @@ void	ServerHandler::readFromFd(size_t& i) {
 
 void	ServerHandler::writeToFd(size_t& i) {
 	Client& client = *_resourceFds.at(_pollFds[i].fd);
-	size_t bytesWritten;
+	ssize_t bytesWritten;
 	size_t bytesToWrite = client.resourceOutString.size() - client.resourceBytesWritten;
 	if (bytesToWrite > BUFFER_SIZE)
 		bytesToWrite = BUFFER_SIZE;

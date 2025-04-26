@@ -47,7 +47,7 @@ void RequestHandler::handleRequest() {
 }
 
 void RequestHandler::readRequest() {
-	int receivedBytes;
+	ssize_t receivedBytes;
 	char buf[BUFFER_SIZE] = {};
 
 	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);

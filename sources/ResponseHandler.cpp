@@ -17,7 +17,7 @@ void ResponseHandler::resetHandler() {
 void ResponseHandler::sendResponse() {
 	if (!_client.responseReady)
 		return;
-	int bytesSent;
+	ssize_t bytesSent;
 	size_t toSend = _response->response.size() - _totalBytesSent;
 	if (toSend > BUFFER_SIZE)
 		toSend = BUFFER_SIZE;
