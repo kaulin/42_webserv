@@ -33,17 +33,21 @@ private:
 	// Private class methods
 	void 						closeFds(const std::vector<int> fdsToclose);
 	void 						handleChildProcess(Client& client);
-	void						handleParentProcess(Client& client);
+	void						handleParentProcess(Client& client, pid_t pid);
 	std::string					setCgiPath(const HttpRequest& request);
 	std::vector<std::string>	setCGIEnv(const HttpRequest& request, const Client& client);
+	void						validateCGIScript(t_CGIrequest cgiRequest, Client& client);
 	void						setupCGI(Client& client);
 	void						runCGIScript(Client& client);
 	bool						readyForExecve(const Client& client);
 	int							checkProcess(int clientFd);
 	void						cleanupPid(pid_t pid);
+	void						setPipesToNonBlock(int* pipe);
 public:
 	CGIHandler();
 	~CGIHandler();
 
 	void	handleCGI(Client& client);
+	int		cleanupCGI(Client& client);
+	void	killCGIProcess(Client& client);
 };

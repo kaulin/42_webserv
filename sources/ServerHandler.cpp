@@ -131,6 +131,7 @@ bool ServerHandler::checkTimeout(const Client& client)
 void ServerHandler::closeConnection(size_t& i) 
 {
 	Client& client = *_clients[_pollFds[i].fd].get();
+	_CGIHandler.killCGIProcess(client);
 	int clientFd = _pollFds[i].fd;
 	auto it = _resourceFds.begin();
 	while (it != _resourceFds.end() && !_resourceFds.empty())
@@ -355,7 +356,8 @@ void	ServerHandler::readFromFd(size_t& i) {
 	if (bytesRead < BUFFER_SIZE)
 	{
 		client.requestReady = true;
-		client.cgiStatus = CGI_RESPONSE_READY;
+		if (client.cgiRequested)
+			client.cgiStatus = _CGIHandler.cleanupCGI(client);
 		std::cout << "Client " << client.fd << " resource read from fd " << _pollFds[i].fd << "\n";
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
@@ -382,7 +384,7 @@ void	ServerHandler::writeToFd(size_t& i) {
 		client.resourceBytesWritten = 0;
 		client.requestHandler->handleRequest();
 		if (client.cgiRequested) {
-				_CGIHandler.handleCGI(client);
+			_CGIHandler.handleCGI(client);
 		}
 		addResourceFd(client);
 	}
