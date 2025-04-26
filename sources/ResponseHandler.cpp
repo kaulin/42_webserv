@@ -61,7 +61,7 @@ void ResponseHandler::addBody(const std::string& bodyString)
 
 void ResponseHandler::formResponse()
 {
-	if (_client.responseReady)
+	if (!_client.requestReady || _client.responseReady)
 		return;
 	const HttpRequest& request = _client.requestHandler->getRequest();
 	_response = std::make_unique<HttpResponse>();

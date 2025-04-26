@@ -255,46 +255,41 @@ void	ServerHandler::pollLoop()
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
-			if (!(_pollFds[i].revents & POLLIN) && !(_pollFds[i].revents & POLLOUT))
-				continue;
 			try {
-				if (i < _serverCount) { // Servers
-					if (_pollFds[i].revents & POLLIN)
-						addConnection(i);
-				}
-				else if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients
+				if (_pollFds[i].revents & POLLIN)
 				{
-					Client& client = *_clients[_pollFds[i].fd].get();
-
-					if (_pollFds[i].revents & POLLIN && client.responseCode == 200)
+					if (i < _serverCount) // Servers in
+						addConnection(i);
+					else if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients in
 					{
+						Client& client = *_clients[_pollFds[i].fd].get();
 						client.requestHandler->handleRequest();
 						client.lastRequest = std::time(nullptr);
 						if (client.cgiRequested)
 							_CGIHandler.handleCGI(client);
 						addResourceFd(client);
 					}
-					else if (_pollFds[i].revents & POLLOUT)
-					{
-						if (client.requestReady)
-						{
-							client.responseHandler->formResponse();
-							client.responseHandler->sendResponse();
-						}
-					}
-					checkClient(i); // check timeouts
-				}
-				else // Resources (pipes and files)
-				{
-					if (_pollFds[i].revents & POLLIN)
+					else // Resource in
 						readFromFd(i);
-					else if (_pollFds[i].revents & POLLOUT)
-						writeToFd(i);
 				}
+				else if (_pollFds[i].revents & POLLOUT)
+				{
+					if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients out
+					{
+						Client& client = *_clients[_pollFds[i].fd].get();
+						client.responseHandler->formResponse();
+						client.responseHandler->sendResponse();
+					}
+					else // Resource out
+						writeToFd(i);
+				} 
 			} catch (const ServerException& e) {
+				if (_sigintReceived)
+					break;
 				handleServerException(e.statusCode(), i);
-				//closeConnection(i);
 			} catch (const std::exception& e) {
+				if (_sigintReceived)
+					break;
 				std::cout << "Caught exception: " << e.what() << "\n";
 			}
 		}
