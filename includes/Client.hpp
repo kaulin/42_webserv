@@ -32,5 +32,6 @@ struct Client {
 	bool								directoryListing;
 	bool								requestReady;
 	bool								responseReady;
+	bool								closeAnyway;
 	int									cgiStatus;
 };

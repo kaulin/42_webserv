@@ -101,28 +101,16 @@ void ServerHandler::resetClient(Client& client) {
 	client.requestReady = false;
 	client.responseReady = false;
 	client.responseSent = false;
+	client.closeAnyway = false;
 	client.responseCode = STATUS_OK;
 	client.requestHandler->resetHandler();
 	client.responseHandler->resetHandler();
 }
 
-void ServerHandler::removeFromPollList(int fdToRemove)
-{
-	std::cout << "Removes " << fdToRemove << " from poll list\n";
-	auto it = _pollFds.begin();
-	while (it != _pollFds.end())
-	{
-		if (it->fd == fdToRemove)
-			it = _pollFds.erase(it);
-		else
-			++it;
-	}
-}
-
 bool ServerHandler::checkTimeout(const Client& client)
 {
 	const std::time_t now = std::time(nullptr);
-	const int timeout = 15;
+	const int timeout = 7;
 	if (now - client.lastRequest > timeout)
 		return false;
 	return true;
@@ -130,8 +118,10 @@ bool ServerHandler::checkTimeout(const Client& client)
 
 void ServerHandler::checkClients()
 {
-	for (size_t i = _pollFds.size() ; i >= _serverCount; i--)
+	for (size_t i = 0; i < _pollFds.size() ; i++)
 	{
+		if (_clients.empty())
+			return;
 		auto it = _clients.find(_pollFds[i].fd);
 		if (it != _clients.end())
 		{
@@ -146,10 +136,16 @@ void ServerHandler::checkClients()
 				std::cout << "Client " << client.fd << " response sent with connection close, disconnecting...\n";
 				closeConnection(i);
 			}
+			else if (client.closeAnyway)
+			{
+				std::cout << "Client " << client.fd << " 413 or send/recv error, disconnecting...\n";
+				closeConnection(i);
+			}
 			else if (client.responseSent)
 				resetClient(client);
 		}
 	}
+	prunePollFds();
 }
 
 void ServerHandler::closeConnection(size_t& i) 
@@ -165,8 +161,8 @@ void ServerHandler::closeConnection(size_t& i)
 		else
 			++it;
 	}
-	_pollFds.erase(_pollFds.begin() + i);
 	_clients.erase(clientFd);
+	_fdsToDrop.push_back(clientFd);
 	close(clientFd);
 }
 
@@ -193,6 +189,31 @@ void ServerHandler::addToPollList(int fd, PollType pollType)
 	std::cout << "Added " << new_pollfd.fd << " to poll list\n";
 }
 
+void ServerHandler::removeFromPollList(int fdToRemove)
+{
+	// std::cout << "Removes " << fdToRemove << " from poll list\n";
+	// auto it = _pollFds.begin();
+	// while (it != _pollFds.end())
+	for (auto it = _pollFds.begin() ; it != _pollFds.end(); it++)
+	{
+		if (it->fd == fdToRemove)
+		{
+			_pollFds.erase(it);
+			return;
+		}
+	}
+}
+
+void ServerHandler::prunePollFds()
+{
+	while (!_fdsToDrop.empty())
+	{
+		std::cout << "Removing FD " << _fdsToDrop.back() << "from poll list.\n";
+		removeFromPollList(_fdsToDrop.back());
+		_fdsToDrop.pop_back();
+	}
+}
+
 void ServerHandler::addResourceFd(Client& client) {
 	// ADD RESOURCES OR PIPES TO POLL LOOP
 	if (client.resourceReadFd != -1)
@@ -209,7 +230,7 @@ void ServerHandler::addResourceFd(Client& client) {
 
 void ServerHandler::removeResourceFd(int fd) {
 	if (fd != -1) {
-		removeFromPollList(fd);
+		_fdsToDrop.push_back(fd);
 		close(fd);
 	}
 	_resourceFds.erase(fd);
@@ -295,12 +316,15 @@ void	ServerHandler::pollLoop()
 				if (_sigintReceived)
 					break;
 				handleServerException(e.statusCode(), i);
+				break;
 			} catch (const std::exception& e) {
 				if (_sigintReceived)
 					break;
 				std::cout << "Caught exception: " << e.what() << "\n";
+				break;
 			}
 		}
+		prunePollFds();
 	}
 	for (pollfd p : _pollFds)
 		close(p.fd);
@@ -311,7 +335,8 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	// Set client from either _clients struct or from requestFds struct.
 	Client& client = (_clients.find(_pollFds[i].fd) != _clients.end()) ? *_clients[_pollFds[i].fd].get() : *_resourceFds.at(_pollFds[i].fd);
 	if (statusCode == STATUS_DISCONNECTED || statusCode == STATUS_RECV_ERROR || statusCode == STATUS_SEND_ERROR) {
-		closeConnection(i);
+		client.closeAnyway = true;
+		// closeConnection(i);
 		return;
 	}
 
@@ -328,6 +353,7 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	}
 
 	client.responseCode = statusCode;
+	client.requestReady = false;
 	client.responseReady = false;
 	client.resourceOutString = "";
 	if (client.resourceReadFd != -1) {
