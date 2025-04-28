@@ -177,6 +177,24 @@ void RequestHandler::processRequest() {
 		_client.keep_alive = false;
 	
 	// TODO Check redirects
+	std::cout << "uliuli:\n";
+	for (auto& location : _client.serverConfig->locations)
+	{
+		std::cout << "location path: " << location.first << "\n";
+		if (!location.second.redirect.second.empty()) {
+			std::string redirect = location.second.redirect.second;
+			int statusCode = location.second.redirect.first; // saving this for potential use
+			(void)statusCode;
+			std::cout << "redirect path:" << redirect << "\n";
+			if (_request->uriPath == location.first) {
+				// send redirection response with corresponding status code
+				std::cout << "switcheroo\n";
+				redirect.erase(redirect.begin(), redirect.begin() + redirect.find_last_of('/'));
+				_request->uriPath = redirect; // this would be easy but probably wrong
+			}
+		}
+	}
+	std::cout << "uri path: " << _request->uriPath << "\n";
 
 	if (!ServerConfigData::checkMethod(*_client.serverConfig, _request->method, _request->uriPath))
 		throw ServerException(STATUS_NOT_ALLOWED);
