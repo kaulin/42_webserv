@@ -122,10 +122,34 @@ void ServerHandler::removeFromPollList(int fdToRemove)
 bool ServerHandler::checkTimeout(const Client& client)
 {
 	const std::time_t now = std::time(nullptr);
-	const int timeout = 60;
+	const int timeout = 15;
 	if (now - client.lastRequest > timeout)
 		return false;
 	return true;
+}
+
+void ServerHandler::checkClients()
+{
+	for (size_t i = _pollFds.size() ; i >= _serverCount; i--)
+	{
+		auto it = _clients.find(_pollFds[i].fd);
+		if (it != _clients.end())
+		{
+			Client& client = *it->second.get();
+			if (!checkTimeout(client))
+			{
+				std::cout << "Client " << client.fd << " timed out, disconnecting...\n";
+				closeConnection(i);
+			}
+			else if (client.responseSent && !client.keepAlive)
+			{
+				std::cout << "Client " << client.fd << " response sent with connection close, disconnecting...\n";
+				closeConnection(i);
+			}
+			else if (client.responseSent)
+				resetClient(client);
+		}
+	}
 }
 
 void ServerHandler::closeConnection(size_t& i) 
@@ -141,27 +165,9 @@ void ServerHandler::closeConnection(size_t& i)
 		else
 			++it;
 	}
-	std::cout << "Client " << _pollFds[i].fd << " disconnected.\n";
 	_pollFds.erase(_pollFds.begin() + i);
 	_clients.erase(clientFd);
 	close(clientFd);
-}
-
-void ServerHandler::checkClient(size_t& i) {
-	Client& client = *_clients[_pollFds[i].fd].get();
-	if (client.responseSent)
-	{
-		// if (client.keepAlive) // Commented out to close all connections after response sent, as timeouts are not working
-		// 	resetClient(client);
-		// else 
-			closeConnection(i);
-		
-	}
-	else if (!checkTimeout(client))
-	{
-		std::cout << "Client " << client.fd << " timed out, closing connection.\n";
-		closeConnection(i);
-	}
 }
 
 // Set pollin or pollout
@@ -254,6 +260,7 @@ void	ServerHandler::pollLoop()
 				break;
 		if (poll_count == -1)
 			throw ServerException(STATUS_INTERNAL_ERROR);
+		checkClients();
 		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
 			try {

@@ -47,8 +47,8 @@ private:
 	void		setPollList();
 	void		addConnection(size_t& i);
 	void		closeConnection(size_t& i);
-	void		checkClient(size_t& i);
 	bool		checkTimeout(const Client& client);
+	void		checkClients();
 	void		handleServerException(int statusCode, size_t& fd);
 public:
 	ServerHandler(std::string path);
