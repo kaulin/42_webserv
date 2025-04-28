@@ -189,7 +189,9 @@ void RequestHandler::processRequest() {
 			if (_request->uriPath == location.first) {
 				// send redirection response with corresponding status code
 				std::cout << "switcheroo\n";
-				redirect.erase(redirect.begin(), redirect.begin() + redirect.find_last_of('/'));
+				if (redirect.find_last_of(':') != std::string::npos)
+					redirect.erase(redirect.begin(), redirect.begin() + redirect.find_last_of(':'));
+				redirect.erase(redirect.begin(), redirect.begin() + redirect.find_first_of('/'));
 				_request->uriPath = redirect; // this would be easy but probably wrong
 			}
 		}
