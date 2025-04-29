@@ -176,27 +176,8 @@ void RequestHandler::processRequest() {
 	if (it != _request->headers.end() && it->second == "close")
 		_client.keep_alive = false;
 	
-	// TODO Check redirects
-	std::cout << "uliuli:\n";
-	for (auto& location : _client.serverConfig->locations)
-	{
-		std::cout << "location path: " << location.first << "\n";
-		if (!location.second.redirect.second.empty()) {
-			std::string redirect = location.second.redirect.second;
-			int statusCode = location.second.redirect.first; // saving this for potential use
-			(void)statusCode;
-			std::cout << "redirect path:" << redirect << "\n";
-			if (_request->uriPath == location.first) {
-				// send redirection response with corresponding status code
-				std::cout << "switcheroo\n";
-				if (redirect.find_last_of(':') != std::string::npos)
-					redirect.erase(redirect.begin(), redirect.begin() + redirect.find_last_of(':'));
-				redirect.erase(redirect.begin(), redirect.begin() + redirect.find_first_of('/'));
-				_request->uriPath = redirect; // this would be easy but probably wrong
-			}
-		}
-	}
-	std::cout << "uri path: " << _request->uriPath << "\n";
+	if (checkRedirect())
+		return;
 
 	if (!ServerConfigData::checkMethod(*_client.serverConfig, _request->method, _request->uriPath))
 		throw ServerException(STATUS_NOT_ALLOWED);
@@ -210,6 +191,21 @@ void RequestHandler::processRequest() {
 		processDelete();
 	else
 		throw ServerException(STATUS_METHOD_UNSUPPORTED);
+}
+
+bool RequestHandler::checkRedirect() {
+	for (auto& location : _client.serverConfig->locations)
+	{
+		if (!location.second.redirect.second.empty()) {
+			int statusCode = location.second.redirect.first;
+			if (_request->uriPath == location.first) {
+				_client.responseCode = statusCode;
+				_client.requestReady = true;
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 void RequestHandler::processGet() {

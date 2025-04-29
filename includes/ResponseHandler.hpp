@@ -22,6 +22,7 @@ private:
 	Client& _client;
 	size_t _totalBytesSent;
 	std::unique_ptr<HttpResponse> _response;
+	void formRedirect(const HttpRequest& request);
 	void formGET();
 	void formPOST();
 	void formDELETE();
@@ -34,6 +35,7 @@ private:
 	static std::string timeToString(const std::filesystem::file_time_type& time);
 	static std::string sizeToString(const size_t& size);
 	static std::string getTimeStamp();
+	bool isRedirect(int code);
 public:
 	ResponseHandler(Client& client);
 	~ResponseHandler();
