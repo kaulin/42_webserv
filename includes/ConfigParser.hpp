@@ -46,6 +46,7 @@ enum class ConfigKey
 	ERROR_500,
 	ERROR_501,
 	CLIENT_MAX_BODY_SIZE,
+	CLIENT_TIMEOUT,
 	UNKNOWN
 };
 
@@ -79,7 +80,8 @@ const std::unordered_map<std::string, ConfigKey> keywordMap =
 	{"error_page431", ConfigKey::ERROR_431},
 	{"error_page500", ConfigKey::ERROR_500},
 	{"error_page501", ConfigKey::ERROR_501},
-	{"client_max_body_size", ConfigKey::CLIENT_MAX_BODY_SIZE}
+	{"client_max_body_size", ConfigKey::CLIENT_MAX_BODY_SIZE},
+	{"client_timeout", ConfigKey::CLIENT_TIMEOUT}
 };
 
 class ConfigParser { 

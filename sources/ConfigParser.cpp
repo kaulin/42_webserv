@@ -4,58 +4,6 @@
 #include <filesystem>
 
 
-// void	testPrintConfigs(std::map<std::string, Config> configs)
-// {
-// 	for (const auto &config : configs)
-// 	{
-// 		std::cout << "Root: " << config.second.root << "\n"; 
-// 		std::cout << "Host: " << config.second.host << "\n"; 
-// 		std::cout << "Names: ";
-// 		for (const auto& name : config.second.names)
-// 			std::cout << name << " ";
-// 		std::cout << "\n";
-		
-// 		std::cout << "Port: ";
-// 		std::cout << config.second.port << " ";
-// 		std::cout << "\n";
-		
-// 		std::cout << "Client Max Body Size: " << config.second.cli_max_bodysize << "\n";
-		
-// 		std::cout << "Default Pages:\n";
-// 		for (const auto& page : config.second.default_pages)
-// 			std::cout << "  " << page.first << ": " << page.second << "\n";
-		
-// 		std::cout << "Error Pages:\n";
-// 		for (const auto& page : config.second.error_pages)
-// 			std::cout << "  " << page.first << ": " << page.second << "\n";
-// 			//std::cout << page << " ";
-		
-// 		// std::cout << "Error Codes:\n";
-// 		// for (const auto& code : config.second._error_codes)
-// 		// 	std::cout << "  " << code.first << ": " << code.second << "\n";
-		
-// 		std::cout << "\n---------------------\n";
-// 		std::cout << "Locations:\n";
-// 		for (const auto& loc : config.second.locations) {
-// 			const Location& location = loc.second;
-// 			std::cout << "  Path: " << location.path << "\n";
-// 			std::cout << "  Root: " << location.root << "\n";
-// 			std::cout << "  Index: " << location.index << "\n";
-// 			std::cout << "  CGI Path: " << location.cgi_path << "\n";
-// 			std::cout << "  CGI Param: " << location.cgi_param << "\n";
-// 			std::cout << "  Redirect: " << location.redirect.first << " -> " << location.redirect.second << "\n";
-// 			//std::cout << "  Directory Listing: " << (location._dir_listing ? "Enabled" : "Disabled") << "\n";
-			
-// 			std::cout << "  Methods:\n";
-// 			for (const auto& method : location.methods)
-// 				std::cout << "	" << method.first << ": " << (method.second ? "Allowed" : "Not Allowed") << "\n";
-			
-// 			std::cout << "\n";
-// 		}
-// 	}
-// 	std::cout << "Finished printing configs\n";
-// }
-
 // helper trimming function
 std::string trim(const std::string &str)
 {
@@ -126,6 +74,29 @@ size_t convertMaxClientSize(const std::string& number)
 		throw std::invalid_argument("Invalid client max body size suffix");
 
 	return mult;
+}
+
+int parseTimeout(const std::string& value) {
+    std::regex timeRegex(R"((\d+)(s|m|h))");
+    std::smatch match;
+
+    if (std::regex_match(value, match, timeRegex))
+	{
+		try
+		{
+			int time = std::stoi(match[1]);
+			std::string unit = match[2];
+
+			if (unit == "s") return time;
+			if (unit == "m") return time * 60;
+			if (unit == "h") return time * 60 * 60;
+		}
+		catch (...)
+		{
+			throw ConfigParser::ConfigParserException("Config: Timeout value out of range.");
+		}
+    }
+    throw ConfigParser::ConfigParserException("Config: Invalid timeout format.");
 }
 
 
@@ -374,6 +345,12 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				blockInstance.cli_max_bodysize = bodySize * mult;
 				++it; break; 
 			}
+			case ConfigKey::CLIENT_TIMEOUT:
+			{
+				++it;
+				blockInstance.timeout = parseTimeout(*it);
+				++it; break;
+			}
 			case ConfigKey::UNKNOWN:
 				std::cout << "Config: Skipped over unknown directive: " << *it << std::endl;
 				break; // default handling
@@ -441,7 +418,8 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 		if (*it == "server")
 		{
 			Config blockInstance; // new server block
-			
+
+			blockInstance.timeout = 0;
 			assignKeyToValue(++it, end, blockInstance);
 			setDefaultErrorPages(blockInstance);
 			setRoot(&blockInstance);
@@ -452,7 +430,6 @@ std::map<std::string, Config> ConfigParser::parseConfigFile(std::string path)
 		}
 		++it;
 	}
-	//testPrintConfigs(configs);
 	return configs;
 }
 
