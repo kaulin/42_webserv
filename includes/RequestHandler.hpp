@@ -42,6 +42,7 @@ class RequestHandler
 		void handleHeaders();
 		void handleChunkedRequest();
 		void setContentLength();
+		bool checkRedirect();
 		bool _isChunked;
 		bool _chunkedBodyStarted;
 		ChunkParseState _chunkState;

@@ -65,7 +65,9 @@ void ResponseHandler::formResponse()
 		return;
 	const HttpRequest& request = _client.requestHandler->getRequest();
 	_response = std::make_unique<HttpResponse>();
-	if (_client.responseCode >= 300)
+	if (isRedirect(_client.responseCode))
+		formRedirect(request);
+	else if (_client.responseCode >= 300)
 		formErrorPage();
 	else if (_client.cgiRequested)
 		formCGI();
@@ -78,6 +80,21 @@ void ResponseHandler::formResponse()
 	else if (request.method == "DELETE")
 		formDELETE();
 	_client.responseReady = true;
+}
+
+void ResponseHandler::formRedirect(const HttpRequest& request) {
+	std::string redirectPath;
+	for (auto& location : _client.serverConfig->locations)
+	{
+		if (!location.second.redirect.second.empty()) {
+			if (request.uriPath == location.first) {
+				redirectPath = location.second.redirect.second;
+			}
+		}
+	}
+	addStatus();
+	addHeader("Date", getTimeStamp());
+	addHeader("Location", redirectPath);
 }
 
 void ResponseHandler::formGET() {
@@ -209,4 +226,8 @@ std::string ResponseHandler::getTimeStamp()
 	std::ostringstream timeStream;
 	timeStream << std::put_time(&tm, "%a, %d %b %Y %H:%M:%S %Z");
 	return timeStream.str();
+}
+
+bool ResponseHandler::isRedirect(int code) {
+    return code == 301 || code == 302 || code == 307 || code == 308;
 }

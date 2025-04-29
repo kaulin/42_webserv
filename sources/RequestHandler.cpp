@@ -176,7 +176,8 @@ void RequestHandler::processRequest() {
 	if (it != _request->headers.end() && it->second == "close")
 		_client.keep_alive = false;
 	
-	// TODO Check redirects
+	if (checkRedirect())
+		return;
 
 	if (!ServerConfigData::checkMethod(*_client.serverConfig, _request->method, _request->uriPath))
 		throw ServerException(STATUS_NOT_ALLOWED);
@@ -190,6 +191,21 @@ void RequestHandler::processRequest() {
 		processDelete();
 	else
 		throw ServerException(STATUS_METHOD_UNSUPPORTED);
+}
+
+bool RequestHandler::checkRedirect() {
+	for (auto& location : _client.serverConfig->locations)
+	{
+		if (!location.second.redirect.second.empty()) {
+			int statusCode = location.second.redirect.first;
+			if (_request->uriPath == location.first) {
+				_client.responseCode = statusCode;
+				_client.requestReady = true;
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 void RequestHandler::processGet() {
