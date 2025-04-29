@@ -15,7 +15,7 @@ class ResponseHandler;
 struct Client {
 	const Config*						serverConfig;
 	int									fd;
-	std::time_t							lastRequest;
+	std::time_t							lastActivity;
 	std::unique_ptr<ResponseHandler>	responseHandler;
 	std::unique_ptr<RequestHandler>		requestHandler;
 	std::string							resourcePath;

@@ -113,7 +113,7 @@ bool ServerHandler::checkTimeout(const Client& client)
 {
 	const std::time_t now = std::time(nullptr);
 	const int timeout = (client.serverConfig->timeout != 0) ? client.serverConfig->timeout : 7;
-	if (now - client.lastRequest > timeout)
+	if (now - client.lastActivity > timeout)
 		return false;
 	return true;
 }
@@ -261,7 +261,7 @@ void ServerHandler::addConnection(size_t& i) {
 		client.keepAlive = false;
 		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
 		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
-		client.lastRequest = std::time(nullptr);
+		client.lastActivity = std::time(nullptr);
 		resetClient(client);
 		std::cout << "Client connected to server " << _servers.at(i)->getServerConfig()->port << " with fd " << client.fd << "\n";
 	} catch (const ServerException& e) {
@@ -296,7 +296,6 @@ void	ServerHandler::pollLoop()
 					{
 						Client& client = *_clients[_pollFds[i].fd].get();
 						client.requestHandler->handleRequest();
-						client.lastRequest = std::time(nullptr);
 						if (client.cgiRequested)
 							_CGIHandler.handleCGI(client);
 						addResourceFd(client);
