@@ -112,7 +112,7 @@ void ServerHandler::resetClient(Client& client) {
 bool ServerHandler::checkTimeout(const Client& client)
 {
 	const std::time_t now = std::time(nullptr);
-	const int timeout = 7;
+	const int timeout = (client.serverConfig->timeout != 0) ? client.serverConfig->timeout : 7;
 	if (now - client.lastRequest > timeout)
 		return false;
 	return true;

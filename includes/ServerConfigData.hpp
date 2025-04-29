@@ -23,9 +23,9 @@ struct Config {
 	std::string									port;
 	std::unordered_map<std::string, Location>	locations;
 	size_t										cli_max_bodysize;
+	int											timeout;
 	std::map<int, std::string>					default_pages;
 	std::map<int, std::string>					error_pages;
-	//std::map<int, std::string>					error_codes; // unnecessary?
 };
 
 class ServerConfigData {
