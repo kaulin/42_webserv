@@ -21,7 +21,7 @@ const char* ServerException::statusMessage(int statusCode) {
 		case 204:
 			return "No Content";
 		case 301:
-			return "Moved Permanentlly";
+			return "Moved Permanently";
 		case 302:
 			return "Moved Temporarily";
 		case 307:
