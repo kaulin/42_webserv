@@ -55,6 +55,7 @@ void RequestHandler::readRequest() {
 		throw ServerException(STATUS_RECV_ERROR);
 	if (receivedBytes == 0)
 		throw ServerException(STATUS_DISCONNECTED);
+	_client.lastActivity = std::time(nullptr);
 	_requestString.append(buf, receivedBytes);
 	handleHeaders();
 	if (!_headersRead)
