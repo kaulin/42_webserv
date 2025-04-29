@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <csignal>
 #include <sys/socket.h>
@@ -36,7 +37,8 @@ ServerHandler::ServerHandler(std::string path) :
 ServerHandler::~ServerHandler() 
 {
 	_servers.clear();
-	_pollFds.clear(); 
+	_pollFds.clear();
+	_newPollFds.clear(); 
 
 	std::cout << "Servers closed down\n";
 }
@@ -138,14 +140,14 @@ void ServerHandler::checkClients()
 			}
 			else if (client.closeAnyway)
 			{
-				std::cout << "Client " << client.fd << " 413 or send/recv error, disconnecting...\n";
+				std::cout << "Client " << client.fd << " disconnected, dropping client...\n";
 				closeConnection(i);
 			}
 			else if (client.responseSent)
 				resetClient(client);
 		}
 	}
-	prunePollFds();
+	updatePollList();
 }
 
 void ServerHandler::closeConnection(size_t& i) 
@@ -185,8 +187,7 @@ void ServerHandler::addToPollList(int fd, PollType pollType)
 		break;
 	}
 	new_pollfd.revents = 0;
-	_pollFds.emplace_back(new_pollfd);
-	std::cout << "Added " << new_pollfd.fd << " to poll list\n";
+	_newPollFds.emplace_back(new_pollfd);
 }
 
 void ServerHandler::removeFromPollList(int fdToRemove)
@@ -204,11 +205,13 @@ void ServerHandler::removeFromPollList(int fdToRemove)
 	}
 }
 
-void ServerHandler::prunePollFds()
+void ServerHandler::updatePollList()
 {
+	_pollFds.insert(_pollFds.end(), _newPollFds.begin(), _newPollFds.end());
+	_newPollFds.clear();
 	while (!_fdsToDrop.empty())
 	{
-		std::cout << "Removing FD " << _fdsToDrop.back() << "from poll list.\n";
+		std::cout << "Removing fd " << _fdsToDrop.back() << " from poll list.\n";
 		removeFromPollList(_fdsToDrop.back());
 		_fdsToDrop.pop_back();
 	}
@@ -269,17 +272,17 @@ void ServerHandler::addConnection(size_t& i) {
 
 void	ServerHandler::pollLoop()
 {
-	int	poll_count;
+	int	pollCount;
 
 	std::signal(SIGINT, ServerHandler::signalHandler);
 	std::signal(SIGPIPE, SIG_IGN);
 	setPollList();
 	while (!_sigintReceived)
 	{
-		poll_count = poll(_pollFds.data(), _pollFds.size(), -1);
+		pollCount = poll(_pollFds.data(), _pollFds.size(), -1);
 		if (_sigintReceived)
 				break;
-		if (poll_count == -1)
+		if (pollCount == -1)
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		checkClients();
 		for(size_t i = 0; i < _pollFds.size(); i++)
@@ -324,9 +327,11 @@ void	ServerHandler::pollLoop()
 				break;
 			}
 		}
-		prunePollFds();
+		updatePollList();
 	}
 	for (pollfd p : _pollFds)
+		close(p.fd);
+	for (pollfd p : _newPollFds)
 		close(p.fd);
 }
 
@@ -377,6 +382,8 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
+	if (_resourceFds.find(_pollFds[i].fd) == _resourceFds.end())
+		return;
 	Client& client = *_resourceFds.at(_pollFds[i].fd);
 	ssize_t bytesRead;
 	char buf[BUFFER_SIZE] = {};
