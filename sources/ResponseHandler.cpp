@@ -30,7 +30,7 @@ void ResponseHandler::sendResponse() {
 	_totalBytesSent += bytesSent;
 	if (_totalBytesSent == _response->response.size())
 	{
-		std::cout << "Client " << _client.fd << " response sent!\n";
+		std::cout << "Client " << _client.fd << " response sent with code: " << _client.responseCode << "\n";
 		_client.responseSent = true;
 	}
 }
