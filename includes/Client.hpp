@@ -27,10 +27,11 @@ struct Client {
 	size_t								resourceBytesWritten;
 	int									responseSent;
 	int									responseCode;
-	bool								keep_alive;
+	bool								keepAlive;
 	bool								cgiRequested;
 	bool								directoryListing;
 	bool								requestReady;
 	bool								responseReady;
+	bool								closeAnyway;
 	int									cgiStatus;
 };

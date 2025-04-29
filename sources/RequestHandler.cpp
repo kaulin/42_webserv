@@ -47,7 +47,7 @@ void RequestHandler::handleRequest() {
 }
 
 void RequestHandler::readRequest() {
-	int receivedBytes;
+	ssize_t receivedBytes;
 	char buf[BUFFER_SIZE] = {};
 
 	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);
@@ -174,7 +174,7 @@ void RequestHandler::processRequest() {
 
 	auto it = _request->headers.find("Connection");
 	if (it != _request->headers.end() && it->second == "close")
-		_client.keep_alive = false;
+		_client.keepAlive = false;
 	
 	if (checkRedirect())
 		return;

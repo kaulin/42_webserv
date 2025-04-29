@@ -17,7 +17,7 @@ void ResponseHandler::resetHandler() {
 void ResponseHandler::sendResponse() {
 	if (!_client.responseReady)
 		return;
-	int bytesSent;
+	ssize_t bytesSent;
 	size_t toSend = _response->response.size() - _totalBytesSent;
 	if (toSend > BUFFER_SIZE)
 		toSend = BUFFER_SIZE;
@@ -30,7 +30,7 @@ void ResponseHandler::sendResponse() {
 	_totalBytesSent += bytesSent;
 	if (_totalBytesSent == _response->response.size())
 	{
-		std::cout << "Client " << _client.fd << " response sent!\n";
+		std::cout << "Client " << _client.fd << " response sent with code: " << _client.responseCode << "\n";
 		_client.responseSent = true;
 	}
 }
@@ -181,7 +181,7 @@ void ResponseHandler::formDirectoryListing() {
 void ResponseHandler::formErrorPage() {
 	addStatus();
 	addHeader("Date", getTimeStamp());
-	if (!_client.keep_alive)
+	if (!_client.keepAlive)
 		addHeader("Connection", "close");
 	addHeader("Content-Type", "text/html");
 	if (_client.resourceInString.empty()) {

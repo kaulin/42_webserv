@@ -2,6 +2,7 @@
 #include <ctime>
 #include <memory>
 #include <poll.h>
+#include <deque>
 #include "ServerConfigData.hpp"
 #include "Client.hpp"
 #include "RequestHandler.hpp"
@@ -32,6 +33,8 @@ private:
 	std::unordered_map<int, std::unique_ptr<Client>>	_clients;
 	std::unordered_map<int, Client*>					_resourceFds;
 	std::vector<struct pollfd>							_pollFds;
+	std::vector<struct pollfd>							_newPollFds;
+	std::deque<int>										_fdsToDrop;
 	ServerConfigData									_config;
 	Logger												_consoleLogger;
 	CGIHandler											_CGIHandler;
@@ -43,12 +46,13 @@ private:
 	void		removeResourceFd(int fd);
 	void		addToPollList(int fd, PollType pollType);
 	void		removeFromPollList(int fd);
+	void		updatePollList();
 	void		pollLoop();
 	void		setPollList();
 	void		addConnection(size_t& i);
 	void		closeConnection(size_t& i);
-	void		checkClient(size_t& i);
 	bool		checkTimeout(const Client& client);
+	void		checkClients();
 	void		handleServerException(int statusCode, size_t& fd);
 public:
 	ServerHandler(std::string path);

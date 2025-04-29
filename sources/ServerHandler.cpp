@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <csignal>
 #include <sys/socket.h>
@@ -36,7 +37,8 @@ ServerHandler::ServerHandler(std::string path) :
 ServerHandler::~ServerHandler() 
 {
 	_servers.clear();
-	_pollFds.clear(); 
+	_pollFds.clear();
+	_newPollFds.clear(); 
 
 	std::cout << "Servers closed down\n";
 }
@@ -94,38 +96,58 @@ void ServerHandler::resetClient(Client& client) {
 	client.resourceBytesRead = 0;
 	client.resourceWriteFd = -1;
 	client.resourceBytesWritten = 0;
-	client.keep_alive = true;
+	client.keepAlive = true;
 	client.cgiRequested = false;
 	client.cgiStatus = -1;
 	client.directoryListing = false;
 	client.requestReady = false;
 	client.responseReady = false;
 	client.responseSent = false;
+	client.closeAnyway = false;
 	client.responseCode = STATUS_OK;
 	client.requestHandler->resetHandler();
 	client.responseHandler->resetHandler();
 }
 
-void ServerHandler::removeFromPollList(int fdToRemove)
-{
-	std::cout << "Removes " << fdToRemove << " from poll list\n";
-	auto it = _pollFds.begin();
-	while (it != _pollFds.end())
-	{
-		if (it->fd == fdToRemove)
-			it = _pollFds.erase(it);
-		else
-			++it;
-	}
-}
-
 bool ServerHandler::checkTimeout(const Client& client)
 {
 	const std::time_t now = std::time(nullptr);
-	const int timeout = 60;
+	const int timeout = 7;
 	if (now - client.lastRequest > timeout)
 		return false;
 	return true;
+}
+
+void ServerHandler::checkClients()
+{
+	for (size_t i = 0; i < _pollFds.size() ; i++)
+	{
+		if (_clients.empty())
+			return;
+		auto it = _clients.find(_pollFds[i].fd);
+		if (it != _clients.end())
+		{
+			Client& client = *it->second.get();
+			if (!checkTimeout(client))
+			{
+				std::cout << "Client " << client.fd << " timed out, disconnecting...\n";
+				closeConnection(i);
+			}
+			else if (client.responseSent && !client.keepAlive)
+			{
+				std::cout << "Client " << client.fd << " response sent with connection close, disconnecting...\n";
+				closeConnection(i);
+			}
+			else if (client.closeAnyway)
+			{
+				std::cout << "Client " << client.fd << " disconnected, dropping client...\n";
+				closeConnection(i);
+			}
+			else if (client.responseSent)
+				resetClient(client);
+		}
+	}
+	updatePollList();
 }
 
 void ServerHandler::closeConnection(size_t& i) 
@@ -141,27 +163,9 @@ void ServerHandler::closeConnection(size_t& i)
 		else
 			++it;
 	}
-	std::cout << "Client " << _pollFds[i].fd << " disconnected.\n";
-	_pollFds.erase(_pollFds.begin() + i);
 	_clients.erase(clientFd);
+	_fdsToDrop.push_back(clientFd);
 	close(clientFd);
-}
-
-void ServerHandler::checkClient(size_t& i) {
-	Client& client = *_clients[_pollFds[i].fd].get();
-	if (client.responseSent)
-	{
-		// if (client.keep_alive) // Commented out to close all connections after response sent, as timeouts are not working
-		// 	resetClient(client);
-		// else 
-			closeConnection(i);
-		
-	}
-	else if (!checkTimeout(client))
-	{
-		std::cout << "Client " << client.fd << " timed out, closing connection.\n";
-		closeConnection(i);
-	}
 }
 
 // Set pollin or pollout
@@ -183,8 +187,34 @@ void ServerHandler::addToPollList(int fd, PollType pollType)
 		break;
 	}
 	new_pollfd.revents = 0;
-	_pollFds.emplace_back(new_pollfd);
-	std::cout << "Added " << new_pollfd.fd << " to poll list\n";
+	_newPollFds.emplace_back(new_pollfd);
+}
+
+void ServerHandler::removeFromPollList(int fdToRemove)
+{
+	// std::cout << "Removes " << fdToRemove << " from poll list\n";
+	// auto it = _pollFds.begin();
+	// while (it != _pollFds.end())
+	for (auto it = _pollFds.begin() ; it != _pollFds.end(); it++)
+	{
+		if (it->fd == fdToRemove)
+		{
+			_pollFds.erase(it);
+			return;
+		}
+	}
+}
+
+void ServerHandler::updatePollList()
+{
+	_pollFds.insert(_pollFds.end(), _newPollFds.begin(), _newPollFds.end());
+	_newPollFds.clear();
+	while (!_fdsToDrop.empty())
+	{
+		std::cout << "Removing fd " << _fdsToDrop.back() << " from poll list.\n";
+		removeFromPollList(_fdsToDrop.back());
+		_fdsToDrop.pop_back();
+	}
 }
 
 void ServerHandler::addResourceFd(Client& client) {
@@ -203,7 +233,7 @@ void ServerHandler::addResourceFd(Client& client) {
 
 void ServerHandler::removeResourceFd(int fd) {
 	if (fd != -1) {
-		removeFromPollList(fd);
+		_fdsToDrop.push_back(fd);
 		close(fd);
 	}
 	_resourceFds.erase(fd);
@@ -228,7 +258,7 @@ void ServerHandler::addConnection(size_t& i) {
 		Client& client = *_clients[clientFd].get();
 		client.serverConfig = _servers.at(i)->getServerConfig();
 		client.fd = clientFd;
-		client.keep_alive = false;
+		client.keepAlive = false;
 		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
 		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
 		client.lastRequest = std::time(nullptr);
@@ -242,18 +272,19 @@ void ServerHandler::addConnection(size_t& i) {
 
 void	ServerHandler::pollLoop()
 {
-	int	poll_count;
+	int	pollCount;
 
 	std::signal(SIGINT, ServerHandler::signalHandler);
 	std::signal(SIGPIPE, SIG_IGN);
 	setPollList();
 	while (!_sigintReceived)
 	{
-		poll_count = poll(_pollFds.data(), _pollFds.size(), -1);
+		pollCount = poll(_pollFds.data(), _pollFds.size(), -1);
 		if (_sigintReceived)
 				break;
-		if (poll_count == -1)
+		if (pollCount == -1)
 			throw ServerException(STATUS_INTERNAL_ERROR);
+		checkClients();
 		for(size_t i = 0; i < _pollFds.size(); i++)
 		{
 			try {
@@ -288,14 +319,19 @@ void	ServerHandler::pollLoop()
 				if (_sigintReceived)
 					break;
 				handleServerException(e.statusCode(), i);
+				break;
 			} catch (const std::exception& e) {
 				if (_sigintReceived)
 					break;
 				std::cout << "Caught exception: " << e.what() << "\n";
+				break;
 			}
 		}
+		updatePollList();
 	}
 	for (pollfd p : _pollFds)
+		close(p.fd);
+	for (pollfd p : _newPollFds)
 		close(p.fd);
 }
 
@@ -304,13 +340,14 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	// Set client from either _clients struct or from requestFds struct.
 	Client& client = (_clients.find(_pollFds[i].fd) != _clients.end()) ? *_clients[_pollFds[i].fd].get() : *_resourceFds.at(_pollFds[i].fd);
 	if (statusCode == STATUS_DISCONNECTED || statusCode == STATUS_RECV_ERROR || statusCode == STATUS_SEND_ERROR) {
-		closeConnection(i);
+		client.closeAnyway = true;
+		// closeConnection(i);
 		return;
 	}
 
 	// If whole request has not been read before error occurs, connection must be closed after error response
 	if (!client.requestHandler->getReadReady()) {
-		client.keep_alive = false;
+		client.keepAlive = false;
 	}
 
 	// If error occurs during error page creation, form response without error page to prevent looping
@@ -321,6 +358,7 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	}
 
 	client.responseCode = statusCode;
+	client.requestReady = false;
 	client.responseReady = false;
 	client.resourceOutString = "";
 	if (client.resourceReadFd != -1) {
@@ -344,8 +382,10 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
+	if (_resourceFds.find(_pollFds[i].fd) == _resourceFds.end())
+		return;
 	Client& client = *_resourceFds.at(_pollFds[i].fd);
-	int bytesRead;
+	ssize_t bytesRead;
 	char buf[BUFFER_SIZE] = {};
 
 	bytesRead = read(client.resourceReadFd, buf, BUFFER_SIZE);
@@ -366,7 +406,7 @@ void	ServerHandler::readFromFd(size_t& i) {
 
 void	ServerHandler::writeToFd(size_t& i) {
 	Client& client = *_resourceFds.at(_pollFds[i].fd);
-	size_t bytesWritten;
+	ssize_t bytesWritten;
 	size_t bytesToWrite = client.resourceOutString.size() - client.resourceBytesWritten;
 	if (bytesToWrite > BUFFER_SIZE)
 		bytesToWrite = BUFFER_SIZE;
