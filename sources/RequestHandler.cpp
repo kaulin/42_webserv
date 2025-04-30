@@ -3,11 +3,12 @@
 #include <string>
 #include <sys/socket.h>
 #include <algorithm>
+#include "CGIHandler.hpp"
 #include "FileHandler.hpp"
+#include "Logger"
 #include "RequestHandler.hpp"
 #include "RequestParser.hpp"
 #include "ServerException.hpp"
-#include "CGIHandler.hpp"
 
 RequestHandler::RequestHandler(Client& client) : _client(client) { resetHandler(); }
 
@@ -30,7 +31,10 @@ void RequestHandler::resetHandler() {
 
 void RequestHandler::handleRequest() {
 	if (!_request)
+	{
 		_request = std::make_unique<HttpRequest>();
+		Logger::log(Logger::OK, "Request incoming from client " + std::to_string(client.fd))";
+	}
 	if (!_readReady)
 		readRequest();
 	else if (_multipart && ++_partIndex < _parts.size()) {

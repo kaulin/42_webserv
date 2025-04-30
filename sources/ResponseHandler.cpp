@@ -1,6 +1,7 @@
 #include <chrono>
 #include <sys/socket.h>
 #include "FileHandler.hpp"
+#include "Logger.hpp"
 #include "ResponseHandler.hpp"
 #include "ServerException.hpp"
 
@@ -30,7 +31,7 @@ void ResponseHandler::sendResponse() {
 	_totalBytesSent += bytesSent;
 	if (_totalBytesSent == _response->response.size())
 	{
-		std::cout << "Client " << _client.fd << " response sent with code: " << _client.responseCode << "\n";
+		Logger::log(Logger::OK, "Response sent to client " + std::to_string(_client.fd) + ": " + std::to_string(_client.responseCode));
 		_client.responseSent = true;
 	}
 }
