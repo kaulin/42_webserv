@@ -30,19 +30,18 @@ private:
 	std::unordered_map<int, std::unique_ptr<t_CGIrequest>>	_requests;
 	std::vector<pid_t> 										_pids;
 
-	// Private class methods
-	void 						closeFds(const std::vector<int> fdsToclose);
 	void 						handleChildProcess(Client& client);
 	void						handleParentProcess(Client& client, pid_t pid);
-	std::string					setCgiPath(const HttpRequest& request);
+	std::string					setCgiPath(Client& client);
 	std::vector<std::string>	setCGIEnv(const HttpRequest& request, const Client& client);
-	void						validateCGIScript(t_CGIrequest cgiRequest, Client& client);
+	void						validateCGIScript(std::string CGIExecutablePath);
 	void						setupCGI(Client& client);
 	void						runCGIScript(Client& client);
 	bool						readyForExecve(const Client& client);
 	int							checkProcess(int clientFd);
 	void						cleanupPid(pid_t pid);
 	void						setPipesToNonBlock(int* pipe);
+	void						closeAllOpenFds();
 public:
 	CGIHandler();
 	~CGIHandler();
