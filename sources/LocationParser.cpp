@@ -84,6 +84,7 @@ std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<
 	if (locations.find(*it) != locations.end())
 		throw std::runtime_error("Duplicate path");
 	location_block.path = set_location_path(it);
+	location_block.dir_listing = false;
 	while (*it != "}")
 	{
 		auto found = directiveMap.find(*it);
