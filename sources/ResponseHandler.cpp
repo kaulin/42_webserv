@@ -95,6 +95,7 @@ void ResponseHandler::formRedirect(const HttpRequest& request) {
 	addStatus();
 	addHeader("Date", getTimeStamp());
 	addHeader("Location", redirectPath);
+	addBody("");
 }
 
 void ResponseHandler::formGET() {
