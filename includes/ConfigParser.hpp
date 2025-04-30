@@ -7,9 +7,9 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include "ServerConfigData.hpp"
 #include <algorithm>
 #include <regex>
+#include "ServerConfigData.hpp"
 
 class ServerConfigData;
 
