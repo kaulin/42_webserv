@@ -32,9 +32,9 @@ private:
 
 	void 						handleChildProcess(Client& client);
 	void						handleParentProcess(Client& client, pid_t pid);
-	std::string					setCgiPath(const HttpRequest& request);
+	std::string					setCgiPath(Client& client);
 	std::vector<std::string>	setCGIEnv(const HttpRequest& request, const Client& client);
-	void						validateCGIScript(t_CGIrequest cgiRequest);
+	void						validateCGIScript(std::string CGIExecutablePath);
 	void						setupCGI(Client& client);
 	void						runCGIScript(Client& client);
 	bool						readyForExecve(const Client& client);

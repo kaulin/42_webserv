@@ -34,14 +34,26 @@ void	CGIHandler::closeAllOpenFds()
 	closedir(dir);
 }
 
-std::string CGIHandler::setCgiPath(const HttpRequest& request)
+std::string CGIHandler::setCgiPath(Client& client)
 {
+	const HttpRequest& request = client.requestHandler->getRequest();
+
 	std::string parsedUri = request.uri;
 	if (!request.uriQuery.empty() && parsedUri.find('?') != std::string::npos)
-	{
 		parsedUri = request.uri.substr(0, request.uri.find('?'));
+
+	// Get root of cgi-bin location + build executable path
+	std::string CGIroot;
+	auto CGILlocationSettings = client.serverConfig->locations.find("/cgi-bin");
+	if (CGILlocationSettings != client.serverConfig->locations.end())
+	{
+		CGIroot = CGILlocationSettings->second.root;
+		if (!CGIroot.empty() && parsedUri.find("/cgi-bin") == 0) 
+			parsedUri = parsedUri.substr(std::string("/cgi-bin").length());
 	}
-	std::string cgiUri = std::filesystem::current_path().string() + "/var/www" + parsedUri;
+	std::string cgiUri = std::filesystem::current_path().string() + "/" + CGIroot + parsedUri;
+	
+	validateCGIScript(cgiUri); // throws error if not found
 	return cgiUri;
 }
 
@@ -117,21 +129,13 @@ int	CGIHandler::checkProcess(int clientFd)
 	return CGI_ERROR;
 }
 
-void	CGIHandler::validateCGIScript(t_CGIrequest cgiRequest)
+void	CGIHandler::validateCGIScript(std::string CGIExecutablePath)
 {
 	struct stat buff;
-	if (stat(cgiRequest.CGIPath.c_str(), &buff) != 0)
-	{
-		std::cerr << "Child: File not found\n";
-		closeAllOpenFds();
-		std::exit(EXIT_FAILURE);
-	}
+	if (stat(CGIExecutablePath.c_str(), &buff) != 0)
+		throw ServerException(STATUS_NOT_FOUND);
 	if (!(buff.st_mode & S_IXUSR))
-	{
-		std::cerr << "Child: File is not executable\n";
-		closeAllOpenFds();
-		std::exit(EXIT_FAILURE);
-	}
+		throw ServerException(STATUS_FORBIDDEN);
 }
 
 void	CGIHandler::setPipesToNonBlock(int* pipe)
@@ -234,7 +238,6 @@ void	CGIHandler::handleChildProcess(Client& client)
 	close(outPipe[READ]);
 	close(outPipe[WRITE]);
 
-	validateCGIScript(cgiRequest);
 	std::vector<char*> envp;
 	for (const auto &var : cgiStrEnv)
 	{
@@ -253,7 +256,8 @@ void	CGIHandler::setupCGI(Client& client)
 	const HttpRequest& request = client.requestHandler->getRequest();
 	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
 
-	cgiInst->CGIPath = setCgiPath(request);
+	cgiInst->CGIPath = setCgiPath(client);
+
 	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
 	cgiInst->argv.emplace_back(nullptr);
 
