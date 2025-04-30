@@ -21,6 +21,8 @@ bool isValidPort(const std::string &port)
 	try
 	{
 		num = std::stoi(port);
+		if (num < 1 || num > 65535)
+			return false;
 	}
 	catch (const std::out_of_range&)
 	{
@@ -384,10 +386,13 @@ void	ConfigParser::setRoot(Config *blockInstance)
 
 void ConfigParser::checkDuplicates(std::map<std::string, Config> configs, Config *blockInstance)
 {
-	for (auto config : configs)
+	for (auto& config : configs)
 	{
-		if (config.second.port == blockInstance->port)
-			throw ConfigParserException("Config: Duplicate ports not allowed.");
+		if (config.second.host == blockInstance->host)
+		{
+			if (config.second.port == blockInstance->port)
+				throw ConfigParserException("Config: Duplicate ports not allowed.");
+		}
 	}
 }	
 
