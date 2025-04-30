@@ -10,6 +10,19 @@ void Logger::log(eStatus ok, const std::string& message)
 		<< message << "\n";
 }
 
+void Logger::start(const std::string& message)
+{
+	std::cout << "\n" 
+		<< "[" << getCurrentTime() << "] " 
+		<< message << "\n";
+}
+
+void Logger::stop(const std::string& message)
+{
+	std::cout << "[" << getCurrentTime() << "] " 
+		<< message << "\n\n";
+}
+
 std::string Logger::getCurrentTime()
 {
 	auto now = std::chrono::system_clock::now();

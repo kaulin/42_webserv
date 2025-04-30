@@ -18,18 +18,18 @@ HttpServer::HttpServer(Config serverData)
 	_port = serverData.port;
 	_sockFd = -1;
 	_config = serverData;
-	std::cout << "Created new virtual server instance\n";
+	std::cout << "Virtual server instance " << _config.host << ":" << _config.port << " created\n";
 }
 
 HttpServer::~HttpServer()
 {
+	std::cout << "Virtual server instance " << _config.host << ":" << _config.port  << " deleted and socket " << _sockFd << " closed\n";
 	close(_sockFd);
-	std::cout << "Server instance deleted and socket closed\n";
 }
 
 void HttpServer::setupSocket(struct addrinfo *ai)
 {
-	struct addrinfo *p = ai;
+	struct addrinfo *p = ai; 
 	int yes = 1;
 	
 	for (p = ai; p != NULL; p = p->ai_next)
@@ -81,10 +81,8 @@ void HttpServer::setupAddrinfo()
 		struct sockaddr_in *ipv = (struct sockaddr_in *)p->ai_addr;
 		addr = &(ipv->sin_addr);
 		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
-		printf("Address: %s\n", ipstr);
 	}
 	setupSocket(ai);
-	std::cout << "-----finished setup addrinfo & socket for server-----\n";
 }
 
 int HttpServer::getListenSockfd() { return _sockFd; }

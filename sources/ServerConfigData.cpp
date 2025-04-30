@@ -12,12 +12,12 @@ ServerConfigData::ServerConfigData(std::string path)
 	// ServerConfigBlocks is of datastructure = std::map<std::string, std::vector<Config>>
 	_serverConfigBlocks = ConfigParser::parseConfigFile(path);
 
-	std::cout << "New server config data created...: \n";
+	std::cout << "Server config data created based on: " << path << "\n";
 }
 
 ServerConfigData::~ServerConfigData() {
 	_serverConfigBlocks.clear();
-	std::cout << "Server config data instance deleted\n";
+	std::cout << "Server config data deleted\n";
 }
 
 std::map<std::string, Config>&	ServerConfigData::getConfigBlocks()

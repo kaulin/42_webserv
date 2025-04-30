@@ -25,4 +25,6 @@ class Logger
 		};
 
 		static void log(eStatus ok, const std::string& message);
+		static void start(const std::string& message);
+		static void stop(const std::string& message);
 };
