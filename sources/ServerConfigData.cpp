@@ -16,6 +16,7 @@ ServerConfigData::ServerConfigData(std::string path)
 }
 
 ServerConfigData::~ServerConfigData() {
+	_serverConfigBlocks.clear();
 	std::cout << "Server config data instance deleted\n";
 }
 
