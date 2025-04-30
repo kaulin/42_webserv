@@ -25,7 +25,7 @@ void	CGIHandler::closeAllOpenFds()
 	int dir_fd = dirfd(dir);
 	struct dirent *entry;
 
-	while ((entry = readdir(dir)))
+	while ((entry = readdir(dir)) != nullptr)
 	{
 		int fd = atoi(entry->d_name);
 		if (fd > 2 && fd != dir_fd && fd < 1024)
