@@ -65,7 +65,7 @@ void	CGIHandler::cleanupPid(pid_t pid)
 	{
 		if (it == pid)
 		{
-			std::cout << "Pid " << pid << " erased\n";
+			// std::cout << "Pid " << pid << " erased\n";
 			_pids.erase(_pids.begin() + i);
 		}
 		i++;
@@ -108,20 +108,20 @@ int	CGIHandler::checkProcess(int clientFd)
 		return CGI_FORKED;
 	else if (w_res == -1)
 	{
-		std::cerr << "Waitpid error " << strerror(errno) << "\n";
+		// std::cerr << "Waitpid error " << strerror(errno) << "\n";
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
 	else
 	{
 		if (WIFEXITED(status))
 		{
-			std::cout << "Child exited with satus " << WEXITSTATUS(status) << "\n";
+			// std::cout << "Child exited with satus " << WEXITSTATUS(status) << "\n";
 			cleanupPid(_requests[clientFd]->childPid);
 			return CGI_READ_READY;
 		}
 		else if (WIFSIGNALED(status))
 		{
-			std::cerr << "Child killed by signal" << strerror(errno) << "\n";
+			// std::cerr << "Child killed by signal" << strerror(errno) << "\n";
 			return CGI_CHILD_KILLED;
 			//throw ServerException(STATUS_INTERNAL_ERROR);
 		}
@@ -195,7 +195,7 @@ void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 	t_CGIrequest& cgiRequest = *_requests[client.fd];
 	
 	_pids.emplace_back(pid);
-	std::cout << "Process has forked " << pid << " added\n";
+	// std::cout << "Process has forked " << pid << " added\n";
 	client.cgiStatus = CGI_FORKED;
 	cgiRequest.childPid = pid;
 	
@@ -319,7 +319,7 @@ void	CGIHandler::handleCGI(Client& client)
 	const HttpRequest& request = client.requestHandler->getRequest();
 	if (_requests.size() >= 10)
 	{
-		std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
+		// std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
 		throw ServerException(STATUS_NOT_ALLOWED); // handle sending some error for overloaded CGI
 	}
 	if (request.method == "GET" || ((request.method == "POST") && !readyForExecve(client)))
