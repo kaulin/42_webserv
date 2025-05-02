@@ -47,7 +47,6 @@ class RequestHandler
 		bool _chunkedBodyStarted;
 		ChunkParseState _chunkState;
 		size_t _expectedChunkSize = 0;
-		bool isMultipartForm() const;
 		void processMultipartForm();
 	public:
 		RequestHandler(Client& client);

@@ -171,7 +171,6 @@ void RequestHandler::handleChunkedRequest()
 	}
 }
 
-
 void RequestHandler::processRequest() {
 	if (_isChunked && !RequestParser::parseRequest(_headerPart + _decodedBody, *_request.get()))
 			throw ServerException(STATUS_BAD_REQUEST);
@@ -247,8 +246,14 @@ void RequestHandler::processGet() {
 }
 
 void RequestHandler::processPost() {
-	if (isMultipartForm())
+	auto it = _request->headers.find("Content-Type");
+	if (it == _request->headers.end())
+		throw ServerException(STATUS_BAD_REQUEST);
+	if (it->second.find("multipart/form-data") == 0)
 		processMultipartForm();
+	it = _request->headers.find("Content-Length");
+	if (it != _request->headers.end() && _expectedContentLength != _request->body.length())
+		throw ServerException(STATUS_BAD_REQUEST);
 	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
 	// 	throw ServerException(STATUS_BAD_REQUEST);
 	else {
@@ -266,12 +271,6 @@ void RequestHandler::processDelete() {
 		throw ServerException(STATUS_FORBIDDEN);
 	_client.resourcePath = file;
 	_client.requestReady = true;
-}
-
-bool RequestHandler::isMultipartForm() const {
-	if (_request->headers.at("Content-Type").find("multipart/form-data") == 0)
-		return true;
-	return false;
 }
 
 void RequestHandler::processMultipartForm() {
