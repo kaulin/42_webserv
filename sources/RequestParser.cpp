@@ -31,7 +31,7 @@ bool RequestParser::parseRequestLine(const std::string& request_line, HttpReques
 	if (request.method.empty() || request.uri.empty() || request.httpVersion.empty())
 		return false;  // Invalid request line
 	if (request.uri.size() > 255)
-		return false;
+		throw ServerException(STATUS_URI_TOO_LONG);
 
 	for (size_t i = 0; i < request.method.length(); ++i)
 		request.method[i] = std::toupper(request.method[i]);
