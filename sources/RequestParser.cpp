@@ -30,6 +30,8 @@ bool RequestParser::parseRequestLine(const std::string& request_line, HttpReques
 	// Validate the format: all three parts must be non-empty
 	if (request.method.empty() || request.uri.empty() || request.httpVersion.empty())
 		return false;  // Invalid request line
+	if (request.uri.size() > 255)
+		return false;
 
 	for (size_t i = 0; i < request.method.length(); ++i)
 		request.method[i] = std::toupper(request.method[i]);
