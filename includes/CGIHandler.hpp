@@ -38,7 +38,7 @@ private:
 	void						setupCGI(Client& client);
 	void						runCGIScript(Client& client);
 	bool						readyForExecve(const Client& client);
-	int							checkProcess(int clientFd);
+	void						checkProcess(Client& client);
 	void						cleanupPid(pid_t pid);
 	void						setPipesToNonBlock(int* pipe);
 	void						closeAllOpenFds();
@@ -47,6 +47,6 @@ public:
 	~CGIHandler();
 
 	void	handleCGI(Client& client);
-	int		cleanupCGI(Client& client);
+	void	cleanupCGI(Client& client);
 	void	killCGIProcess(Client& client);
 };
