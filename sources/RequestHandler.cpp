@@ -100,6 +100,8 @@ void RequestHandler::handleHeaders()
 	if (_headersRead)
 		return;
 	size_t headersEnd = _requestString.find("\r\n\r\n");
+	if (headersEnd > _client.serverConfig->cli_max_bodysize)
+		throw ServerException(STATUS_LARGE_HEADERS);
 	if (headersEnd == std::string::npos)
 		return;
 
@@ -294,7 +296,11 @@ const std::string& RequestHandler::getMethod() const { return _request->method; 
 const std::string& RequestHandler::getUri() const { return _request->uri; }
 const std::string& RequestHandler::getUriQuery() const { return _request->uriQuery; }
 const std::string& RequestHandler::getUriPath() const { return _request->uriPath; }
-const std::string& RequestHandler::getHttpVersion() const { return _request->httpVersion; }
+const std::string& RequestHandler::getHttpVersion() const {
+	if (_request->httpVersion.empty())
+		_request->httpVersion = "HTTP/1.0";
+	return _request->httpVersion;
+}
 const std::string& RequestHandler::getBody() const { return _request->body; }
 bool RequestHandler::getReadReady() const { return _readReady; }
 const std::vector <MultipartFormData>& RequestHandler::getParts() const { return _parts; }
