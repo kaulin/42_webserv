@@ -130,6 +130,8 @@ void ServerHandler::checkClients()
 			}
 			else if (client.responseSent)
 				resetClient(client);
+			else if (client.cgiStatus == CGI_ERROR)
+				throw ServerException(STATUS_INTERNAL_ERROR);
 		}
 	}
 	updatePollList();
@@ -259,6 +261,7 @@ void	ServerHandler::pollLoop()
 	int	pollCount;
 
 	std::signal(SIGINT, ServerHandler::signalHandler);
+	std::signal(SIGCHLD, CGIHandler::checkProcesses);
 	std::signal(SIGPIPE, SIG_IGN);
 	setPollList();
 	while (!_sigintReceived)
