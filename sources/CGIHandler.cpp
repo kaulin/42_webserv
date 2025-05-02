@@ -67,7 +67,7 @@ void	CGIHandler::cleanupPid(pid_t pid)
 	{
 		if (it == pid)
 		{
-			// std::cout << "Pid " << pid << " erased\n";
+			Logger::log(Logger::OK, "CGI completed for client " + std::to_string(pid));
 			_pids.erase(_pids.begin() + i);
 		}
 		i++;
@@ -86,14 +86,16 @@ void	CGIHandler::killCGIProcess(Client& client)
 				kill(_requests[client.fd]->childPid, SIGTERM);
 			}
 		}
-		cleanupPid(_requests[client.fd]->childPid);
-		_requests.erase(client.fd);
+		cleanupCGI(client);
 	}
 }
 
 int	CGIHandler::cleanupCGI(Client& client)
 {
 	// CGI request is completed and the response is read by the client
+	Logger::log(Logger::OK, "CGI completed for client " + std::to_string(client.fd));
+
+	cleanupPid(_requests[client.fd]->childPid);
 	_requests.erase(client.fd);
 	if (client.cgiStatus == CGI_ERROR)
 		return CGI_ERROR;
