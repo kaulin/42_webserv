@@ -67,7 +67,7 @@ void	CGIHandler::cleanupPid(pid_t pid)
 	{
 		if (it == pid)
 		{
-			Logger::log(Logger::OK, "CGI completed for client " + std::to_string(pid));
+			Logger::log(Logger::OK, "Removing pid " + std::to_string(pid));
 			_pids.erase(_pids.begin() + i);
 		}
 		i++;
