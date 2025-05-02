@@ -331,7 +331,7 @@ void	CGIHandler::handleCGI(Client& client)
 	const HttpRequest& request = client.requestHandler->getRequest();
 	if (_requests.size() >= 10)
 	{
-		// std::cout << "Server is busy with too many CGI requests, try again in a moment\n";
+		Logger::log(Logger::ERROR, "Server is busy with too many CGI requests, try again in a moment");
 		throw ServerException(STATUS_NOT_ALLOWED); // handle sending some error for overloaded CGI
 	}
 	if (request.method == "GET" || ((request.method == "POST") && !readyForExecve(client)))
