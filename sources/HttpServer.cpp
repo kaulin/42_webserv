@@ -23,8 +23,7 @@ HttpServer::HttpServer(Config serverData)
 
 HttpServer::~HttpServer()
 {
-	std::cout << "Virtual server instance " << _config.host << ":" << _config.port  << " deleted and socket " << _sockFd << " closed\n";
-	close(_sockFd);
+	std::cout << "Virtual server instance " << _config.host << ":" << _config.port  << " deleted and socket\n";
 }
 
 void HttpServer::setupSocket(struct addrinfo *ai)
