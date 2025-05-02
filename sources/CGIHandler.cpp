@@ -1,6 +1,7 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
-#include <string.h>
+// #include <string.h>
+#include <cstring>
 #include <fcntl.h>
 #include <exception>
 #include <iostream>
@@ -9,6 +10,7 @@
 #include "CGIHandler.hpp"
 #include "HttpRequest.hpp"
 #include "ServerException.hpp"
+#include "Logger.hpp"
 
 CGIHandler::CGIHandler()
 {
@@ -93,6 +95,8 @@ int	CGIHandler::cleanupCGI(Client& client)
 {
 	// CGI request is completed and the response is read by the client
 	_requests.erase(client.fd);
+	if (client.cgiStatus == CGI_ERROR)
+		return CGI_ERROR;
 	return CGI_RESPONSE_READY;
 }
 
@@ -108,20 +112,28 @@ int	CGIHandler::checkProcess(int clientFd)
 		return CGI_FORKED;
 	else if (w_res == -1)
 	{
-		// std::cerr << "Waitpid error " << strerror(errno) << "\n";
+		Logger::log(Logger::ERROR, "CGI error: " + std::string(std::strerror(status)));
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
 	else
 	{
 		if (WIFEXITED(status))
 		{
-			// std::cout << "Child exited with satus " << WEXITSTATUS(status) << "\n";
 			cleanupPid(_requests[clientFd]->childPid);
-			return CGI_READ_READY;
+			if (WEXITSTATUS(status) > 0)
+			{
+				Logger::log(Logger::ERROR, "Child exited with error status: " + std::to_string(status) + std::string(std::strerror(errno)));
+				return CGI_ERROR;
+			}
+			else
+			{
+				Logger::log(Logger::OK, "Child exited with status: " + std::to_string(status));
+				return CGI_READ_READY;
+			}
 		}
 		else if (WIFSIGNALED(status))
 		{
-			// std::cerr << "Child killed by signal" << strerror(errno) << "\n";
+			Logger::log(Logger::ERROR, "Child killed by signal: " + std::string(std::strerror(errno)));
 			return CGI_CHILD_KILLED;
 			//throw ServerException(STATUS_INTERNAL_ERROR);
 		}
@@ -185,7 +197,6 @@ std::vector<std::string>	CGIHandler::setCGIEnv(const HttpRequest& request, const
 	strEnv.emplace_back("QUERY_STRING=" + request.uriQuery);
 	strEnv.emplace_back("PATH_INFO=" + request.uri);
 	strEnv.emplace_back("SERVER_PORT=" + client.serverConfig->port);
-	strEnv.emplace_back("REMOTE_ADDR=");	// not necessarily needed
 
 	return strEnv;
 }
@@ -195,7 +206,8 @@ void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 	t_CGIrequest& cgiRequest = *_requests[client.fd];
 	
 	_pids.emplace_back(pid);
-	// std::cout << "Process has forked " << pid << " added\n";
+	Logger::log(Logger::OK, "Process has forked " + std::to_string(pid) + " added");
+	
 	client.cgiStatus = CGI_FORKED;
 	cgiRequest.childPid = pid;
 	
@@ -209,7 +221,7 @@ void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 	client.resourceReadFd = dup(outPipe[READ]);
 	if (client.resourceReadFd == -1)
 	{
-		std::cerr << "Dup error:" << strerror(errno) << "\n";
+		Logger::log(Logger::ERROR, "Dup error:" + std::string(std::strerror(errno)));		
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
 	close(outPipe[READ]);
@@ -247,7 +259,7 @@ void	CGIHandler::handleChildProcess(Client& client)
 
 	closeAllOpenFds();
 	execve(cgiRequest.CGIPath.c_str(), cgiRequest.argv.data(), envp.data());
-	std::cerr << "Child: Execve failed" << strerror(errno) << "\n";
+	Logger::log(Logger::ERROR, "Execve failed: " + std::string(std::strerror(errno)));
 	std::exit(EXIT_FAILURE);
 }
 
@@ -267,7 +279,7 @@ void	CGIHandler::setupCGI(Client& client)
 
 		if (pipe(cgiInst->inPipe) < 0)
 		{
-			std::cerr << "Pipe error: " << strerror(errno) << "\n";
+			Logger::log(Logger::ERROR, "Pipe error: " + std::string(std::strerror(errno)));
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		}
 		setPipesToNonBlock(cgiInst->inPipe);
@@ -276,7 +288,7 @@ void	CGIHandler::setupCGI(Client& client)
 		client.resourceWriteFd = dup(cgiInst->inPipe[WRITE]);
 		if (client.resourceWriteFd == -1)
 		{
-			std::cerr << "Dup error: " << strerror(errno) << "\n";
+			Logger::log(Logger::ERROR, "Dup error: " + std::string(std::strerror(errno)));
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		}
 		close(cgiInst->inPipe[WRITE]);
@@ -284,7 +296,7 @@ void	CGIHandler::setupCGI(Client& client)
 
 	if (pipe(cgiInst->outPipe) < 0)
 	{
-		std::cerr << "Pipe error: " << strerror(errno) << "\n";
+		Logger::log(Logger::ERROR, "Pipe error: " + std::string(std::strerror(errno)));
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
 	setPipesToNonBlock(cgiInst->inPipe);
@@ -332,4 +344,9 @@ void	CGIHandler::handleCGI(Client& client)
 	}
 	if (client.cgiStatus == CGI_FORKED)
 		client.cgiStatus = checkProcess(client.fd); // sets FORKED (still running) or READ_READY
+	if (client.cgiStatus == CGI_ERROR)
+	{
+		cleanupCGI(client);
+		throw ServerException(STATUS_INTERNAL_ERROR);
+	}
 }
