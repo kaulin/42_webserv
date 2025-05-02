@@ -3,11 +3,12 @@
 #include <string>
 #include <sys/socket.h>
 #include <algorithm>
+#include "CGIHandler.hpp"
 #include "FileHandler.hpp"
+#include "Logger.hpp"
 #include "RequestHandler.hpp"
 #include "RequestParser.hpp"
 #include "ServerException.hpp"
-#include "CGIHandler.hpp"
 
 RequestHandler::RequestHandler(Client& client) : _client(client) { resetHandler(); }
 
@@ -30,7 +31,10 @@ void RequestHandler::resetHandler() {
 
 void RequestHandler::handleRequest() {
 	if (!_request)
+	{
 		_request = std::make_unique<HttpRequest>();
+		Logger::log(Logger::OK, "Client " + std::to_string(_client.fd) + " request incoming");
+	}
 	if (!_readReady)
 		readRequest();
 	else if (_multipart && ++_partIndex < _parts.size()) {
@@ -52,7 +56,10 @@ void RequestHandler::readRequest() {
 
 	receivedBytes = recv(_client.fd, buf, BUFFER_SIZE, 0);
 	if (receivedBytes == -1)
+	{
+		Logger::log(Logger::ERROR, "Client " + std::to_string(_client.fd) + " recv error ");
 		throw ServerException(STATUS_RECV_ERROR);
+	}
 	if (receivedBytes == 0)
 		throw ServerException(STATUS_DISCONNECTED);
 	_client.lastActivity = std::time(nullptr);
@@ -172,6 +179,8 @@ void RequestHandler::processRequest() {
 		if (_request->method == "POST" && _requestString.length() - _headerPart.length() != _expectedContentLength)
 			throw ServerException(STATUS_BAD_REQUEST);
 	}
+
+	Logger::log(Logger::OK, "Client " + std::to_string(_client.fd) + " request received: " + _request->method + " " + _request->uri);
 
 	auto it = _request->headers.find("Connection");
 	if (it != _request->headers.end() && it->second == "close")

@@ -12,34 +12,19 @@
 class Logger
 {
 	private:
-		std::stringstream	_buffer;
-
-		std::string getCurrentTime() const;
-
-	public:
-		// constructor for a console logger
+		static std::string getCurrentTime();
 		Logger();
-
-		// destructor
 		~Logger();
 
-		// overload << operator for stream manipulators (like std::endl)
-		Logger& operator<<(std::ostream& (*func)(std::ostream&));
+	public:
 
-		// function template for logging
-		template <typename T>
-		void log(const std::string& level, const T& message)
+		enum eStatus
 		{
-			std::cout << "[" << getCurrentTime() << "] " 
-				<< "[" << level << "] " 
-				<< message << "\n";
-		}
+			OK = true,
+			ERROR = false
+		};
 
-		// overload << operator for streaming
-		template <typename T>
-		Logger& operator<<(const T& message)
-		{
-			_buffer << message;
-			return *this;
-		}
+		static void log(eStatus ok, const std::string& message);
+		static void start(const std::string& message);
+		static void stop(const std::string& message);
 };

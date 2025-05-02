@@ -1,15 +1,16 @@
-#include <algorithm>
-#include <memory>
 #include <csignal>
-#include <sys/socket.h>
+#include <cstring>
 #include <filesystem>
-#include "ServerException.hpp"
-#include "ServerHandler.hpp"
+#include <memory>
+#include <sys/socket.h>
+#include "FileHandler.hpp"
 #include "HttpServer.hpp"
+#include "Logger.hpp"
 #include "RequestParser.hpp"
 #include "RequestHandler.hpp"
 #include "ResponseHandler.hpp"
-#include "FileHandler.hpp"
+#include "ServerException.hpp"
+#include "ServerHandler.hpp"
 
 #define BACKLOG 10 // how many pending connections queue will hold
 
@@ -18,29 +19,26 @@ bool ServerHandler::_sigintReceived = false;
 void	ServerHandler::signalHandler(int signal) 
 {
 	(void)signal;
-	std::cout << "SIGINT received, shutting down servers...\n"; // TODO log sigint received
+	std::cout << std::endl;
+	Logger::log(Logger::OK, "SIGINT received");
 	_sigintReceived = true;
 }
 
 ServerHandler::ServerHandler(std::string path) : 
-	_config(ServerConfigData(path)), _consoleLogger(),
+	_config(ServerConfigData(path)),
 	_CGIHandler(CGIHandler())
 {
 	_serverCount = _config.getServerCount();
 	_servers.reserve(_serverCount);
 	_ports.reserve(_serverCount);
-	_pollFds.reserve(_serverCount); // reserves space for ports
-
-	std::cout << "Constructor Size of pollfd list: " << _pollFds.capacity() << "\n";
+	_pollFds.reserve(_serverCount);
 }
 
 ServerHandler::~ServerHandler() 
 {
 	_servers.clear();
 	_pollFds.clear();
-	_newPollFds.clear(); 
-
-	std::cout << "Servers closed down\n";
+	_newPollFds.clear();
 }
 
 /* 	One server config data instance is created. The config file is parsed in 
@@ -70,22 +68,9 @@ void	ServerHandler::setPollList()
 		int listenSockfd = server->getListenSockfd();
 		_pollFds[i].fd = listenSockfd;
 		_pollFds[i].events = POLLIN;
+		Logger::log(Logger::OK, "Server " + server->getServerConfig()->host + ":" + server->getServerConfig()->port + " polling on socket " + std::to_string(listenSockfd));
 		i++;
 	}
-	// for testing
-	for (auto& poll_obj : _pollFds) 
-	{
-		std::cout << "Polling on fd: " << poll_obj.fd << "\n";
-	}
-}
-
-void printClientInfo(const Client& client) {
-	std::cout << "Client fd " << client.fd << ":\n";
-	std::cout << "	bool cgiRequested: " << (client.cgiRequested ? "true" : "false") << "\n";
-	std::cout << "	bool requestReady: " << (client.requestReady ? "true" : "false") << "\n";
-	std::cout << "	bool responseReady: " << (client.responseReady ? "true" : "false") << "\n";
-	std::cout << "	int responseCode: " << client.responseCode << "\n";
-	std::cout << "\n";
 }
 
 void ServerHandler::resetClient(Client& client) {
@@ -130,17 +115,17 @@ void ServerHandler::checkClients()
 			Client& client = *it->second.get();
 			if (!checkTimeout(client))
 			{
-				std::cout << "Client " << client.fd << " timed out, disconnecting...\n";
+				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " timed out, disconnecting");
 				closeConnection(i);
 			}
 			else if (client.responseSent && !client.keepAlive)
 			{
-				std::cout << "Client " << client.fd << " response sent with connection close, disconnecting...\n";
+				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " terminating connection");
 				closeConnection(i);
 			}
 			else if (client.closeAnyway)
 			{
-				std::cout << "Client " << client.fd << " disconnected, dropping client...\n";
+				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " disconnected, dropping client");
 				closeConnection(i);
 			}
 			else if (client.responseSent)
@@ -192,9 +177,6 @@ void ServerHandler::addToPollList(int fd, PollType pollType)
 
 void ServerHandler::removeFromPollList(int fdToRemove)
 {
-	// std::cout << "Removes " << fdToRemove << " from poll list\n";
-	// auto it = _pollFds.begin();
-	// while (it != _pollFds.end())
 	for (auto it = _pollFds.begin() ; it != _pollFds.end(); it++)
 	{
 		if (it->fd == fdToRemove)
@@ -207,11 +189,12 @@ void ServerHandler::removeFromPollList(int fdToRemove)
 
 void ServerHandler::updatePollList()
 {
+	if (_sigintReceived)
+		return;
 	_pollFds.insert(_pollFds.end(), _newPollFds.begin(), _newPollFds.end());
 	_newPollFds.clear();
 	while (!_fdsToDrop.empty())
 	{
-		std::cout << "Removing fd " << _fdsToDrop.back() << " from poll list.\n";
 		removeFromPollList(_fdsToDrop.back());
 		_fdsToDrop.pop_back();
 	}
@@ -243,31 +226,32 @@ void ServerHandler::addConnection(size_t& i) {
 	int clientFd;
 	socklen_t addrlen;
 	struct sockaddr_storage remoteaddr_in;
-	
-	try {
-		addrlen = sizeof(remoteaddr_in);
-		clientFd = accept(_pollFds[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
-		if (clientFd == -1)
-			throw ServerException(STATUS_INTERNAL_ERROR);
-		if (fcntl(clientFd, F_SETFL, O_NONBLOCK) == -1) {
-			close(clientFd);
-			throw ServerException(STATUS_INTERNAL_ERROR);
-		}
-		addToPollList(clientFd, SET_POLLBOTH);
-		_clients[clientFd] = std::make_unique<Client>();
-		Client& client = *_clients[clientFd].get();
-		client.serverConfig = _servers.at(i)->getServerConfig();
-		client.fd = clientFd;
-		client.keepAlive = false;
-		client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
-		client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
-		client.lastActivity = std::time(nullptr);
-		resetClient(client);
-		std::cout << "Client connected to server " << _servers.at(i)->getServerConfig()->port << " with fd " << client.fd << "\n";
-	} catch (const ServerException& e) {
-		// TODO these should be logged, no response can be made, as there is no connection
+
+	addrlen = sizeof(remoteaddr_in);
+	clientFd = accept(_pollFds[i].fd, (struct sockaddr *)&remoteaddr_in, &addrlen);
+	if (clientFd == -1)
+	{
+		Logger::log(Logger::ERROR, "accept failed on new connection to " + _servers.at(i)->getServerConfig()->host + _servers.at(i)->getServerConfig()->port );
 		return;
 	}
+	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) == -1)
+	{
+		Logger::log(Logger::ERROR, "fcntl failed on new connection to " + _servers.at(i)->getServerConfig()->host + _servers.at(i)->getServerConfig()->port );
+		close(clientFd);
+		return;
+	}
+	addToPollList(clientFd, SET_POLLBOTH);
+	_clients[clientFd] = std::make_unique<Client>();
+	Client& client = *_clients[clientFd].get();
+	client.serverConfig = _servers.at(i)->getServerConfig();
+	client.fd = clientFd;
+	client.keepAlive = false;
+	client.requestHandler = std::make_unique<RequestHandler>(*_clients[clientFd].get());
+	client.responseHandler = std::make_unique<ResponseHandler>(*_clients[clientFd].get());
+	client.lastActivity = std::time(nullptr);
+	resetClient(client);
+	
+	Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " connected to server " + _servers.at(i)->getServerConfig()->host + ":" +  _servers.at(i)->getServerConfig()->port );
 }
 
 void	ServerHandler::pollLoop()
@@ -279,54 +263,61 @@ void	ServerHandler::pollLoop()
 	setPollList();
 	while (!_sigintReceived)
 	{
-		pollCount = poll(_pollFds.data(), _pollFds.size(), -1);
-		if (_sigintReceived)
-				break;
-		if (pollCount == -1)
-			throw ServerException(STATUS_INTERNAL_ERROR);
-		checkClients();
-		for(size_t i = 0; i < _pollFds.size(); i++)
-		{
-			try {
-				if (_pollFds[i].revents & POLLIN)
-				{
-					if (i < _serverCount) // Servers in
-						addConnection(i);
-					else if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients in
-					{
-						Client& client = *_clients[_pollFds[i].fd].get();
-						client.requestHandler->handleRequest();
-						if (client.cgiRequested)
-							_CGIHandler.handleCGI(client);
-						addResourceFd(client);
-					}
-					else // Resource in
-						readFromFd(i);
-				}
-				else if (_pollFds[i].revents & POLLOUT)
-				{
-					if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients out
-					{
-						Client& client = *_clients[_pollFds[i].fd].get();
-						client.responseHandler->formResponse();
-						client.responseHandler->sendResponse();
-					}
-					else // Resource out
-						writeToFd(i);
-				} 
-			} catch (const ServerException& e) {
-				if (_sigintReceived)
+		try {
+			pollCount = poll(_pollFds.data(), _pollFds.size(), -1);
+			if (_sigintReceived)
 					break;
-				handleServerException(e.statusCode(), i);
-				break;
-			} catch (const std::exception& e) {
-				if (_sigintReceived)
-					break;
-				std::cout << "Caught exception: " << e.what() << "\n";
+			if (pollCount == -1)
+			{
+				if (errno == EINTR)
+					continue;
+				Logger::log(Logger::ERROR, "poll failed: " + std::string(std::strerror(errno)));
 				break;
 			}
+			checkClients();
+			for(size_t i = 0; i < _pollFds.size(); i++)
+			{
+				try {
+					if (_pollFds[i].revents & POLLIN)
+					{
+						if (i < _serverCount) // Servers in
+							addConnection(i);
+						else if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients in
+						{
+							Client& client = *_clients[_pollFds[i].fd].get();
+							client.requestHandler->handleRequest();
+							if (client.cgiRequested)
+								_CGIHandler.handleCGI(client);
+							addResourceFd(client);
+						}
+						else // Resource in
+							readFromFd(i);
+					}
+					else if (_pollFds[i].revents & POLLOUT)
+					{
+						if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients out
+						{
+							Client& client = *_clients[_pollFds[i].fd].get();
+							client.responseHandler->formResponse();
+							client.responseHandler->sendResponse();
+						}
+						else // Resource out
+							writeToFd(i);
+					} 
+				} catch (const ServerException& e) {
+					if (_sigintReceived)
+						break;
+					handleServerException(e.statusCode(), i);
+					break;
+				}
+			}
+			updatePollList();
+		} catch (const std::exception& e) {
+			if (_sigintReceived)
+				break;
+			Logger::log(Logger::ERROR, "Caught exception: " + std::string(e.what()));
+			continue;
 		}
-		updatePollList();
 	}
 	for (pollfd p : _pollFds)
 		close(p.fd);
@@ -340,7 +331,6 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	Client& client = (_clients.find(_pollFds[i].fd) != _clients.end()) ? *_clients[_pollFds[i].fd].get() : *_resourceFds.at(_pollFds[i].fd);
 	if (statusCode == STATUS_DISCONNECTED || statusCode == STATUS_RECV_ERROR || statusCode == STATUS_SEND_ERROR) {
 		client.closeAnyway = true;
-		// closeConnection(i);
 		return;
 	}
 
@@ -371,8 +361,7 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 			FileHandler::openForRead(client.resourceReadFd, path);
 			addResourceFd(client);
 		} catch (const ServerException& e) { // if an error occurs when opening error page resource
-			// TODO log error page missing
-			// proceed with generating error page
+			Logger::log(Logger::ERROR, "error page " + path + " not found, generating response");
 			client.requestReady = true;
 		}
 	}
@@ -397,7 +386,6 @@ void	ServerHandler::readFromFd(size_t& i) {
 		client.requestReady = true;
 		if (client.cgiRequested)
 			client.cgiStatus = _CGIHandler.cleanupCGI(client);
-		std::cout << "Client " << client.fd << " resource read from fd " << _pollFds[i].fd << "\n";
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
 	}
@@ -417,7 +405,6 @@ void	ServerHandler::writeToFd(size_t& i) {
 	if (client.resourceBytesWritten == client.resourceOutString.size())
 	{
 		client.responseCode = STATUS_CREATED;
-		std::cout << "Client " << client.fd << " resource written to fd " << _pollFds[i].fd << "\n";
 		removeResourceFd(client.resourceWriteFd);
 		client.resourceWriteFd = -1;
 		client.resourceBytesWritten = 0;
@@ -431,7 +418,9 @@ void	ServerHandler::writeToFd(size_t& i) {
 
 void	ServerHandler::runServers()
 {
+	Logger::start("Starting servers");
 	pollLoop();
+	Logger::stop("Shutting down servers");
 	_resourceFds.clear();
 	_clients.clear();
 	_servers.clear();

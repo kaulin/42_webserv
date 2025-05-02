@@ -36,7 +36,6 @@ private:
 	std::vector<struct pollfd>							_newPollFds;
 	std::deque<int>										_fdsToDrop;
 	ServerConfigData									_config;
-	Logger												_consoleLogger;
 	CGIHandler											_CGIHandler;
 	static void	resetClient(Client& client);
 	static void	signalHandler(int);

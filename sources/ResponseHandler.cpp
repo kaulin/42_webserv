@@ -1,6 +1,7 @@
 #include <chrono>
 #include <sys/socket.h>
 #include "FileHandler.hpp"
+#include "Logger.hpp"
 #include "ResponseHandler.hpp"
 #include "ServerException.hpp"
 
@@ -24,13 +25,16 @@ void ResponseHandler::sendResponse() {
 
 	bytesSent= send(_client.fd, _response->response.c_str() + _totalBytesSent, toSend, MSG_NOSIGNAL);
 	if (bytesSent == -1)
+	{
+		Logger::log(Logger::ERROR, "Client " + std::to_string(_client.fd) + " send error ");
 		throw ServerException(STATUS_SEND_ERROR);
+	}
 	if (bytesSent == 0)
 		throw ServerException(STATUS_DISCONNECTED);
 	_totalBytesSent += bytesSent;
 	if (_totalBytesSent == _response->response.size())
 	{
-		std::cout << "Client " << _client.fd << " response sent with code: " << _client.responseCode << "\n";
+		Logger::log(Logger::OK, "Client " + std::to_string(_client.fd) + " response sent: " + std::to_string(_client.responseCode));
 		_client.responseSent = true;
 	}
 }
