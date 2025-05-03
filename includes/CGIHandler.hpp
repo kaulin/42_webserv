@@ -42,16 +42,16 @@ private:
 	bool						readyForExecve(const Client& client);
 	void						setPipesToNonBlock(int* pipe);
 	void						closeAllOpenFds();
-	static void					cleanupPid(pid_t pid, int exitStatus);
+	// static void					cleanupPid(pid_t pid, int exitStatus);
+	static void					cleanupPid(pid_t pid);
 
+	static void					childTimeout(int signal);
 	public:
 	CGIHandler();
 	~CGIHandler();
 	
+	void	checkProcess(Client& client);
 	void	handleCGI(Client& client);
 	void	cleanupCGI(Client& client);
 	void	killCGIProcess(Client& client);
-	
-	// Signal handler
-	static void					checkProcesses(int sig);
 };

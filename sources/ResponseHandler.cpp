@@ -1,5 +1,6 @@
 #include <chrono>
 #include <sys/socket.h>
+#include <CGIHandler.hpp>
 #include "FileHandler.hpp"
 #include "Logger.hpp"
 #include "ResponseHandler.hpp"
@@ -137,7 +138,10 @@ void ResponseHandler::formDELETE() {
 }
 
 void ResponseHandler::formCGI() {
-	_response->response = _client.resourceInString;
+	if (_client.cgiStatus == CGI_ERROR)
+		throw ServerException(STATUS_INTERNAL_ERROR);
+	else
+		_response->response = _client.resourceInString;
 }
 
 void ResponseHandler::formDirectoryListing() {
