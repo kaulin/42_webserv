@@ -308,12 +308,6 @@ void	ServerHandler::pollLoop()
 						else if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients in
 						{
 							Client& client = *_clients[_pollFds[i].fd].get();
-							/* if (client.cgiStatus == CGI_ERROR)
-							{
-								std::cout << "should throw\n";
-								close(client.resourceReadFd);
-								throw ServerException(STATUS_INTERNAL_ERROR);
-							} */
 							client.requestHandler->handleRequest();
 							if (client.cgiRequested)
 								_CGIHandler.handleCGI(client);
@@ -329,11 +323,7 @@ void	ServerHandler::pollLoop()
 						{
 							Client& client = *_clients[_pollFds[i].fd].get();
 							if (client.cgiStatus == CGI_ERROR)
-							{
-								// std::cout << "should throw\n";
-								// close(client.resourceReadFd);
 								throw ServerException(STATUS_INTERNAL_ERROR);
-							}
 							client.responseHandler->formResponse();
 							client.responseHandler->sendResponse();
 						}
