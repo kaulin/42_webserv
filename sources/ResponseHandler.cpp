@@ -43,7 +43,7 @@ void ResponseHandler::sendResponse() {
 Adds status line to response
 */
 void ResponseHandler::addStatus() {
-	if (_client.connectionState != DRAIN || _client.connectionState != DRAINED)
+	if (_client.connectionState != DRAIN && _client.connectionState != DRAINED)
 		_response->response = _client.requestHandler->getHttpVersion() + " " + std::to_string(_client.responseCode) + " " + ServerException::statusMessage(_client.responseCode) + "\r\n";
 	else
 		_response->response = "HTTP/1.1 " + std::to_string(_client.responseCode) + " " + ServerException::statusMessage(_client.responseCode) + "\r\n";
