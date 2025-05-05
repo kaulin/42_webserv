@@ -36,7 +36,7 @@ std::string FileHandler::getMIMEType(const std::string& filePath) {
 	std::string extension = filePath.substr(extensionStart);
 	
 	// Defines MIME types, can be added to
-		std::unordered_map<std::string, std::string> types = {
+	std::unordered_map<std::string, std::string> types = {
 		{".html", "text/html"},
 		{".htm", "text/html"},
 		{".css", "text/css"},

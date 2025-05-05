@@ -41,6 +41,7 @@ void RequestHandler::handleRequest() {
 	else if (_multipart && ++_partIndex < _parts.size()) {
 		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
 		_client.resourceOutString = _parts[_partIndex].content;
+		checkContentType();
 		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 	}
 	else if (_client.cgiRequested && _client.cgiStatus != CGI_RESPONSE_READY) {
@@ -256,21 +257,34 @@ void RequestHandler::processGet() {
 }
 
 void RequestHandler::processPost() {
+	checkContentLength();
 	auto it = _request->headers.find("Content-Type");
 	if (it == _request->headers.end())
 		throw ServerException(STATUS_BAD_REQUEST);
 	if (it->second.find("multipart/form-data") == 0)
 		processMultipartForm();
-	it = _request->headers.find("Content-Length");
-	if (it != _request->headers.end() && _expectedContentLength != _request->body.length())
-		throw ServerException(STATUS_BAD_REQUEST);
 	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
 	// 	throw ServerException(STATUS_BAD_REQUEST);
 	else {
 		_client.resourceOutString = _request->body;
 		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
-		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 	}
+	checkContentType();
+	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
+}
+
+void RequestHandler::processMultipartForm() {
+	_multipart = true;
+	std::string type = _request->headers.at("Content-Type");
+	std::string prefix = "multipart/form-data; boundary=";
+	if (type.find(prefix) == std::string::npos)
+		throw ServerException(STATUS_BAD_REQUEST);
+	std::string boundary = type.substr(prefix.size());
+	RequestParser::parseMultipart(boundary, _request.get()->body, _parts);
+	if (_parts.empty())
+		throw ServerException(STATUS_BAD_REQUEST);
+	_client.resourceOutString = _parts[_partIndex].content;
+	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
 }
 
 void RequestHandler::processDelete() {
@@ -283,20 +297,24 @@ void RequestHandler::processDelete() {
 	_client.requestReady = true;
 }
 
-void RequestHandler::processMultipartForm() {
-	_multipart = true;
-	std::string type = _request->headers.at("Content-Type");
-	std::string prefix = "multipart/form-data; boundary=";
-	if (type.find(prefix) == std::string::npos)
+void RequestHandler::checkContentType() const {
+	std::string indicatedType;
+	if (_multipart)
+		indicatedType = _parts.at(_partIndex).contentType;
+	else
+		indicatedType = _request->headers.at("Content-Type");
+	if (FileHandler::getMIMEType(_client.resourcePath) != indicatedType)
 		throw ServerException(STATUS_BAD_REQUEST);
-	std::string boundary = type.substr(prefix.size());
+}
 
-	RequestParser::parseMultipart(boundary, _request.get()->body, _parts);
-	if (_parts.empty())
+void RequestHandler::checkAcceptType() const {
+	
+}
+
+void RequestHandler::checkContentLength() const {
+	auto it = _request->headers.find("Content-Length");
+	if (it != _request->headers.end() && _expectedContentLength != _request->body.length())
 		throw ServerException(STATUS_BAD_REQUEST);
-	_client.resourceOutString = _parts[_partIndex].content;
-	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
-	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 }
 
 // GETTERS
