@@ -29,7 +29,6 @@ void	ServerHandler::signalHandler(int signal)
 void	ServerHandler::CGISignal(int signal)
 {
 	(void)signal;
-	std::cout << "check cgi process triggered\n";
 	g_cgiCheckProcess = 1;
 }
 
@@ -127,7 +126,6 @@ void ServerHandler::checkClients()
 				_CGIHandler.checkProcess(client);
 				/* if (client.cgiStatus == CGI_ERROR)
 				{
-					std::cout << "CGI ERROR\n";
 					//_CGIHandler.killCGIProcess(client);
 					closeConnection(i);
 				} */
@@ -356,7 +354,6 @@ void	ServerHandler::pollLoop()
 
 void	ServerHandler::handleServerException(int statusCode, size_t& i)
 {
-	std::cout << "error thrown with status" << statusCode << "\n";
 	// Set client from either _clients struct or from requestFds struct.
 	Client& client = (_clients.find(_pollFds[i].fd) != _clients.end()) ? *_clients[_pollFds[i].fd].get() : *_resourceFds.at(_pollFds[i].fd);
 

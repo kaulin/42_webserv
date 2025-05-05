@@ -145,10 +145,8 @@ void	CGIHandler::checkProcess(Client& client)
 	int status;
 	pid_t pid;
 	
-	std::cout << "Entering waitpid loop\n";
 	if (_requests.find(client.fd) == _requests.end())
 	{
-		std::cout << "No pid for client anymore\n";
 		return;
 	}
 	//while((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
@@ -184,7 +182,7 @@ void	CGIHandler::checkProcess(Client& client)
 	}
 	if (pid == 0)
 	{
-		std::cout << "Client " << client.fd << " is still running\n";
+		Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " is still running");
 	}
 	if (pid == -1 && errno != ECHILD)
 	{
@@ -259,12 +257,10 @@ void	CGIHandler::childTimeout(int signal)
 	(void)signal;
 	int i = 0;
 
-	std::cout << "Child has timed out\n";
 	for (pid_t it : _pids)
 	{
 		if (it > 0)
 		{
-			std::cout << "Pid killed and removed" << it << "\n";
 			if (kill(it, SIGTERM) == -1)
 				std::cout << strerror(errno) << "\n";
 			int status;
