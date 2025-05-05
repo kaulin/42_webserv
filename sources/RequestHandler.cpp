@@ -23,6 +23,7 @@ void RequestHandler::resetHandler() {
 	_chunkState = SIZE;
 	_expectedChunkSize = 0;
 	_expectedContentLength = 0;
+	_totalReceivedLength = 0;
 	_multipart = false;
 	_partIndex = 0;
 	_parts.clear();
@@ -47,7 +48,6 @@ void RequestHandler::handleRequest() {
 	}
 	else
 		_client.requestReady = true;
-	
 }
 
 void RequestHandler::readRequest() {
@@ -63,6 +63,16 @@ void RequestHandler::readRequest() {
 	if (receivedBytes == 0)
 		throw ServerException(STATUS_DISCONNECTED);
 	_client.lastActivity = std::time(nullptr);
+	_totalReceivedLength += receivedBytes;
+	if (_client.connectionState == DRAIN)
+	{
+		if ((!_headersRead && receivedBytes < BUFFER_SIZE) || (_headersRead && _totalReceivedLength - _headerPart.length() >= _expectedContentLength))
+		{
+			_client.connectionState = DRAINED;
+			_readReady = true;
+		}
+		return;
+	}
 	_requestString.append(buf, receivedBytes);
 	handleHeaders();
 	if (!_headersRead)

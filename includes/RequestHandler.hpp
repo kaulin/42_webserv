@@ -32,6 +32,7 @@ class RequestHandler
 		bool _readReady;
 		bool _multipart;
 		size_t _expectedContentLength;
+		size_t _totalReceivedLength;
 		size_t _partIndex;
 		std::vector <MultipartFormData> _parts;
 		void readRequest();

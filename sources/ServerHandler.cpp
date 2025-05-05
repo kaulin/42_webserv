@@ -88,8 +88,8 @@ void ServerHandler::resetClient(Client& client) {
 	client.requestReady = false;
 	client.responseReady = false;
 	client.responseSent = false;
-	client.closeAnyway = false;
 	client.responseCode = STATUS_OK;
+	client.connectionState = ACTIVE;
 	client.requestHandler->resetHandler();
 	client.responseHandler->resetHandler();
 }
@@ -118,14 +118,14 @@ void ServerHandler::checkClients()
 				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " timed out, disconnecting");
 				closeConnection(i);
 			}
-			else if (client.responseSent && !client.keepAlive)
+			if (client.connectionState != DRAIN && client.responseSent && !client.keepAlive)
 			{
-				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " terminating connection");
+				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " connection disconnected by server");
 				closeConnection(i);
 			}
-			else if (client.closeAnyway)
+			else if (client.connectionState == CLOSE)
 			{
-				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " disconnected, dropping client");
+				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " connection disconnected by client");
 				closeConnection(i);
 			}
 			else if (client.responseSent)
@@ -288,7 +288,8 @@ void	ServerHandler::pollLoop()
 							client.requestHandler->handleRequest();
 							if (client.cgiRequested)
 								_CGIHandler.handleCGI(client);
-							addResourceFd(client);
+							if (client.responseCode == STATUS_OK)
+								addResourceFd(client);
 						}
 						else // Resource in
 							readFromFd(i);
@@ -329,13 +330,16 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 {
 	// Set client from either _clients struct or from requestFds struct.
 	Client& client = (_clients.find(_pollFds[i].fd) != _clients.end()) ? *_clients[_pollFds[i].fd].get() : *_resourceFds.at(_pollFds[i].fd);
+
+	// If connection has been severed by client or recv or send returns -1
 	if (statusCode == STATUS_DISCONNECTED || statusCode == STATUS_RECV_ERROR || statusCode == STATUS_SEND_ERROR) {
-		client.closeAnyway = true;
+		client.connectionState = CLOSE;
 		return;
 	}
 
-	// If whole request has not been read before error occurs, connection must be closed after error response
+	// If whole request has not been read before error occurs, connection must be closed after draining socket and sending error response
 	if (!client.requestHandler->getReadReady()) {
+		client.connectionState = DRAIN;
 		client.keepAlive = false;
 	}
 
@@ -392,6 +396,8 @@ void	ServerHandler::readFromFd(size_t& i) {
 }
 
 void	ServerHandler::writeToFd(size_t& i) {
+	if (_resourceFds.find(_pollFds[i].fd) == _resourceFds.end())
+		return;
 	Client& client = *_resourceFds.at(_pollFds[i].fd);
 	ssize_t bytesWritten;
 	size_t bytesToWrite = client.resourceOutString.size() - client.resourceBytesWritten;
