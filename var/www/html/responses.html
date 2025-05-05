@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Responses</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="stylesheet" type="text/css" href="/style/coffee.css" />
+  </head>
+  <body>
+    <h1>Responses</h1>
+    <p>These links send requests that cause a specific server response, which might or might not show as a matching error page.</p>
+
+    <ul>
+      <a href="kissa.html"><li>kissa.html (200 OK)</li></a>
+      <a href="old.html"><li>old.html (301 Moved Permanently)</li></a>
+      <a href="kahvi.jpg"><li>kahvi.jpg (302 Moved Temporarily)</li></a>
+      <a href="data"><li>Data directory, autoindex off (403 Forbidden)</li></a>
+      <a href="thereisnospoon"><li>Doesn't exist (404 Not found)</li></a>
+    </ul>
+
+    <p>The following should be tested using Postman, Curl or other tool for sending HTTP requests with different methods</p>
+    <ul>
+      <li>405 Method Not Allowed</li>
+      <li>406 Not Acceptable</li>
+      <li>411 Length Required</li>
+      <li>413 Content Too Large</li>
+      <li>414 Request-URI Too Long</li>
+      <li>415 Unsupported Media Type</li>
+      <li>418 I'm a teapot</li>
+      <li>431 Request Header Fields Too Large</li>
+      <li>501 Unsupported Method</li>
+    </ul>
+    <a href="/"><p>Back</p></a>
+  </body>
+</html>
