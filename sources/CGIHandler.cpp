@@ -112,14 +112,14 @@ void	CGIHandler::killCGIProcess(Client& client)
 		//cleanupPid(_requests[client.fd]->childPid); // check
 	}
 	// IF TIMEOUT --> kill and wait etc
-	if (client.cgiStatus != CGI_RESPONSE_READY &&
+	if (client.cgiStatus != CGI_CHILD_EXITED &&
 		(!_requests.empty() && _requests.find(client.fd) != _requests.end()))
 	{
-		/* if (client.cgiStatus == CGI_FORKED)
+		if (client.cgiStatus == CGI_FORKED)
 		{
 			kill(_requests[client.fd]->childPid, SIGTERM);
-		} */
-		//cleanupPid(_requests[client.fd]->childPid); // check
+		}
+		cleanupPid(_requests[client.fd]->childPid); // check
 		_requests.erase(client.fd);
 	}
 }
@@ -128,9 +128,14 @@ void	CGIHandler::cleanupCGI(Client& client)
 {
 	// CGI request is completed and the response is read by the client
 	Logger::log(Logger::OK, "Cleaning up CGI for client " + std::to_string(client.fd));
+	if (client.cgiStatus != CGI_CHILD_EXITED)
+	{
+		killCGIProcess(client);
+	}
 
+	if (client.cgiRequested && (_requests.find(client.fd) == _requests.end()))
+		_requests.erase(client.fd);
 	//cleanupPid(_requests[client.fd]->childPid);
-	_requests.erase(client.fd);
 }
 
 /*	Checks if child has been terminated and output written to client, 
@@ -146,9 +151,9 @@ void	CGIHandler::checkProcess(Client& client)
 		std::cout << "No pid for client anymore\n";
 		return;
 	}
-	while((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
+	//while((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
+	if ((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
 	{
-		std::cout << "Waitpid loop\n";
 		if (WIFEXITED(status))
 		{
 			int exitCode = WEXITSTATUS(status);

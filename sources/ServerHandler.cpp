@@ -148,7 +148,10 @@ void ServerHandler::checkClients()
 				closeConnection(i);
 			}
 			else if (client.responseSent)
+			{
+				_CGIHandler.cleanupCGI(client);
 				resetClient(client);
+			}
 		}
 	}
 	g_cgiCheckProcess = 0;
@@ -159,7 +162,7 @@ void ServerHandler::closeConnection(size_t& i)
 {
 	Client& client = *_clients[_pollFds[i].fd].get();
 	if (client.cgiRequested)
-		_CGIHandler.killCGIProcess(client);
+		_CGIHandler.cleanupCGI(client);
 	int clientFd = _pollFds[i].fd;
 	auto it = _resourceFds.begin();
 	while (it != _resourceFds.end() && !_resourceFds.empty())
@@ -417,8 +420,8 @@ void	ServerHandler::readFromFd(size_t& i) {
 	{
 		client.requestReady = true;
 		//client.cgiStatus = CGI_RESPONSE_READY;
-		if (client.cgiRequested)
-			_CGIHandler.handleCGI(client);
+		//if (client.cgiRequested)
+		//	_CGIHandler.handleCGI(client);
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
 	}
