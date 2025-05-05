@@ -118,7 +118,7 @@ void ServerHandler::checkClients()
 				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " timed out, disconnecting");
 				closeConnection(i);
 			}
-			if (client.connectionState != DRAIN && client.responseSent && !client.keepAlive)
+			else if (client.connectionState != DRAIN && client.responseSent && !client.keepAlive)
 			{
 				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " connection disconnected by server");
 				closeConnection(i);
