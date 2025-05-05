@@ -12,6 +12,14 @@ struct Config;
 class RequestHandler;
 class ResponseHandler;
 
+enum ConnectionState
+{
+	ACTIVE,
+	DRAIN,
+	DRAINED,
+	CLOSE
+};
+
 struct Client {
 	const Config*						serverConfig;
 	int									fd;
@@ -27,11 +35,11 @@ struct Client {
 	size_t								resourceBytesWritten;
 	int									responseSent;
 	int									responseCode;
+	ConnectionState						connectionState;
 	bool								keepAlive;
 	bool								cgiRequested;
 	bool								directoryListing;
 	bool								requestReady;
 	bool								responseReady;
-	bool								closeAnyway;
 	int									cgiStatus;
 };
