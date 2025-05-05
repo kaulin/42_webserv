@@ -131,7 +131,6 @@ void	CGIHandler::cleanupCGI(Client& client)
 
 	//cleanupPid(_requests[client.fd]->childPid);
 	_requests.erase(client.fd);
-	client.cgiStatus = CGI_RESPONSE_READY;
 }
 
 /*	Checks if child has been terminated and output written to client, 
@@ -145,6 +144,7 @@ void	CGIHandler::checkProcess(Client& client)
 	if (_requests.find(client.fd) == _requests.end())
 	{
 		std::cout << "No pid for client anymore\n";
+		return;
 	}
 	while((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
 	{
@@ -160,7 +160,7 @@ void	CGIHandler::checkProcess(Client& client)
 			}
 			else
 			{
-				client.cgiStatus = CGI_READ_READY;
+				client.cgiStatus = CGI_CHILD_EXITED;
 				cleanupPid(pid);
 			}
 		}
@@ -410,6 +410,12 @@ void	CGIHandler::handleCGI(Client& client)
 	Logger::log(Logger::OK, "Handling CGI for request " + std::to_string(client.fd));
 	const HttpRequest& request = client.requestHandler->getRequest();
 
+ 	if (client.cgiStatus == CGI_CHILD_EXITED)
+	{
+		cleanupCGI(client);
+		client.cgiStatus = CGI_RESPONSE_READY;
+		return;
+	}
 	if (!_requests.empty() && (_requests.find(client.fd) != _requests.end()))
 	{
 		if (_requests[client.fd]->childExitStatus == CGI_ERROR)

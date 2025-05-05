@@ -353,7 +353,7 @@ void	ServerHandler::pollLoop()
 
 void	ServerHandler::handleServerException(int statusCode, size_t& i)
 {
-	std::cout << "error thrown\n";
+	std::cout << "error thrown with status" << statusCode << "\n";
 	// Set client from either _clients struct or from requestFds struct.
 	Client& client = (_clients.find(_pollFds[i].fd) != _clients.end()) ? *_clients[_pollFds[i].fd].get() : *_resourceFds.at(_pollFds[i].fd);
 
@@ -416,8 +416,9 @@ void	ServerHandler::readFromFd(size_t& i) {
 	if (bytesRead < BUFFER_SIZE)
 	{
 		client.requestReady = true;
-		if (client.cgiRequested && client.cgiStatus != CGI_RESPONSE_READY)
-			_CGIHandler.cleanupCGI(client);
+		//client.cgiStatus = CGI_RESPONSE_READY;
+		if (client.cgiRequested)
+			_CGIHandler.handleCGI(client);
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
 	}
