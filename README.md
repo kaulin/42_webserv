@@ -38,6 +38,6 @@ Some example configuration files and an example site demonstrating the servers f
 
 ## Acknowledgements
 
-- Peer evaluators: [XXX](https://github.com/XXX), [YYY](https://github.com/YYY), Arttu Salo, [ZZZ](https://github.com/ZZZ)
+- Peer evaluators: [XXX](https://github.com/XXX), [YYY](https://github.com/YYY) & [ZZZ](https://github.com/ZZZ)
 
 ## Resources
