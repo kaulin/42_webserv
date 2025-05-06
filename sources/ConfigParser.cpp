@@ -228,6 +228,7 @@ void ConfigParser::assignErrorPage(std::vector<std::string>::const_iterator &it,
 		{ ConfigKey::ERROR_431, 431 },
 		{ ConfigKey::ERROR_500, 500 },
 		{ ConfigKey::ERROR_501, 501 },
+		{ ConfigKey::ERROR_504, 504 },
 	};
 
 	auto itCode = keyToCode.find(key);
@@ -259,7 +260,8 @@ void ConfigParser::setDefaultErrorPages(Config &blockInstance)
 		{418, "/errors/418.html"},
 		{431, "/errors/431.html"},
 		{500, "/errors/500.html"},
-		{501, "/errors/501.html"}
+		{501, "/errors/501.html"},
+		{504, "/errors/504.html"}
 	};
 
 	for (const auto& entry : defaultPages)
