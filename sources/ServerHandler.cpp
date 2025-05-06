@@ -410,9 +410,6 @@ void	ServerHandler::readFromFd(size_t& i) {
 	if (bytesRead < BUFFER_SIZE)
 	{
 		client.requestReady = true;
-		//client.cgiStatus = CGI_RESPONSE_READY;
-		//if (client.cgiRequested)
-		//	_CGIHandler.handleCGI(client);
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
 	}

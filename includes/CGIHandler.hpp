@@ -30,7 +30,6 @@ typedef struct s_CGIrequest {
 	std::vector<char*>	argv;
 	std::vector<char*>	envp;
 	std::string			CGIPath;
-	int					childExitStatus;
 } t_CGIrequest;
 
 class CGIHandler {
