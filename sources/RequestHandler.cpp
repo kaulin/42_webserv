@@ -248,11 +248,8 @@ void RequestHandler::processGet() {
 		else
 			throw ServerException(STATUS_FORBIDDEN);
 	}
-	// Check if request has Accept header and that requested resource matches said content type (TODO: add default "*/*")
-	// auto itAcceptHeader = _request->headers.find("Accept");
-	// if (itAcceptHeader != _request->headers.end() && (*itAcceptHeader).second.find(FileHandler::getMIMEType(_request->uriPath)) == std::string::npos)
-	// 	throw ServerException(STATUS_NOT_ACCEPTABLE);
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, path) + path;
+	checkAcceptType();
 	FileHandler::openForRead(_client.resourceReadFd, _client.resourcePath);
 }
 
@@ -263,8 +260,6 @@ void RequestHandler::processPost() {
 		throw ServerException(STATUS_BAD_REQUEST);
 	if (it->second.find("multipart/form-data") == 0)
 		processMultipartForm();
-	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
-	// 	throw ServerException(STATUS_BAD_REQUEST);
 	else {
 		_client.resourceOutString = _request->body;
 		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
@@ -308,7 +303,9 @@ void RequestHandler::checkContentType() const {
 }
 
 void RequestHandler::checkAcceptType() const {
-	
+	auto it = _request->headers.find("Accept");
+	if (it == _request->headers.end() && it->second.find(FileHandler::getMIMEType(_client.resourcePath)) == std::string::npos)
+		throw ServerException(STATUS_NOT_ACCEPTABLE);
 }
 
 void RequestHandler::checkContentLength() const {
