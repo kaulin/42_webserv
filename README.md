@@ -15,8 +15,8 @@ This was a 42 cursus project focusing on creating an HTTP server using C++17.
 - The server should:
   - never block and requests should never hang indefinitely
   - support at least GET, POST and DELETE requests
-  - implement CGI with a chosen language (we chose Python)
-  - serve fully static websites and work with a chosen browser (we chose Firefox)
+  - implement CGI with a chosen language
+  - serve fully static websites and work with a chosen browser
   - be able to listen to multiple ports
   - provide accurate HTTP status codes and implement default error pages
 
@@ -28,7 +28,7 @@ Git clone the repository and run `make` to compile the program.
 
 `./webserv [config file path]`
 
-Some example configuration files and an example site demonstrating the servers features are provided in the repository. Running the program without arguments uses the default configuration file. Configuration file syntax is similar to, but not one-to-one compatible with nginx.
+Some example configuration files and an example site demonstrating the program's features are provided in the repository. Running the program without arguments uses the default configuration file. Configuration file syntax is similar to, but not one-to-one compatible with nginx.
 
 ## Problems encountered / key takeaways / implementation choises / room for improvement / ???
 
