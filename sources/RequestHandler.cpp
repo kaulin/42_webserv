@@ -306,7 +306,11 @@ void RequestHandler::checkContentType() const {
 
 void RequestHandler::checkAcceptType() const {
 	auto it = _request->headers.find("Accept");
-	if (it == _request->headers.end() && it->second.find(FileHandler::getMIMEType(_client.resourcePath)) == std::string::npos)
+	if (it == _request->headers.end() || it->second.find("*/*") != std::string::npos)
+		return;
+	std::string requestedResourceType = FileHandler::getMIMEType(_client.resourcePath);
+	std::string requestedType = requestedResourceType.substr(0, requestedResourceType.find("/"));
+	if (it->second.find(requestedResourceType) == std::string::npos && it->second.find(requestedType + "/*") == std::string::npos)
 		throw ServerException(STATUS_NOT_ACCEPTABLE);
 }
 
