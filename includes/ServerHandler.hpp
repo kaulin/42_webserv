@@ -16,6 +16,8 @@ class HttpServer;
 #define DEFAULT_CONFIG_FILE "config/default.conf"
 #define BACKLOG 10 // how many pending connections queue will hold
 
+// sig_atomic_t g_cgiCheckProcess;
+
 enum PollType 
 {
 	SET_POLLBOTH,
@@ -39,6 +41,7 @@ private:
 	CGIHandler											_CGIHandler;
 	static void	resetClient(Client& client);
 	static void	signalHandler(int);
+	static void	CGISignal(int);
 	void		readFromFd(size_t& i);
 	void		writeToFd(size_t& i);
 	void		addResourceFd(Client& client);

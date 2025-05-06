@@ -16,12 +16,20 @@
 
 bool ServerHandler::_sigintReceived = false;
 
+sig_atomic_t g_cgiCheckProcess = 0;
+
 void	ServerHandler::signalHandler(int signal) 
 {
 	(void)signal;
 	std::cout << std::endl;
 	Logger::log(Logger::OK, "SIGINT received");
 	_sigintReceived = true;
+}
+
+void	ServerHandler::CGISignal(int signal)
+{
+	(void)signal;
+	g_cgiCheckProcess = 1;
 }
 
 ServerHandler::ServerHandler(std::string path) : 
@@ -113,7 +121,16 @@ void ServerHandler::checkClients()
 		if (it != _clients.end())
 		{
 			Client& client = *it->second.get();
-			if (!checkTimeout(client))
+			if (client.cgiRequested && g_cgiCheckProcess)
+			{
+				_CGIHandler.checkProcess(client);
+				/* if (client.cgiStatus == CGI_ERROR)
+				{
+					//_CGIHandler.killCGIProcess(client);
+					closeConnection(i);
+				} */
+			}
+			else if (!checkTimeout(client))
 			{
 				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " timed out, disconnecting");
 				closeConnection(i);
@@ -129,16 +146,21 @@ void ServerHandler::checkClients()
 				closeConnection(i);
 			}
 			else if (client.responseSent)
+			{
+				_CGIHandler.cleanupCGI(client);
 				resetClient(client);
+			}
 		}
 	}
+	g_cgiCheckProcess = 0;
 	updatePollList();
 }
 
 void ServerHandler::closeConnection(size_t& i) 
 {
 	Client& client = *_clients[_pollFds[i].fd].get();
-	_CGIHandler.killCGIProcess(client);
+	if (client.cgiRequested)
+		_CGIHandler.cleanupCGI(client);
 	int clientFd = _pollFds[i].fd;
 	auto it = _resourceFds.begin();
 	while (it != _resourceFds.end() && !_resourceFds.empty())
@@ -202,6 +224,7 @@ void ServerHandler::updatePollList()
 
 void ServerHandler::addResourceFd(Client& client) {
 	// ADD RESOURCES OR PIPES TO POLL LOOP
+
 	if (client.resourceReadFd != -1)
 	{
 		addToPollList(client.resourceReadFd, SET_POLLIN);
@@ -259,6 +282,7 @@ void	ServerHandler::pollLoop()
 	int	pollCount;
 
 	std::signal(SIGINT, ServerHandler::signalHandler);
+	std::signal(SIGCHLD, ServerHandler::CGISignal);
 	std::signal(SIGPIPE, SIG_IGN);
 	setPollList();
 	while (!_sigintReceived)
@@ -266,7 +290,7 @@ void	ServerHandler::pollLoop()
 		try {
 			pollCount = poll(_pollFds.data(), _pollFds.size(), -1);
 			if (_sigintReceived)
-					break;
+				break;
 			if (pollCount == -1)
 			{
 				if (errno == EINTR)
@@ -299,6 +323,8 @@ void	ServerHandler::pollLoop()
 						if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients out
 						{
 							Client& client = *_clients[_pollFds[i].fd].get();
+							if (client.cgiStatus == CGI_ERROR)
+								throw ServerException(STATUS_INTERNAL_ERROR);
 							client.responseHandler->formResponse();
 							client.responseHandler->sendResponse();
 						}
@@ -371,6 +397,8 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	}
 	else
 		client.requestReady = true;
+
+	client.cgiStatus = -1;
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
@@ -388,8 +416,9 @@ void	ServerHandler::readFromFd(size_t& i) {
 	if (bytesRead < BUFFER_SIZE)
 	{
 		client.requestReady = true;
-		if (client.cgiRequested)
-			client.cgiStatus = _CGIHandler.cleanupCGI(client);
+		//client.cgiStatus = CGI_RESPONSE_READY;
+		//if (client.cgiRequested)
+		//	_CGIHandler.handleCGI(client);
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
 	}

@@ -8,11 +8,13 @@
 
 enum CGIStatus {
 	CGI_FORKED,
+	CGI_ERROR,
 	CGI_EXECVE_READY,
 	CGI_READ_READY,
 	CGI_RESPONSE_READY,
 	CGI_CHILD_KILLED,
-	CGI_ERROR
+	CGI_CHILD_STOPPED,
+	CGI_CHILD_EXITED
 };
 
 typedef struct s_CGIrequest {
@@ -23,12 +25,13 @@ typedef struct s_CGIrequest {
 	std::vector<char*>	argv;
 	std::vector<char*>	envp;
 	std::string			CGIPath;
+	int					childExitStatus;
 } t_CGIrequest;
 
 class CGIHandler {
 private:
-	std::unordered_map<int, std::unique_ptr<t_CGIrequest>>	_requests;
-	std::vector<pid_t> 										_pids;
+	static std::unordered_map<int, std::unique_ptr<t_CGIrequest>>	_requests;
+	static std::vector<pid_t> 										_pids;
 
 	void 						handleChildProcess(Client& client);
 	void						handleParentProcess(Client& client, pid_t pid);
@@ -38,15 +41,18 @@ private:
 	void						setupCGI(Client& client);
 	void						runCGIScript(Client& client);
 	bool						readyForExecve(const Client& client);
-	int							checkProcess(int clientFd);
-	void						cleanupPid(pid_t pid);
 	void						setPipesToNonBlock(int* pipe);
 	void						closeAllOpenFds();
-public:
+	// static void					cleanupPid(pid_t pid, int exitStatus);
+	static void					cleanupPid(pid_t pid);
+
+	static void					childTimeout(int signal);
+	public:
 	CGIHandler();
 	~CGIHandler();
-
+	
+	void	checkProcess(Client& client);
 	void	handleCGI(Client& client);
-	int		cleanupCGI(Client& client);
+	void	cleanupCGI(Client& client);
 	void	killCGIProcess(Client& client);
 };
