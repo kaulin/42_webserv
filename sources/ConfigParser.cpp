@@ -261,6 +261,8 @@ void ConfigParser::setDefaultErrorPages(Config &blockInstance)
 		{431, "/errors/431.html"},
 		{500, "/errors/500.html"},
 		{501, "/errors/501.html"},
+		{502, "/errors/502.html"},
+		{503, "/errors/503.html"},
 		{504, "/errors/504.html"}
 	};
 

@@ -134,7 +134,7 @@ void	CGIHandler::cleanupCGI(Client& client)
 void	CGIHandler::checkCGIStatus(Client& client)
 {
 	if (client.cgiStatus == CGI_ERROR)
-		throw ServerException(STATUS_INTERNAL_ERROR);
+		throw ServerException(STATUS_BAD_GATEWAY);
 	else if (client.cgiStatus == CGI_TIMED_OUT)
 		throw ServerException(STATUS_GATEWAY_TIMEOOUT);
 }
@@ -194,8 +194,9 @@ void	CGIHandler::checkProcess(Client& client)
 		}
 		Logger::log(Logger::OK, "Finished checking child process with status " + std::to_string(client.cgiStatus));
 	}
-	else if (!cgiTimeout(client))
+	else if (!cgiTimeout(client) && client.cgiStatus != CGI_EXECVE_READY)
 	{
+		Logger::log(Logger::OK, "timed out");
 		killCGIProcess(client);
 		client.cgiStatus = CGI_TIMED_OUT;
 	}
@@ -278,7 +279,6 @@ void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 {
 	t_CGIrequest& cgiRequest = *_requests[client.fd];
 	
-	// alarm(1);
 	_pids.emplace_back(pid);
 	Logger::log(Logger::OK, "Process has forked " + std::to_string(pid) + " added");
 	
@@ -300,11 +300,6 @@ void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 	}
 	close(outPipe[READ]);
 }
-
-/* void	CGIHandler::flagKill(int signal)
-{
-
-} */
 
 void	CGIHandler::handleChildProcess(Client& client)
 {
@@ -337,7 +332,6 @@ void	CGIHandler::handleChildProcess(Client& client)
 	envp.emplace_back(nullptr);
 
 	closeAllOpenFds();
-	//signal(SIGALRM, flagKill);
 	execve(cgiRequest.CGIPath.c_str(), cgiRequest.argv.data(), envp.data());
 	Logger::log(Logger::ERROR, "Execve failed: " + std::string(std::strerror(errno)));
 	std::exit(EXIT_FAILURE);
@@ -373,7 +367,6 @@ void	CGIHandler::setupCGI(Client& client)
 		}
 		close(cgiInst->inPipe[WRITE]);
 	}
-
 	if (pipe(cgiInst->outPipe) < 0)
 	{
 		Logger::log(Logger::ERROR, "Pipe error: " + std::string(std::strerror(errno)));
@@ -413,24 +406,23 @@ void	CGIHandler::handleCGI(Client& client)
 	Logger::log(Logger::OK, "Handling CGI for request " + std::to_string(client.fd));
 	const HttpRequest& request = client.requestHandler->getRequest();
 
+	if ((client.cgiStatus == CGI_COMPLETE)) //  || (_requests.find(client.fd) == _requests.end())
+		return;
  	if (client.cgiStatus == CGI_CHILD_EXITED)
 	{
+		client.cgiStatus = CGI_COMPLETE;
 		cleanupCGI(client);
-		client.cgiStatus = CGI_RESPONSE_READY;
 		return;
 	}
-	if (!_requests.empty() && (_requests.find(client.fd) != _requests.end()))
+	/* if (_requests[client.fd]->childExitStatus == CGI_ERROR)
 	{
-		if (_requests[client.fd]->childExitStatus == CGI_ERROR)
-		{
-			client.cgiStatus = CGI_ERROR;
-			throw ServerException(STATUS_INTERNAL_ERROR);
-		}
-	}
+		client.cgiStatus = CGI_ERROR;
+		throw ServerException(STATUS_BAD_GATEWAY);
+	} */
 	if (_requests.size() >= 10)
 	{
 		Logger::log(Logger::ERROR, "Server is busy with too many CGI requests, try again in a moment");
-		throw ServerException(STATUS_NOT_ALLOWED); // handle sending some error for overloaded CGI
+		throw ServerException(STATUS_SERVICE_UNAVAILABLE); // handle sending some error for overloaded CGI
 	}
 	if (request.method == "GET" || ((request.method == "POST") && !readyForExecve(client)))
 	{
