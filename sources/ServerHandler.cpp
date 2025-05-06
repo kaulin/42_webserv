@@ -145,7 +145,7 @@ void ServerHandler::checkClients()
 				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " connection disconnected by client");
 				closeConnection(i);
 			}
-			else if (client.responseSent)
+			else if (client.connectionState != DRAIN && client.responseSent)
 			{
 				_CGIHandler.cleanupCGI(client);
 				resetClient(client);
@@ -380,6 +380,7 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	client.requestReady = false;
 	client.responseReady = false;
 	client.resourceOutString = "";
+	client.cgiStatus = -1;
 	if (client.resourceReadFd != -1) {
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
@@ -397,8 +398,6 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	}
 	else
 		client.requestReady = true;
-
-	client.cgiStatus = -1;
 }
 
 void	ServerHandler::readFromFd(size_t& i) {

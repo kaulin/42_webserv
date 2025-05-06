@@ -247,30 +247,38 @@ void RequestHandler::processGet() {
 		else
 			throw ServerException(STATUS_FORBIDDEN);
 	}
-	// Check if request has Accept header and that requested resource matches said content type (TODO: add default "*/*")
-	// auto itAcceptHeader = _request->headers.find("Accept");
-	// if (itAcceptHeader != _request->headers.end() && (*itAcceptHeader).second.find(FileHandler::getMIMEType(_request->uriPath)) == std::string::npos)
-	// 	throw ServerException(STATUS_NOT_ACCEPTABLE);
 	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, path) + path;
+	checkAcceptType();
 	FileHandler::openForRead(_client.resourceReadFd, _client.resourcePath);
 }
 
 void RequestHandler::processPost() {
+	checkContentLength();
 	auto it = _request->headers.find("Content-Type");
 	if (it == _request->headers.end())
 		throw ServerException(STATUS_BAD_REQUEST);
 	if (it->second.find("multipart/form-data") == 0)
 		processMultipartForm();
-	it = _request->headers.find("Content-Length");
-	if (it != _request->headers.end() && _expectedContentLength != _request->body.length())
-		throw ServerException(STATUS_BAD_REQUEST);
-	// if ((*itContentTypeHeader).second != FileHandler::getMIMEType(_request->uriPath))
-	// 	throw ServerException(STATUS_BAD_REQUEST);
 	else {
 		_client.resourceOutString = _request->body;
 		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath;
-		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 	}
+	checkContentType();
+	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
+}
+
+void RequestHandler::processMultipartForm() {
+	_multipart = true;
+	std::string type = _request->headers.at("Content-Type");
+	std::string prefix = "multipart/form-data; boundary=";
+	if (type.find(prefix) == std::string::npos)
+		throw ServerException(STATUS_BAD_REQUEST);
+	std::string boundary = type.substr(prefix.size());
+	RequestParser::parseMultipart(boundary, _request.get()->body, _parts);
+	if (_parts.empty())
+		throw ServerException(STATUS_BAD_REQUEST);
+	_client.resourceOutString = _parts[_partIndex].content;
+	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
 }
 
 void RequestHandler::processDelete() {
@@ -283,20 +291,33 @@ void RequestHandler::processDelete() {
 	_client.requestReady = true;
 }
 
-void RequestHandler::processMultipartForm() {
-	_multipart = true;
-	std::string type = _request->headers.at("Content-Type");
-	std::string prefix = "multipart/form-data; boundary=";
-	if (type.find(prefix) == std::string::npos)
+void RequestHandler::checkContentType() const {
+	if (_multipart)
+	{
+		for (MultipartFormData part : _parts)
+		{
+			if (FileHandler::getMIMEType(part.filename) != part.contentType)
+				throw ServerException(STATUS_BAD_REQUEST);
+		}
+	}
+	else if (FileHandler::getMIMEType(_client.resourcePath) != _request->headers.at("Content-Type"))
 		throw ServerException(STATUS_BAD_REQUEST);
-	std::string boundary = type.substr(prefix.size());
+}
 
-	RequestParser::parseMultipart(boundary, _request.get()->body, _parts);
-	if (_parts.empty())
+void RequestHandler::checkAcceptType() const {
+	auto it = _request->headers.find("Accept");
+	if (it == _request->headers.end() || it->second.find("*/*") != std::string::npos)
+		return;
+	std::string requestedResourceType = FileHandler::getMIMEType(_client.resourcePath);
+	std::string requestedType = requestedResourceType.substr(0, requestedResourceType.find("/"));
+	if (it->second.find(requestedResourceType) == std::string::npos && it->second.find(requestedType + "/*") == std::string::npos)
+		throw ServerException(STATUS_NOT_ACCEPTABLE);
+}
+
+void RequestHandler::checkContentLength() const {
+	auto it = _request->headers.find("Content-Length");
+	if (it != _request->headers.end() && _expectedContentLength != _request->body.length())
 		throw ServerException(STATUS_BAD_REQUEST);
-	_client.resourceOutString = _parts[_partIndex].content;
-	_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
-	FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 }
 
 // GETTERS

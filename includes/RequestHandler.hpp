@@ -49,6 +49,9 @@ class RequestHandler
 		ChunkParseState _chunkState;
 		size_t _expectedChunkSize = 0;
 		void processMultipartForm();
+		void checkContentType() const;
+		void checkAcceptType() const;
+		void checkContentLength() const;
 	public:
 		RequestHandler(Client& client);
 		~RequestHandler();
