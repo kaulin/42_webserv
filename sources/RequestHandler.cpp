@@ -41,7 +41,6 @@ void RequestHandler::handleRequest() {
 	else if (_multipart && ++_partIndex < _parts.size()) {
 		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
 		_client.resourceOutString = _parts[_partIndex].content;
-		checkContentType();
 		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 	}
 	else if (_client.cgiRequested && _client.cgiStatus != CGI_RESPONSE_READY) {
@@ -293,12 +292,15 @@ void RequestHandler::processDelete() {
 }
 
 void RequestHandler::checkContentType() const {
-	std::string indicatedType;
 	if (_multipart)
-		indicatedType = _parts.at(_partIndex).contentType;
-	else
-		indicatedType = _request->headers.at("Content-Type");
-	if (FileHandler::getMIMEType(_client.resourcePath) != indicatedType)
+	{
+		for (MultipartFormData part : _parts)
+		{
+			if (FileHandler::getMIMEType(part.filename) != part.contentType)
+				throw ServerException(STATUS_BAD_REQUEST);
+		}
+	}
+	else if (FileHandler::getMIMEType(_client.resourcePath) != _request->headers.at("Content-Type"))
 		throw ServerException(STATUS_BAD_REQUEST);
 }
 
