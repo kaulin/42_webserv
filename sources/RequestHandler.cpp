@@ -32,10 +32,7 @@ void RequestHandler::resetHandler() {
 
 void RequestHandler::handleRequest() {
 	if (!_request)
-	{
 		_request = std::make_unique<HttpRequest>();
-		Logger::log(Logger::OK, "Client " + std::to_string(_client.fd) + " request incoming");
-	}
 	if (!_readReady)
 		readRequest();
 	else if (_multipart && ++_partIndex < _parts.size()) {
@@ -62,6 +59,8 @@ void RequestHandler::readRequest() {
 	}
 	if (receivedBytes == 0)
 		throw ServerException(STATUS_DISCONNECTED);
+	if (_totalReceivedLength == 0)
+		Logger::log(Logger::OK, "Client " + std::to_string(_client.fd) + " request incoming");
 	_client.lastActivity = std::time(nullptr);
 	_totalReceivedLength += receivedBytes;
 	if (_client.connectionState == DRAIN)
