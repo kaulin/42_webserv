@@ -78,11 +78,12 @@ void	CGIHandler::cleanupPid(pid_t pid)
 
 void	CGIHandler::killCGIProcess(Client& client)
 {
+	Logger::log(Logger::OK,  "Client " + std::to_string(client.fd) + " CGI timed out, killing process with id " + std::to_string(_requests[client.fd]->childPid));
 	if (client.cgiStatus == CGI_FORKED && (_requests.find(client.fd) != _requests.end()))
 	{
 		kill(_requests[client.fd]->childPid, SIGTERM);
 		waitpid(_requests[client.fd]->childPid, nullptr, 0);
-		cleanupPid(_requests[client.fd]->childPid); // check
+		cleanupPid(_requests[client.fd]->childPid);
 	}
 }
 
@@ -91,7 +92,7 @@ void	CGIHandler::cleanupCGI(Client& client)
 	// CGI request is completed and the response is read by the client
 	if (client.cgiStatus == CGI_FORKED)
 		killCGIProcess(client);
-	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
+	if (_requests.find(client.fd) != _requests.end())
 		_requests.erase(client.fd);
 }
 
@@ -145,7 +146,12 @@ void	CGIHandler::checkProcess(Client& client)
 		}
 		if (pid == 0)
 		{
-			Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " is still running");
+			Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " is still running, checking timeout");
+			if (!cgiTimeout(client))
+			{
+				killCGIProcess(client);
+				client.cgiStatus = CGI_TIMED_OUT;
+			}
 		}
 		if (pid == -1 && errno != ECHILD)
 		{
@@ -155,7 +161,6 @@ void	CGIHandler::checkProcess(Client& client)
 	}
 	else if (!cgiTimeout(client) && client.cgiStatus != CGI_EXECVE_READY)
 	{
-		Logger::log(Logger::OK,  "Client " + std::to_string(client.fd) + " CGI timed out, killing process with id " + std::to_string(_requests[client.fd]->childPid));
 		killCGIProcess(client);
 		client.cgiStatus = CGI_TIMED_OUT;
 	}
@@ -187,7 +192,7 @@ void	CGIHandler::setPipesToNonBlock(int* pipe)
 
 bool	CGIHandler::readyForExecve(const Client& client)
 {
-	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
+	if (_requests.find(client.fd) != _requests.end())
 	{
 		if (client.cgiStatus == CGI_EXECVE_READY && client.resourceWriteFd == -1)
 			return true;
@@ -349,7 +354,7 @@ void	CGIHandler::handleCGI(Client& client)
 {
 	const HttpRequest& request = client.requestHandler->getRequest();
 
-	if ((client.cgiStatus == CGI_COMPLETE))
+	if ((client.cgiStatus == CGI_COMPLETE) || (client.cgiStatus == CGI_FORKED))
 		return;
  	if (client.cgiStatus == CGI_CHILD_EXITED)
 	{
