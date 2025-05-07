@@ -123,25 +123,28 @@ void ServerHandler::checkClients()
 			Client& client = *it->second.get();
 			if (client.cgiRequested && !client.responseSent && client.cgiStatus != CGI_COMPLETE)
 				_CGIHandler.checkProcess(client);
-			else if (!checkTimeout(client))
-			{
-				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " timed out, disconnecting");
-				closeConnection(i);
-			}
-			else if (client.connectionState != DRAIN && client.responseSent && !client.keepAlive)
-			{
-				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " connection disconnected by server");
-				closeConnection(i);
-			}
 			else if (client.connectionState == CLOSE)
 			{
 				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " connection disconnected by client");
 				closeConnection(i);
 			}
+			else if (client.connectionState == ACTIVE && !checkTimeout(client))
+			{
+				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " timed out, disconnecting");
+				closeConnection(i);
+			}
 			else if (client.connectionState != DRAIN && client.responseSent)
 			{
-				_CGIHandler.cleanupCGI(client);
-				resetClient(client);
+				if (!client.keepAlive)
+				{
+					Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " connection disconnected by server");
+					closeConnection(i);
+				}
+				else
+				{
+					_CGIHandler.cleanupCGI(client);
+					resetClient(client);
+				}
 			}
 		}
 	}

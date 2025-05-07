@@ -37,6 +37,7 @@ void ResponseHandler::sendResponse() {
 	{
 		Logger::log(Logger::OK, "Client " + std::to_string(_client.fd) + " response sent: " + std::to_string(_client.responseCode));
 		_client.responseSent = true;
+		_client.lastActivity = time(nullptr);
 	}
 }
 

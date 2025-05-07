@@ -192,6 +192,7 @@ void RequestHandler::processRequest() {
 	}
 
 	Logger::log(Logger::OK, "Client " + std::to_string(_client.fd) + " request received: " + _request->method + " " + _request->uri);
+	_client.connectionState = PROCESSING;
 
 	auto it = _request->headers.find("Connection");
 	if (it != _request->headers.end() && it->second == "close")
