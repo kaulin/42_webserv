@@ -10,7 +10,6 @@
 #include "CGIHandler.hpp"
 #include "HttpRequest.hpp"
 #include "ServerException.hpp"
-// #include "ServerHandler.hpp"
 #include "Logger.hpp"
 
 std::unordered_map<int, std::unique_ptr<t_CGIrequest>>	CGIHandler::_requests;
@@ -61,32 +60,9 @@ std::string CGIHandler::setCgiPath(Client& client)
 	}
 	std::string cgiUri = std::filesystem::current_path().string() + "/" + CGIroot + parsedUri;
 	
-	validateCGIScript(cgiUri); // throws error if not found
+	validateCGIScript(cgiUri);
 	return cgiUri;
 }
-
-/* void	CGIHandler::cleanupPid(pid_t pid, int exitStatus)
-{
-	int i = 0;
-
-	for (auto& request : _requests)
-	{
-		if (request.second->childPid == pid)
-			request.second->childExitStatus = exitStatus;
-	}
-	for (pid_t it : _pids)
-	{
-		if (it == pid)
-		{
-			Logger::log(Logger::OK, "Removing pid " + std::to_string(pid));
-			_pids.erase(_pids.begin() + i);
-		}
-		i++;
-	}
-	Logger::log(Logger::OK, "leaving cleanup pid");
-
-} */
-
 
 void	CGIHandler::cleanupPid(pid_t pid)
 {
@@ -95,47 +71,45 @@ void	CGIHandler::cleanupPid(pid_t pid)
 	for (pid_t it : _pids)
 	{
 		if (it == pid)
-		{
-			Logger::log(Logger::OK, "Removing pid " + std::to_string(pid));
 			_pids.erase(_pids.begin() + i);
-		}
 		i++;
 	}
 }
 
 void	CGIHandler::killCGIProcess(Client& client)
 {
-	_requests.erase(client.fd);
-	if (client.cgiStatus == CGI_ERROR)
+	Logger::log(Logger::OK,  "Client " + std::to_string(client.fd) + " CGI timed out, killing process with id " + std::to_string(_requests[client.fd]->childPid));
+	if (client.cgiStatus == CGI_FORKED && (_requests.find(client.fd) != _requests.end()))
 	{
-		//close(client.resourceReadFd);
-		//cleanupPid(_requests[client.fd]->childPid); // check
-	}
-	// IF TIMEOUT --> kill and wait etc
-	if (client.cgiStatus != CGI_CHILD_EXITED &&
-		(!_requests.empty() && _requests.find(client.fd) != _requests.end()))
-	{
-		if (client.cgiStatus == CGI_FORKED)
-		{
-			kill(_requests[client.fd]->childPid, SIGTERM);
-		}
-		cleanupPid(_requests[client.fd]->childPid); // check
-		_requests.erase(client.fd);
+		kill(_requests[client.fd]->childPid, SIGTERM);
+		waitpid(_requests[client.fd]->childPid, nullptr, 0);
+		cleanupPid(_requests[client.fd]->childPid);
 	}
 }
 
 void	CGIHandler::cleanupCGI(Client& client)
 {
 	// CGI request is completed and the response is read by the client
-	Logger::log(Logger::OK, "Cleaning up CGI for client " + std::to_string(client.fd));
-	if (client.cgiStatus != CGI_CHILD_EXITED)
-	{
+	if (client.cgiStatus == CGI_FORKED)
 		killCGIProcess(client);
-	}
-
-	if (client.cgiRequested && (_requests.find(client.fd) == _requests.end()))
+	if (_requests.find(client.fd) != _requests.end())
 		_requests.erase(client.fd);
-	//cleanupPid(_requests[client.fd]->childPid);
+}
+
+void	CGIHandler::checkCGIStatus(Client& client)
+{
+	if (client.cgiStatus == CGI_ERROR)
+		throw ServerException(STATUS_BAD_GATEWAY);
+	else if (client.cgiStatus == CGI_TIMED_OUT)
+		throw ServerException(STATUS_GATEWAY_TIMEOOUT);
+}
+
+bool	CGIHandler::cgiTimeout(Client& client)
+{
+	const std::time_t now = std::time(nullptr);
+	if (now - _requests[client.fd]->CGIstart > CGI_TIMEOUT)
+		return false;
+	return true;
 }
 
 /*	Checks if child has been terminated and output written to client, 
@@ -145,51 +119,51 @@ void	CGIHandler::checkProcess(Client& client)
 	int status;
 	pid_t pid;
 	
-	if (_requests.find(client.fd) == _requests.end())
-	{
+	if (_requests.find(client.fd) == _requests.end() || client.cgiStatus == CGI_COMPLETE)
 		return;
-	}
-	//while((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
-	if ((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
+	if (g_cgiCheckProcess)
 	{
-		if (WIFEXITED(status))
+		if ((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
 		{
-			int exitCode = WEXITSTATUS(status);
-			Logger::log(Logger::OK, "Child exited with status: " + std::to_string(exitCode));
-			if (exitCode > 0)
+			if (WIFEXITED(status))
 			{
-				client.cgiStatus = CGI_ERROR;
-				cleanupPid(pid);
+				if (WEXITSTATUS(status) > 0)
+					client.cgiStatus = CGI_ERROR;
+				else
+					client.cgiStatus = CGI_CHILD_EXITED;
 			}
-			else
+			else if (WIFSIGNALED(status))
 			{
-				client.cgiStatus = CGI_CHILD_EXITED;
-				cleanupPid(pid);
+				Logger::log(Logger::ERROR, "Child killed by signal: " + std::to_string(WTERMSIG(status)));
+				client.cgiStatus = CGI_CHILD_KILLED;
 			}
-		}
-		else if (WIFSIGNALED(status))
-		{
-			Logger::log(Logger::ERROR, "Child killed by signal: " + std::to_string(WTERMSIG(status)));
-			client.cgiStatus = CGI_CHILD_KILLED;
+			else if (WIFSTOPPED(status))
+			{
+				Logger::log(Logger::ERROR, "Child stopped by signal: " + std::to_string(WSTOPSIG(status)));
+				client.cgiStatus = CGI_CHILD_STOPPED;
+			}
 			cleanupPid(pid);
 		}
-		else if (WIFSTOPPED(status))
+		if (pid == 0)
 		{
-			Logger::log(Logger::ERROR, "Child stopped by signal: " + std::to_string(WSTOPSIG(status)));
-			client.cgiStatus = CGI_CHILD_STOPPED;
-			cleanupPid(pid);
+			Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " is still running, checking timeout");
+			if (!cgiTimeout(client))
+			{
+				killCGIProcess(client);
+				client.cgiStatus = CGI_TIMED_OUT;
+			}
+		}
+		if (pid == -1 && errno != ECHILD)
+		{
+			Logger::log(Logger::ERROR, "Waitpid error" + std::string(std::strerror(errno)));
+			throw ServerException(STATUS_INTERNAL_ERROR);
 		}
 	}
-	if (pid == 0)
+	else if (!cgiTimeout(client) && client.cgiStatus != CGI_EXECVE_READY)
 	{
-		Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " is still running");
+		killCGIProcess(client);
+		client.cgiStatus = CGI_TIMED_OUT;
 	}
-	if (pid == -1 && errno != ECHILD)
-	{
-		Logger::log(Logger::ERROR, "CGI error (waitpid): " + std::string(std::strerror(errno)));
-		throw ServerException(STATUS_INTERNAL_ERROR);
-	}
-	Logger::log(Logger::OK, "Finished checking child process with status " + std::to_string(client.cgiStatus));
 }
 
 void	CGIHandler::validateCGIScript(std::string CGIExecutablePath)
@@ -205,13 +179,11 @@ void	CGIHandler::setPipesToNonBlock(int* pipe)
 {
 	int flags;
 	
-	// Write end
 	if ((flags = fcntl(pipe[WRITE], F_GETFL)) == -1)
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	if (fcntl(pipe[WRITE], F_SETFL, flags | O_NONBLOCK) == -1) 
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	
-	// Read end
 	if ((flags = fcntl(pipe[READ], F_GETFL)) == -1)
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	if (fcntl(pipe[READ], F_SETFL, flags | O_NONBLOCK) == -1) 
@@ -220,7 +192,7 @@ void	CGIHandler::setPipesToNonBlock(int* pipe)
 
 bool	CGIHandler::readyForExecve(const Client& client)
 {
-	if (!_requests.empty() && _requests.find(client.fd) != _requests.end())
+	if (_requests.find(client.fd) != _requests.end())
 	{
 		if (client.cgiStatus == CGI_EXECVE_READY && client.resourceWriteFd == -1)
 			return true;
@@ -252,34 +224,13 @@ std::vector<std::string>	CGIHandler::setCGIEnv(const HttpRequest& request, const
 	return strEnv;
 }
 
-void	CGIHandler::childTimeout(int signal)
-{
-	(void)signal;
-	int i = 0;
-
-	for (pid_t it : _pids)
-	{
-		if (it > 0)
-		{
-			if (kill(it, SIGTERM) == -1)
-				std::cout << strerror(errno) << "\n";
-			int status;
-			waitpid(it, &status, 0);
-
-			_pids.erase(_pids.begin() + i);
-		}
-		i++;
-	}
-}
-
 void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 {
 	t_CGIrequest& cgiRequest = *_requests[client.fd];
 	
-	alarm(0);
 	_pids.emplace_back(pid);
-	Logger::log(Logger::OK, "Process has forked " + std::to_string(pid) + " added");
-	
+	Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " forked: process " + std::to_string(pid) + " added");
+
 	client.cgiStatus = CGI_FORKED;
 	cgiRequest.childPid = pid;
 	
@@ -298,11 +249,6 @@ void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 	}
 	close(outPipe[READ]);
 }
-
-/* void	CGIHandler::flagKill(int signal)
-{
-
-} */
 
 void	CGIHandler::handleChildProcess(Client& client)
 {
@@ -335,7 +281,6 @@ void	CGIHandler::handleChildProcess(Client& client)
 	envp.emplace_back(nullptr);
 
 	closeAllOpenFds();
-	//signal(SIGALRM, flagKill);
 	execve(cgiRequest.CGIPath.c_str(), cgiRequest.argv.data(), envp.data());
 	Logger::log(Logger::ERROR, "Execve failed: " + std::string(std::strerror(errno)));
 	std::exit(EXIT_FAILURE);
@@ -371,7 +316,6 @@ void	CGIHandler::setupCGI(Client& client)
 		}
 		close(cgiInst->inPipe[WRITE]);
 	}
-
 	if (pipe(cgiInst->outPipe) < 0)
 	{
 		Logger::log(Logger::ERROR, "Pipe error: " + std::string(std::strerror(errno)));
@@ -388,9 +332,9 @@ void	CGIHandler::runCGIScript(Client& client)
 {
 	if (client.cgiStatus != CGI_FORKED)
 	{
-		// signal(SIGALRM, childTimeout);
-		pid_t pid = fork();
+		_requests[client.fd]->CGIstart = std::time(nullptr);
 		
+		pid_t pid = fork();
 		if (pid < 0)
 		{
 			throw ServerException(STATUS_INTERNAL_ERROR);
@@ -408,28 +352,22 @@ void	CGIHandler::runCGIScript(Client& client)
 
 void	CGIHandler::handleCGI(Client& client)
 {
-	Logger::log(Logger::OK, "Handling CGI for request " + std::to_string(client.fd));
 	const HttpRequest& request = client.requestHandler->getRequest();
 
+	if ((client.cgiStatus == CGI_COMPLETE) || (client.cgiStatus == CGI_FORKED))
+		return;
  	if (client.cgiStatus == CGI_CHILD_EXITED)
 	{
+		client.cgiStatus = CGI_COMPLETE;
 		cleanupCGI(client);
-		client.cgiStatus = CGI_RESPONSE_READY;
 		return;
-	}
-	if (!_requests.empty() && (_requests.find(client.fd) != _requests.end()))
-	{
-		if (_requests[client.fd]->childExitStatus == CGI_ERROR)
-		{
-			client.cgiStatus = CGI_ERROR;
-			throw ServerException(STATUS_INTERNAL_ERROR);
-		}
 	}
 	if (_requests.size() >= 10)
 	{
 		Logger::log(Logger::ERROR, "Server is busy with too many CGI requests, try again in a moment");
-		throw ServerException(STATUS_NOT_ALLOWED); // handle sending some error for overloaded CGI
+		throw ServerException(STATUS_SERVICE_UNAVAILABLE);
 	}
+	Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " CGI request initialised");
 	if (request.method == "GET" || ((request.method == "POST") && !readyForExecve(client)))
 	{
 		setupCGI(client); // sets CGI status to EXECVE READY
@@ -438,9 +376,4 @@ void	CGIHandler::handleCGI(Client& client)
 	{
 		runCGIScript(client); // sets CGI status FORKED
 	}
-	// IF signal
-	/* if (client.cgiStatus == CGI_FORKED)
-		checkProcess(client); */
-	/* if (client.cgiStatus == CGI_ERROR)
-		throw ServerException(STATUS_INTERNAL_ERROR); */
 }

@@ -39,6 +39,8 @@ def main():
 """
 
 	# Generate headers
+    while True:
+        print()
     date_str = email.utils.formatdate(usegmt=True)
     content_length = len(html_body.encode("utf-8"))
     # Send the response headers and body

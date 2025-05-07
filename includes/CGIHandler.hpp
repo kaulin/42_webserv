@@ -6,14 +6,18 @@
 #define READ 0
 #define WRITE 1
 
+#define CGI_TIMEOUT 3
+
 enum CGIStatus {
 	CGI_FORKED,
 	CGI_ERROR,
 	CGI_EXECVE_READY,
 	CGI_READ_READY,
 	CGI_RESPONSE_READY,
+	CGI_COMPLETE,
 	CGI_CHILD_KILLED,
 	CGI_CHILD_STOPPED,
+	CGI_TIMED_OUT,
 	CGI_CHILD_EXITED
 };
 
@@ -21,11 +25,11 @@ typedef struct s_CGIrequest {
 	int					inPipe[2];
 	int					outPipe[2];
 	pid_t				childPid;
+	std::time_t			CGIstart;
 	std::string			output;
 	std::vector<char*>	argv;
 	std::vector<char*>	envp;
 	std::string			CGIPath;
-	int					childExitStatus;
 } t_CGIrequest;
 
 class CGIHandler {
@@ -43,10 +47,9 @@ private:
 	bool						readyForExecve(const Client& client);
 	void						setPipesToNonBlock(int* pipe);
 	void						closeAllOpenFds();
-	// static void					cleanupPid(pid_t pid, int exitStatus);
 	static void					cleanupPid(pid_t pid);
+	static bool					cgiTimeout(Client& client);
 
-	static void					childTimeout(int signal);
 	public:
 	CGIHandler();
 	~CGIHandler();
@@ -55,4 +58,5 @@ private:
 	void	handleCGI(Client& client);
 	void	cleanupCGI(Client& client);
 	void	killCGIProcess(Client& client);
+	void	checkCGIStatus(Client& client);
 };

@@ -121,15 +121,8 @@ void ServerHandler::checkClients()
 		if (it != _clients.end())
 		{
 			Client& client = *it->second.get();
-			if (client.cgiRequested && g_cgiCheckProcess)
-			{
+			if (client.cgiRequested && !client.responseSent && client.cgiStatus != CGI_COMPLETE)
 				_CGIHandler.checkProcess(client);
-				/* if (client.cgiStatus == CGI_ERROR)
-				{
-					//_CGIHandler.killCGIProcess(client);
-					closeConnection(i);
-				} */
-			}
 			else if (!checkTimeout(client))
 			{
 				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " timed out, disconnecting");
@@ -323,8 +316,8 @@ void	ServerHandler::pollLoop()
 						if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients out
 						{
 							Client& client = *_clients[_pollFds[i].fd].get();
-							if (client.cgiStatus == CGI_ERROR)
-								throw ServerException(STATUS_INTERNAL_ERROR);
+							if (client.cgiRequested)
+								_CGIHandler.checkCGIStatus(client);
 							client.responseHandler->formResponse();
 							client.responseHandler->sendResponse();
 						}
@@ -398,6 +391,8 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 	}
 	else
 		client.requestReady = true;
+
+	client.cgiStatus = CGI_COMPLETE;
 }
 
 void	ServerHandler::readFromFd(size_t& i) {
@@ -415,9 +410,6 @@ void	ServerHandler::readFromFd(size_t& i) {
 	if (bytesRead < BUFFER_SIZE)
 	{
 		client.requestReady = true;
-		//client.cgiStatus = CGI_RESPONSE_READY;
-		//if (client.cgiRequested)
-		//	_CGIHandler.handleCGI(client);
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
 	}
