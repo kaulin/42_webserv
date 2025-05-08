@@ -162,7 +162,13 @@ void ServerHandler::closeConnection(size_t& i)
 	while (it != _resourceFds.end() && !_resourceFds.empty())
 	{
 		if (it->second == &client)
-			removeResourceFd(it->first);
+		{
+			if (it->first != -1) {
+				_fdsToDrop.push_back(it->first);
+				close(it->first);
+			}
+			it = _resourceFds.erase(it);
+		}
 		else
 			++it;
 	}
