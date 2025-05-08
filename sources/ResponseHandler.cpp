@@ -139,7 +139,7 @@ void ResponseHandler::formDELETE() {
 }
 
 void ResponseHandler::formCGI() {
-	if (_client.cgiStatus == CGI_ERROR)
+	if (_client.cgiStatus == CGI_SERVER_ERROR)
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	else
 		_response->response = _client.resourceInString;

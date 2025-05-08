@@ -98,10 +98,12 @@ void	CGIHandler::cleanupCGI(Client& client)
 
 void	CGIHandler::checkCGIStatus(Client& client)
 {
-	if (client.cgiStatus == CGI_ERROR)
+	if (client.cgiStatus == CGI_BAD_GATEWAY)
 		throw ServerException(STATUS_BAD_GATEWAY);
-	else if (client.cgiStatus == CGI_TIMED_OUT)
+	if (client.cgiStatus == CGI_TIMED_OUT)
 		throw ServerException(STATUS_GATEWAY_TIMEOOUT);
+	if (client.cgiStatus == CGI_SERVER_ERROR)
+		throw ServerException(STATUS_INTERNAL_ERROR);
 }
 
 bool	CGIHandler::cgiTimeout(Client& client)
@@ -128,7 +130,7 @@ void	CGIHandler::checkProcess(Client& client)
 			if (WIFEXITED(status))
 			{
 				if (WEXITSTATUS(status) > 0)
-					client.cgiStatus = CGI_ERROR;
+					client.cgiStatus = CGI_BAD_GATEWAY;
 				else
 					client.cgiStatus = CGI_CHILD_EXITED;
 			}
@@ -156,7 +158,7 @@ void	CGIHandler::checkProcess(Client& client)
 		if (pid == -1 && errno != ECHILD)
 		{
 			Logger::log(Logger::ERROR, "Waitpid error" + std::string(std::strerror(errno)));
-			throw ServerException(STATUS_INTERNAL_ERROR);
+			client.cgiStatus = CGI_SERVER_ERROR;
 		}
 	}
 	else if (!cgiTimeout(client) && client.cgiStatus != CGI_EXECVE_READY)
