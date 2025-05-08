@@ -15,6 +15,7 @@ class ResponseHandler;
 enum ConnectionState
 {
 	ACTIVE,
+	PROCESSING,
 	DRAIN,
 	DRAINED,
 	CLOSE
