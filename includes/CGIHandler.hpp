@@ -7,6 +7,7 @@
 #define WRITE 1
 
 #define CGI_TIMEOUT 3
+#define CGI_MAX_REQUESTS 10
 
 enum CGIStatus {
 	CGI_FORKED,
@@ -35,8 +36,8 @@ typedef struct s_CGIrequest {
 
 class CGIHandler {
 private:
-	static std::unordered_map<int, std::unique_ptr<t_CGIrequest>>	_requests;
-	static std::vector<pid_t> 										_pids;
+	std::unordered_map<int, std::unique_ptr<t_CGIrequest>>	_requests;
+	std::vector<pid_t> 										_pids;
 
 	void 						handleChildProcess(Client& client);
 	void						handleParentProcess(Client& client, pid_t pid);
@@ -48,8 +49,8 @@ private:
 	bool						readyForExecve(const Client& client);
 	void						setPipesToNonBlock(int* pipe);
 	void						closeAllOpenFds();
-	static void					cleanupPid(pid_t pid);
-	static bool					cgiTimeout(Client& client);
+	void						cleanupPid(pid_t pid);
+	bool						cgiTimeout(Client& client);
 
 	public:
 	CGIHandler();

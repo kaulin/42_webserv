@@ -26,18 +26,9 @@ def read_orders():
 
 def main():
 
-    # Print environment variables
-    # print("Environment Variables:")
-    # for key in sorted(os.environ):
-    #     print(f"{key}: {os.environ[key]}")
-
     # Read POST data from stdin
     content_length = int(os.environ.get("CONTENT_LENGTH", 0))
     raw_data = sys.stdin.read(content_length)
-
-    # Print the raw POST data (for debugging)
-    # print("\nRaw POST data:")
-    # print(raw_data)
 
     # URL-decode the raw POST data before parsing it
     decoded_data = unquote(raw_data)
@@ -49,11 +40,6 @@ def main():
     name = post_data.get('name', [''])[0]
     coffee = post_data.get('coffee', [''])[0]
     size = post_data.get('size', [''])[0]
-
-    # print(f"\nParsed Data:")
-    # print(f"Name: {name}")
-    # print(f"Coffee: {coffee}")
-    # print(f"Size: {size}")
 
     if name and coffee and size:
         save_order(name, coffee, size)

@@ -12,11 +12,7 @@
 #include "ServerException.hpp"
 #include "ServerHandler.hpp"
 
-#define BACKLOG 10 // how many pending connections queue will hold
-
 bool ServerHandler::_sigintReceived = false;
-
-sig_atomic_t g_cgiCheckProcess = 0;
 
 void	ServerHandler::signalHandler(int signal) 
 {
@@ -24,12 +20,6 @@ void	ServerHandler::signalHandler(int signal)
 	std::cout << std::endl;
 	Logger::log(Logger::OK, "SIGINT received");
 	_sigintReceived = true;
-}
-
-void	ServerHandler::CGISignal(int signal)
-{
-	(void)signal;
-	g_cgiCheckProcess = 1;
 }
 
 ServerHandler::ServerHandler(std::string path) : 
@@ -148,7 +138,6 @@ void ServerHandler::checkClients()
 			}
 		}
 	}
-	g_cgiCheckProcess = 0;
 	updatePollList();
 }
 
@@ -284,7 +273,6 @@ void	ServerHandler::pollLoop()
 	int	pollCount;
 
 	std::signal(SIGINT, ServerHandler::signalHandler);
-	std::signal(SIGCHLD, ServerHandler::CGISignal);
 	std::signal(SIGPIPE, SIG_IGN);
 	setPollList();
 	while (!_sigintReceived)

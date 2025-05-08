@@ -14,9 +14,6 @@ class HttpServer;
 
 #define BUFFER_SIZE 1024
 #define DEFAULT_CONFIG_FILE "config/default.conf"
-#define BACKLOG 10 // how many pending connections queue will hold
-
-// sig_atomic_t g_cgiCheckProcess;
 
 enum PollType 
 {
