@@ -123,7 +123,7 @@ void ServerHandler::checkClients()
 			Client& client = *it->second.get();
 			if (client.cgiRequested && !client.responseSent && client.cgiStatus != CGI_COMPLETE)
 				_CGIHandler.checkProcess(client);
-			else if (client.connectionState == CLOSE)
+			if (client.connectionState == CLOSE)
 			{
 				Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " connection disconnected by client");
 				closeConnection(i);
@@ -311,7 +311,7 @@ void	ServerHandler::pollLoop()
 						else if (_clients.find(_pollFds[i].fd) != _clients.end()) // Clients in
 						{
 							Client& client = *_clients[_pollFds[i].fd].get();
-							client.requestHandler->handleRequest();
+							client.requestHandler->readRequest();
 							if (client.cgiRequested)
 								_CGIHandler.handleCGI(client);
 							if (client.responseCode == STATUS_OK)
