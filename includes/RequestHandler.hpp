@@ -35,7 +35,6 @@ class RequestHandler
 		size_t _totalReceivedLength;
 		size_t _partIndex;
 		std::vector <MultipartFormData> _parts;
-		void readRequest();
 		void processRequest();
 		void processGet();
 		void processPost();
@@ -57,6 +56,7 @@ class RequestHandler
 		~RequestHandler();
 		void resetHandler();
 		void handleRequest();
+		void readRequest();
 
 		const HttpRequest& getRequest() const;
 		const std::string& getMethod() const;

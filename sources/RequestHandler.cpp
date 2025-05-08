@@ -31,19 +31,18 @@ void RequestHandler::resetHandler() {
 }
 
 void RequestHandler::handleRequest() {
-	if (!_request)
-		_request = std::make_unique<HttpRequest>();
-	readRequest();
 	if (_multipart && ++_partIndex < _parts.size()) {
 		_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, _request->uriPath) + _request->uriPath + "/" + _parts[_partIndex].filename;
 		_client.resourceOutString = _parts[_partIndex].content;
 		FileHandler::openForWrite( _client.resourceWriteFd, _client.resourcePath);
 	}
-	else if (_multipart || (_client.cgiRequested && _client.cgiStatus == CGI_RESPONSE_READY))
+	else if (_multipart || (_client.cgiRequested && !(_client.cgiStatus != CGI_RESPONSE_READY)))
 		_client.requestReady = true;
 }
 
 void RequestHandler::readRequest() {
+	if (!_request)
+		_request = std::make_unique<HttpRequest>();
 	ssize_t receivedBytes;
 	char buf[BUFFER_SIZE] = {};
 
