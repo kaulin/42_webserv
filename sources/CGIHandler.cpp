@@ -7,19 +7,14 @@
 #include <iostream>
 #include <filesystem>
 #include <dirent.h>
-#include "CGIHandler.hpp"
 #include "HttpRequest.hpp"
+#include "CGIHandler.hpp"
 #include "ServerException.hpp"
 #include "Logger.hpp"
 
-std::unordered_map<int, std::unique_ptr<t_CGIrequest>>	CGIHandler::_requests;
-std::vector<pid_t> 										CGIHandler::_pids;
-
-extern sig_atomic_t g_cgiCheckProcess;
-
 CGIHandler::CGIHandler()
 {
-	_requests.reserve(10);
+	_requests.reserve(CGI_MAX_REQUESTS);
 }
 
 CGIHandler::~CGIHandler() {}
@@ -78,7 +73,6 @@ void	CGIHandler::cleanupPid(pid_t pid)
 
 void	CGIHandler::killCGIProcess(Client& client)
 {
-	Logger::log(Logger::OK,  "Client " + std::to_string(client.fd) + " CGI timed out, killing process with id " + std::to_string(_requests[client.fd]->childPid));
 	if (client.cgiStatus == CGI_FORKED && (_requests.find(client.fd) != _requests.end()))
 	{
 		kill(_requests[client.fd]->childPid, SIGTERM);
@@ -123,46 +117,44 @@ void	CGIHandler::checkProcess(Client& client)
 	
 	if (_requests.find(client.fd) == _requests.end() || client.cgiStatus == CGI_COMPLETE)
 		return;
-	if (g_cgiCheckProcess)
+	if ((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
 	{
-		if ((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
+		if (WIFEXITED(status))
 		{
-			if (WIFEXITED(status))
-			{
-				if (WEXITSTATUS(status) > 0)
-					client.cgiStatus = CGI_BAD_GATEWAY;
-				else
-					client.cgiStatus = CGI_CHILD_EXITED;
-			}
-			else if (WIFSIGNALED(status))
-			{
-				Logger::log(Logger::ERROR, "Child killed by signal: " + std::to_string(WTERMSIG(status)));
-				client.cgiStatus = CGI_CHILD_KILLED;
-			}
-			else if (WIFSTOPPED(status))
-			{
-				Logger::log(Logger::ERROR, "Child stopped by signal: " + std::to_string(WSTOPSIG(status)));
-				client.cgiStatus = CGI_CHILD_STOPPED;
-			}
-			cleanupPid(pid);
+			if (WEXITSTATUS(status) > 0)
+				client.cgiStatus = CGI_BAD_GATEWAY;
+			else
+				client.cgiStatus = CGI_CHILD_EXITED;
 		}
-		if (pid == 0)
+		else if (WIFSIGNALED(status))
 		{
-			Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " is still running, checking timeout");
-			if (!cgiTimeout(client))
-			{
-				killCGIProcess(client);
-				client.cgiStatus = CGI_TIMED_OUT;
-			}
+			Logger::log(Logger::ERROR, "Child killed by signal: " + std::to_string(WTERMSIG(status)));
+			client.cgiStatus = CGI_CHILD_KILLED;
 		}
-		if (pid == -1 && errno != ECHILD)
+		else if (WIFSTOPPED(status))
 		{
-			Logger::log(Logger::ERROR, "Waitpid error" + std::string(std::strerror(errno)));
-			client.cgiStatus = CGI_SERVER_ERROR;
+			Logger::log(Logger::ERROR, "Child stopped by signal: " + std::to_string(WSTOPSIG(status)));
+			client.cgiStatus = CGI_CHILD_STOPPED;
+		}
+		cleanupPid(pid);
+	}
+	if (pid == 0)
+	{
+		if (!cgiTimeout(client))
+		{
+			Logger::log(Logger::OK,  "Client " + std::to_string(client.fd) + " CGI timed out, killing process with id " + std::to_string(_requests[client.fd]->childPid));
+			killCGIProcess(client);
+			client.cgiStatus = CGI_TIMED_OUT;
 		}
 	}
-	else if (!cgiTimeout(client) && client.cgiStatus != CGI_EXECVE_READY)
+	if (pid == -1 && errno != ECHILD)
 	{
+		Logger::log(Logger::ERROR, "Waitpid error" + std::string(std::strerror(errno)));
+		client.cgiStatus = CGI_SERVER_ERROR;
+	}
+	if (!cgiTimeout(client) && client.cgiStatus != CGI_EXECVE_READY)
+	{
+		Logger::log(Logger::OK,  "Client " + std::to_string(client.fd) + " CGI timed out, killing process with id " + std::to_string(_requests[client.fd]->childPid));
 		killCGIProcess(client);
 		client.cgiStatus = CGI_TIMED_OUT;
 	}
@@ -356,6 +348,7 @@ void	CGIHandler::handleCGI(Client& client)
 {
 	const HttpRequest& request = client.requestHandler->getRequest();
 
+	checkCGIStatus(client);
 	if ((client.cgiStatus == CGI_COMPLETE) || (client.cgiStatus == CGI_FORKED))
 		return;
  	if (client.cgiStatus == CGI_CHILD_EXITED)
@@ -364,14 +357,14 @@ void	CGIHandler::handleCGI(Client& client)
 		cleanupCGI(client);
 		return;
 	}
-	if (_requests.size() >= 10)
+	if (_requests.size() >= CGI_MAX_REQUESTS)
 	{
 		Logger::log(Logger::ERROR, "Server is busy with too many CGI requests, try again in a moment");
 		throw ServerException(STATUS_SERVICE_UNAVAILABLE);
 	}
-	Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " CGI request initialised");
 	if (request.method == "GET" || ((request.method == "POST") && !readyForExecve(client)))
 	{
+		Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " CGI request initialised");
 		setupCGI(client); // sets CGI status to EXECVE READY
 	}
 	if (readyForExecve(client))
