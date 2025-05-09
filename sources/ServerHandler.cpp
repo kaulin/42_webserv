@@ -375,8 +375,8 @@ void	ServerHandler::handleServerException(int statusCode, size_t& i)
 		removeResourceFd(client.resourceReadFd);
 		client.resourceReadFd = -1;
 	}
-	auto it = client.serverConfig->error_pages.find(statusCode);
-	if (it != client.serverConfig->error_pages.end()) {
+	auto it = client.serverConfig->errorPages.find(statusCode);
+	if (it != client.serverConfig->errorPages.end()) {
 		std::string path = ServerConfigData::getRoot(*client.serverConfig, "/") + it->second;
 		try {
 			FileHandler::openForRead(client.resourceReadFd, path);
