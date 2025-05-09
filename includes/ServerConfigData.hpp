@@ -9,11 +9,12 @@ struct Location {
 	std::string	path;
 	std::string	root;
 	std::string	index;
-	std::string	cgi_path;
-	std::string	cgi_param;
+	std::string	cgiPath;
+	std::string cgiExtension;
+	std::string	cgiParam;
 	std::pair<int, std::string>	redirect;
 	std::unordered_map<std::string, bool>	methods = {{"GET", false}, {"POST", false}, {"DELETE", false}};
-	bool		dir_listing;
+	bool		dirListing;
 };
 
 struct Config {
@@ -22,10 +23,10 @@ struct Config {
 	std::vector<std::string>					names;
 	std::string									port;
 	std::unordered_map<std::string, Location>	locations;
-	size_t										cli_max_bodysize;
+	size_t										cliMaxBodysize;
 	int											timeout;
-	std::map<int, std::string>					default_pages;
-	std::map<int, std::string>					error_pages;
+	std::map<int, std::string>					defaultPages;
+	std::map<int, std::string>					errorPages;
 };
 
 class ServerConfigData {

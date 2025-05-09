@@ -43,5 +43,6 @@ class LocationParser {
 		static std::string					set_root(std::vector<std::string>::const_iterator &it);
 		static std::string					set_index(std::vector<std::string>::const_iterator &it);
 		static std::string					set_cgi(std::vector<std::string>::const_iterator &it);
+		static void							verify_cgi(Location &location_block);
 		static bool							set_autoindex(std::vector<std::string>::const_iterator &it);
 };

@@ -73,7 +73,7 @@ void RequestHandler::readRequest() {
 	handleHeaders();
 	if (!_headersRead)
 		return;
-	if (_requestString.size() - _headerPart.size() > _client.serverConfig->cli_max_bodysize)
+	if (_requestString.size() - _headerPart.size() > _client.serverConfig->cliMaxBodysize)
 		throw ServerException(STATUS_TOO_LARGE);	
 	if (_isChunked)
 		handleChunkedRequest();
@@ -97,7 +97,7 @@ void RequestHandler::setContentLength() {
 	ss >> _expectedContentLength;
 	if (ss.fail() || !ss.eof())
 		throw ServerException(STATUS_BAD_REQUEST);
-	if (_expectedContentLength > _client.serverConfig->cli_max_bodysize)
+	if (_expectedContentLength > _client.serverConfig->cliMaxBodysize)
 		throw ServerException(STATUS_TOO_LARGE);
 }
 
@@ -106,7 +106,7 @@ void RequestHandler::handleHeaders()
 	if (_headersRead)
 		return;
 	size_t headersEnd = _requestString.find("\r\n\r\n");
-	if (headersEnd > _client.serverConfig->cli_max_bodysize)
+	if (headersEnd > _client.serverConfig->cliMaxBodysize)
 		throw ServerException(STATUS_LARGE_HEADERS);
 	if (headersEnd == std::string::npos)
 		return;
@@ -235,7 +235,7 @@ void RequestHandler::processGet() {
 			throw ServerException(STATUS_FORBIDDEN);
 		if (!location->index.empty())
 			path = location->path + location->index;
-		else if (location->dir_listing) {
+		else if (location->dirListing) {
 			_client.directoryListing = true;
 			_client.requestReady = true;
 			_client.resourcePath = ServerConfigData::getRoot(*_client.serverConfig, path) + path;

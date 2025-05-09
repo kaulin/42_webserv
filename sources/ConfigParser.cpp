@@ -236,7 +236,7 @@ void ConfigParser::assignErrorPage(std::vector<std::string>::const_iterator &it,
 		++it;
 		if (it == end)
 			throw ConfigParserException("Config: Missing path for error code.");
-		blockInstance.error_pages.emplace(itCode->second, *it);
+		blockInstance.errorPages.emplace(itCode->second, *it);
 		++it;
 	}
 }
@@ -268,8 +268,8 @@ void ConfigParser::setDefaultErrorPages(Config &blockInstance)
 
 	for (const auto& entry : defaultPages)
 	{
-		if (blockInstance.error_pages.find(entry.first) == blockInstance.error_pages.end())
-			blockInstance.error_pages[entry.first] = entry.second;
+		if (blockInstance.errorPages.find(entry.first) == blockInstance.errorPages.end())
+			blockInstance.errorPages[entry.first] = entry.second;
 	}
 }
 
@@ -350,7 +350,7 @@ void ConfigParser::assignKeyToValue(std::vector<std::string>::const_iterator &it
 				}
 				if (bodySize > SIZE_MAX / mult)
 					throw ConfigParserException("Config: Max client body size overflow.");
-				blockInstance.cli_max_bodysize = bodySize * mult;
+				blockInstance.cliMaxBodysize = bodySize * mult;
 				++it; break; 
 			}
 			case ConfigKey::CLIENT_TIMEOUT:

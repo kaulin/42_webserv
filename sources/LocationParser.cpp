@@ -61,16 +61,15 @@ void	LocationParser::set_location_methods(std::vector<std::string>::const_iterat
 	}
 }
 
-/* struct Location {
-	bool		_dir_listing;
-	std::string path;
-	std::string root;
-	std::string index;
-	std::string cgi_path;
-	std::string cgi_param;
-	std::pair<int, std::string> redirect;
-	std::unordered_map<std::string, bool> methods;
-}; */
+void LocationParser::verify_cgi(Location &location_block)
+{
+	size_t pos = location_block.cgiPath.find_last_of('.');
+	if (pos == std::string::npos)
+		throw ConfigParser::ConfigParserException("Invalid CGI path");
+	std::string ext = location_block.cgiPath.substr(pos);
+	if (ext != location_block.cgiExtension)
+		throw ConfigParser::ConfigParserException("Unsupported CGI extension");
+}
 
 std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<std::string>::const_iterator &it, 
 	std::vector<std::string>::const_iterator &end,
@@ -84,7 +83,7 @@ std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<
 	if (locations.find(*it) != locations.end())
 		throw std::runtime_error("Duplicate path");
 	location_block.path = set_location_path(it);
-	location_block.dir_listing = false;
+	location_block.dirListing = false;
 	while (*it != "}")
 	{
 		auto found = directiveMap.find(*it);
@@ -96,7 +95,7 @@ std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<
 				set_location_methods(it, location_block.methods);
 				break;
 			case LocationConfigKey::AUTOINDEX:
-				location_block.dir_listing = set_autoindex(it);
+				location_block.dirListing = set_autoindex(it);
 				break;
 			case LocationConfigKey::REDIR:
 				location_block.redirect = set_redirect(it);
@@ -108,13 +107,13 @@ std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<
 				location_block.index = set_index(it);
 				break;
 			case LocationConfigKey::CGI_PATH:
-				location_block.cgi_path = set_cgi(it);
+				location_block.cgiPath = set_cgi(it);
 				break;
 			case LocationConfigKey::CGI_PARAM:
-				location_block.cgi_param = set_cgi(it);
+				location_block.cgiParam = set_cgi(it);
 				break;
 			case LocationConfigKey::CGI_EXT:
-				location_block.cgi_param = set_cgi(it);
+				location_block.cgiExtension = set_cgi(it);
 				break;
 			case LocationConfigKey::BREAK:
 				break;
@@ -123,5 +122,7 @@ std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<
 		}
 		it++;
 	}
+	if (!location_block.cgiPath.empty() || !location_block.cgiExtension.empty())
+		verify_cgi(location_block);
 	return std::pair<std::string, Location>(location_block.path, location_block);
 }
