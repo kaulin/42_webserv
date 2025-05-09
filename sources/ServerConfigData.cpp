@@ -37,6 +37,21 @@ size_t  ServerConfigData::getServerCount()
 const Location* ServerConfigData::getLocation(const Config& config, std::string path) {
 	if (path.size() > 1 && path.back() == '/')
 			path.erase(path.begin() + path.find_last_of('/'), path.end());
+	std::cout << "Location path: " << path << "\n";
+	auto itLocation = config.locations.find(path);
+	if (itLocation == config.locations.end())
+		return nullptr;
+	return &(*itLocation).second;
+}
+
+/*
+	Returns the Location struct for a specific path, if it exists, or nullptr, 
+	if it doesn't.
+*/
+const Location* ServerConfigData::getParentLocation(const Config& config, std::string path) {
+	if (path.size() > 1)
+			path.erase(path.begin() + path.find_last_of('/'), path.end());
+	std::cout << "Location path: " << path << "\n";
 	auto itLocation = config.locations.find(path);
 	if (itLocation == config.locations.end())
 		return nullptr;
