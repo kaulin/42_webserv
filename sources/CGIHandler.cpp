@@ -83,11 +83,24 @@ void	CGIHandler::killCGIProcess(Client& client)
 
 void	CGIHandler::cleanupCGI(Client& client)
 {
+	
+	if (client.cgiStatus == CGI_SERVER_EXITED || client.cgiStatus == CGI_INITIALISED)
+		return;
 	// CGI request is completed and the response is read by the client
+	Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " cleaned up CGI");
 	if (client.cgiStatus == CGI_FORKED)
 		killCGIProcess(client);
+	// If CGI is set up but not executed yet, close pipes
+	else if (client.cgiStatus == CGI_EXECVE_READY)
+	{
+		close(_requests[client.fd]->inPipe[READ]);
+		close(_requests[client.fd]->outPipe[WRITE]);
+		close(_requests[client.fd]->outPipe[READ]);
+	}
+	// Remove CGI request from the map
 	if (_requests.find(client.fd) != _requests.end())
 		_requests.erase(client.fd);
+	client.cgiStatus = CGI_SERVER_EXITED;
 }
 
 void	CGIHandler::checkCGIStatus(Client& client)
@@ -120,6 +133,10 @@ void	CGIHandler::checkProcess(Client& client)
 	
 	if (_requests.find(client.fd) == _requests.end() || client.cgiStatus == CGI_COMPLETE)
 		return;
+	if (_requests[client.fd]->childPid == -1)
+	{
+		return;
+	}
 	if ((pid = waitpid(_requests[client.fd]->childPid, &status, WNOHANG)) > 0)
 	{
 		if (WIFEXITED(status))
@@ -189,9 +206,9 @@ bool	CGIHandler::readyForExecve(const Client& client)
 {
 	if (_requests.find(client.fd) != _requests.end())
 	{
-		if (client.cgiStatus == CGI_EXECVE_READY && client.resourceWriteFd == -1)
+		if (client.cgiStatus == CGI_EXECVE_READY)
 			return true;
-		else if (client.cgiStatus == CGI_EXECVE_READY && client.requestHandler->getMethod() != "POST")
+		else if (client.cgiStatus == CGI_INITIALISED && client.resourceWriteFd == -1)
 			return true;
 	}
 	return false;
@@ -287,6 +304,7 @@ void	CGIHandler::setupCGI(Client& client)
 	std::unique_ptr<t_CGIrequest> cgiInst = std::make_unique<t_CGIrequest>();
 
 	cgiInst->CGIPath = setCgiPath(client);
+	cgiInst->childPid = -1;
 
 	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
 	cgiInst->argv.emplace_back(nullptr);
@@ -301,7 +319,6 @@ void	CGIHandler::setupCGI(Client& client)
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		}
 		setPipesToNonBlock(cgiInst->inPipe);
-			
 		// Set client to write to inpipe and close unused pipe
 		client.resourceWriteFd = dup(cgiInst->inPipe[WRITE]);
 		if (client.resourceWriteFd == -1)
@@ -316,10 +333,13 @@ void	CGIHandler::setupCGI(Client& client)
 		Logger::log(Logger::ERROR, "Pipe error: " + std::string(std::strerror(errno)));
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
-	setPipesToNonBlock(cgiInst->inPipe);
+	setPipesToNonBlock(cgiInst->outPipe);
 
 	_requests.emplace(client.fd, std::move(cgiInst));
-	client.cgiStatus = CGI_EXECVE_READY;
+	if (request.method == "GET")
+		client.cgiStatus = CGI_EXECVE_READY;
+	else
+		client.cgiStatus = CGI_INITIALISED;
 }
 
 
@@ -355,8 +375,8 @@ void	CGIHandler::handleCGI(Client& client)
  	if (client.cgiStatus == CGI_CHILD_EXITED)
 	{
 		client.cgiStatus = CGI_COMPLETE;
-		cleanupCGI(client);
 		return;
+		// cleanupCGI(client);
 	}
 	if (_requests.size() >= CGI_MAX_REQUESTS && !readyForExecve(client)) // not for forked ones
 	{
