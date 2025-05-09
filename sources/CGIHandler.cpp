@@ -12,12 +12,20 @@
 #include "ServerException.hpp"
 #include "Logger.hpp"
 
+volatile sig_atomic_t sigTermReceived = 0;
+
 CGIHandler::CGIHandler()
 {
 	_requests.reserve(CGI_MAX_REQUESTS);
 }
 
 CGIHandler::~CGIHandler() {}
+
+void	handleChildSIGTERM(int signal)
+{
+	(void)signal;
+	sigTermReceived = 1;
+}
 
 void	CGIHandler::closeAllOpenFds()
 {
@@ -36,6 +44,22 @@ void	CGIHandler::closeAllOpenFds()
 	closedir(dir);
 }
 
+void	CGIHandler::signalShutdown()
+{
+	for (auto& request : _requests)
+	{			
+		if (request.second->inPipe[READ] != -1)
+			close(request.second->inPipe[READ]);
+		if (request.second->inPipe[WRITE] != -1)
+			close(request.second->inPipe[WRITE]);
+		if (request.second->outPipe[READ] != -1)
+			close(request.second->outPipe[READ]);
+		if (request.second->outPipe[WRITE] != -1)
+			close(request.second->outPipe[WRITE]);
+	}
+	_requests.clear();
+}
+
 std::string CGIHandler::setCgiPath(Client& client)
 {
 	const HttpRequest& request = client.requestHandler->getRequest();
@@ -47,8 +71,6 @@ std::string CGIHandler::setCgiPath(Client& client)
 
 	CGIroot = location->root;
 	CGIpath = location->cgiPath;
-		//if (!CGIroot.empty() && parsedUri.find("/cgi-bin") == 0) 
-		//	parsedUri = parsedUri.substr(std::string("/cgi-bin").length());
 	std::string cgiUri = std::filesystem::current_path().string() + "/" + CGIroot + "/" + CGIpath;
 	
 	validateCGIScript(cgiUri);
@@ -74,6 +96,7 @@ void	CGIHandler::killCGIProcess(Client& client)
 		kill(_requests[client.fd]->childPid, SIGTERM);
 		waitpid(_requests[client.fd]->childPid, nullptr, 0);
 		cleanupPid(_requests[client.fd]->childPid);
+		_requests[client.fd]->childPid = -1;
 	}
 }
 
@@ -177,19 +200,17 @@ void	CGIHandler::validateCGIScript(std::string CGIExecutablePath)
 		throw ServerException(STATUS_FORBIDDEN);
 }
 
-void	CGIHandler::setPipesToNonBlock(int* pipe)
+void	CGIHandler::setPipesToNonBlock(std::vector<int> pipeFds)
 {
-	int flags;
-	
-	if ((flags = fcntl(pipe[WRITE], F_GETFL)) == -1)
-		throw ServerException(STATUS_INTERNAL_ERROR);
-	if (fcntl(pipe[WRITE], F_SETFL, flags | O_NONBLOCK) == -1) 
-		throw ServerException(STATUS_INTERNAL_ERROR);
-	
-	if ((flags = fcntl(pipe[READ], F_GETFL)) == -1)
-		throw ServerException(STATUS_INTERNAL_ERROR);
-	if (fcntl(pipe[READ], F_SETFL, flags | O_NONBLOCK) == -1) 
-		throw ServerException(STATUS_INTERNAL_ERROR);
+	for (int& pipe : pipeFds)
+	{
+		int flags;
+
+		if ((flags = fcntl(pipe, F_GETFL)) == -1)
+			throw ServerException(STATUS_INTERNAL_ERROR);
+		if (fcntl(pipe, F_SETFL, flags | O_NONBLOCK) == -1) 
+			throw ServerException(STATUS_INTERNAL_ERROR);
+	}
 }
 
 bool	CGIHandler::readyForExecve(const Client& client)
@@ -230,6 +251,8 @@ void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 {
 	t_CGIrequest& cgiRequest = *_requests[client.fd];
 	
+	setPipesToNonBlock(std::vector<int>{cgiRequest.outPipe[READ]});
+
 	_pids.emplace_back(pid);
 	Logger::log(Logger::OK, "Client " + std::to_string(client.fd) + " forked: process " + std::to_string(pid) + " added");
 
@@ -260,6 +283,8 @@ void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 void	CGIHandler::handleChildProcess(Client& client)
 {
 	t_CGIrequest cgiRequest = *_requests[client.fd];
+
+	signal(SIGTERM, handleChildSIGTERM);
 	std::vector<std::string> cgiStrEnv = setCGIEnv(client.requestHandler->getRequest(), client);
 	int inPipe[2] = {cgiRequest.inPipe[0], cgiRequest.inPipe[1]};
 	int outPipe[2] = {cgiRequest.outPipe[0], cgiRequest.outPipe[1]};
@@ -288,6 +313,11 @@ void	CGIHandler::handleChildProcess(Client& client)
 	envp.emplace_back(nullptr);
 
 	closeAllOpenFds();
+	if (sigTermReceived)
+	{
+		Logger::log(Logger::OK, "Child of process " + std::to_string(client.fd) + " terminated by SIGINT signal");
+		exit(0);
+	}
 	execve(cgiRequest.CGIPath.c_str(), cgiRequest.argv.data(), envp.data());
 	Logger::log(Logger::ERROR, "Execve failed: " + std::string(std::strerror(errno)));
 	std::exit(EXIT_FAILURE);
@@ -317,7 +347,7 @@ void	CGIHandler::setupCGI(Client& client)
 			Logger::log(Logger::ERROR, "Pipe error: " + std::string(std::strerror(errno)));
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		}
-		setPipesToNonBlock(cgiInst->inPipe);
+		setPipesToNonBlock(std::vector<int>{cgiInst->inPipe[READ], cgiInst->inPipe[WRITE]});
 			
 		// Set client to write to inpipe and close unused pipe
 		client.resourceWriteFd = dup(cgiInst->inPipe[WRITE]);
@@ -334,7 +364,6 @@ void	CGIHandler::setupCGI(Client& client)
 		Logger::log(Logger::ERROR, "Pipe error: " + std::string(std::strerror(errno)));
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
-	setPipesToNonBlock(cgiInst->outPipe);
 
 	_requests.emplace(client.fd, std::move(cgiInst));
 	client.cgiStatus = CGI_EXECVE_READY;
@@ -378,7 +407,7 @@ void	CGIHandler::handleCGI(Client& client)
 	}
 	if (_requests.size() >= CGI_MAX_REQUESTS && !readyForExecve(client)) // not for forked ones
 	{
-		Logger::log(Logger::ERROR, "Client " + std::to_string(client.fd) + "Server is busy with too many CGI requests, try again in a moment");
+		Logger::log(Logger::ERROR, "Client " + std::to_string(client.fd) + " Server is busy with too many CGI requests, try again in a moment");
 		throw ServerException(STATUS_SERVICE_UNAVAILABLE);
 	}
 	if (request.method == "GET" || ((request.method == "POST") && !readyForExecve(client)))
