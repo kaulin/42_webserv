@@ -193,13 +193,12 @@ void RequestHandler::processRequest() {
 	auto it = _request->headers.find("Connection");
 	if (it != _request->headers.end() && it->second == "close")
 		_client.keepAlive = false;
-	
+
 	if (checkRedirect())
 		return;
-
 	if (!ServerConfigData::checkMethod(*_client.serverConfig, _request->method, _request->uriPath))
 		throw ServerException(STATUS_NOT_ALLOWED);
-	if (_request->uri.find(".py") != std::string::npos) // for testing CGI -- if request is to cgi-path
+	if (checkCGI())
 		_client.cgiRequested = true;
 	else if (_request->method == "GET")
 		processGet();
@@ -209,6 +208,19 @@ void RequestHandler::processRequest() {
 		processDelete();
 	else
 		throw ServerException(STATUS_METHOD_UNSUPPORTED);
+}
+
+bool RequestHandler::checkCGI() const {
+	const Location* location = ServerConfigData::getLocation(*_client.serverConfig, _request->uriPath);
+	if (location == nullptr)
+		throw ServerException(STATUS_BAD_REQUEST);
+	if (!location.cgiPath.isEmpty() && !location.cgiExtension.isEmpty())
+		return false;
+	if (_request->uriPath.find_last_not_of(location->cgiExtension) == std::string::npos)
+		return false;
+	if (_request->uriPath.find_last_of(location->cgiExtension) + location->cgiExtension.length() != std::string::npos)
+		return false;
+	return true;
 }
 
 bool RequestHandler::checkRedirect() {
