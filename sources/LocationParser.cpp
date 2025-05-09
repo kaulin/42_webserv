@@ -113,6 +113,9 @@ std::pair<std::string, Location>	LocationParser::set_location_block(std::vector<
 			case LocationConfigKey::CGI_PARAM:
 				location_block.cgi_param = set_cgi(it);
 				break;
+			case LocationConfigKey::CGI_EXT:
+				location_block.cgi_param = set_cgi(it);
+				break;
 			case LocationConfigKey::BREAK:
 				break;
 			default:

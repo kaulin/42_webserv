@@ -12,6 +12,7 @@ enum LocationConfigKey {
 	INDEX,
 	CGI_PATH,
 	CGI_PARAM,
+	CGI_EXT,
 	BREAK
 };
 
@@ -23,7 +24,8 @@ static const std::unordered_map<std::string, int> directiveMap = {
 	{"index", 4},
 	{"cgi_path", 5},
 	{"cgi_param", 6},
-	{";", 7}
+	{"cgi_extension", 7},
+	{";", 8}
 };
 
 class LocationParser {

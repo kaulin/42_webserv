@@ -2,8 +2,8 @@
 
 printf "5\r\nHillo\r\n5\r\nWorld\r\n0\r\n\r\n" > chunked_input.txt
 
-for num in $(seq 1 10); do
-  for port in {8080..8097}; do
+for num in $(seq 1 5000); do
+  for port in {8080..8082}; do
     echo "Testing port $port..."
     curl -v -X POST http://localhost:$port/uploads/chunktest_$port.txt \
       -H "Transfer-Encoding: chunked" \
