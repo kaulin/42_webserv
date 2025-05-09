@@ -210,19 +210,6 @@ void RequestHandler::processRequest() {
 		throw ServerException(STATUS_METHOD_UNSUPPORTED);
 }
 
-bool RequestHandler::checkCGI() const {
-	const Location* location = ServerConfigData::getLocation(*_client.serverConfig, _request->uriPath);
-	if (location == nullptr)
-		throw ServerException(STATUS_BAD_REQUEST);
-	if (!location.cgiPath.isEmpty() && !location.cgiExtension.isEmpty())
-		return false;
-	if (_request->uriPath.find_last_not_of(location->cgiExtension) == std::string::npos)
-		return false;
-	if (_request->uriPath.find_last_of(location->cgiExtension) + location->cgiExtension.length() != std::string::npos)
-		return false;
-	return true;
-}
-
 bool RequestHandler::checkRedirect() {
 	for (auto& location : _client.serverConfig->locations)
 	{
@@ -236,6 +223,19 @@ bool RequestHandler::checkRedirect() {
 		}
 	}
 	return false;
+}
+
+bool RequestHandler::checkCGI() const {
+	const Location* location = ServerConfigData::getLocation(*_client.serverConfig, _request->uriPath);
+	if (location == nullptr)
+		return false;
+	if (location->cgiPath.empty() || location->cgiExtension.empty())
+		return false;
+	if (_request->uriPath.find_last_not_of(location->cgiExtension) == std::string::npos)
+		return false;
+	if (_request->uriPath.find_last_of(location->cgiExtension) + location->cgiExtension.length() != std::string::npos)
+		return false;
+	return true;
 }
 
 void RequestHandler::processGet() {
