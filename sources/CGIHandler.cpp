@@ -40,20 +40,16 @@ std::string CGIHandler::setCgiPath(Client& client)
 {
 	const HttpRequest& request = client.requestHandler->getRequest();
 
-	std::string parsedUri = request.uri; // e.g. "/cgi-bin/order_coffee"
-	if (!request.uriQuery.empty() && parsedUri.find('?') != std::string::npos)
-		parsedUri = request.uri.substr(0, request.uri.find('?'));
-
 	// Get root of cgi-bin location + build executable path
 	std::string CGIroot;
 	std::string CGIpath;
-	const Location* location = ServerConfigData::getLocation(*client.serverConfig, parsedUri);
+	const Location* location = ServerConfigData::getParentLocation(*client.serverConfig, request.uriPath);
 
 	CGIroot = location->root;
 	CGIpath = location->cgiPath;
 		//if (!CGIroot.empty() && parsedUri.find("/cgi-bin") == 0) 
 		//	parsedUri = parsedUri.substr(std::string("/cgi-bin").length());
-	std::string cgiUri = std::filesystem::current_path().string() + "/" + CGIroot + parsedUri;
+	std::string cgiUri = std::filesystem::current_path().string() + "/" + CGIroot + "/" + CGIpath;
 	
 	validateCGIScript(cgiUri);
 	return cgiUri;
@@ -338,7 +334,7 @@ void	CGIHandler::setupCGI(Client& client)
 		Logger::log(Logger::ERROR, "Pipe error: " + std::string(std::strerror(errno)));
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
-	setPipesToNonBlock(cgiInst->inPipe);
+	setPipesToNonBlock(cgiInst->outPipe);
 
 	_requests.emplace(client.fd, std::move(cgiInst));
 	client.cgiStatus = CGI_EXECVE_READY;
