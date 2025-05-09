@@ -47,7 +47,7 @@ private:
 	void						setupCGI(Client& client);
 	void						runCGIScript(Client& client);
 	bool						readyForExecve(const Client& client);
-	void						setPipesToNonBlock(int* pipe);
+	void						setPipesToNonBlock(std::vector<int> pipeFds);
 	void						closeAllOpenFds();
 	void						cleanupPid(pid_t pid);
 	bool						cgiTimeout(Client& client);
@@ -61,4 +61,5 @@ private:
 	void	cleanupCGI(Client& client);
 	void	killCGIProcess(Client& client);
 	void	checkCGIStatus(Client& client);
+	void	signalShutdown();
 };
