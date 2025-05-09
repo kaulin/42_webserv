@@ -43,6 +43,7 @@ class RequestHandler
 		void handleChunkedRequest();
 		void setContentLength();
 		bool checkRedirect();
+		bool checkCGI() const;
 		bool _isChunked;
 		bool _chunkedBodyStarted;
 		ChunkParseState _chunkState;
