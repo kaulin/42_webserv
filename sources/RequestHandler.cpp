@@ -190,7 +190,7 @@ void RequestHandler::processRequest() {
 	Logger::log(Logger::OK, "Client " + std::to_string(_client.fd) + " request received: " + _request->method + " " + _request->uri);
 	_client.connectionState = PROCESSING;
 
-	if (_request->method != "GET" || _request->method != "POST" || _request->method != "DELETE" )
+	if (_request->method != "GET" && _request->method != "POST" && _request->method != "DELETE" )
 		throw ServerException(STATUS_METHOD_UNSUPPORTED);
 
 	auto it = _request->headers.find("Connection");
