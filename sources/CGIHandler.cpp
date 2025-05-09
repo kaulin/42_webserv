@@ -47,14 +47,12 @@ std::string CGIHandler::setCgiPath(Client& client)
 	// Get root of cgi-bin location + build executable path
 	std::string CGIroot;
 	std::string CGIpath;
-	auto locationSettings = client.serverConfig->locations.find(parsedUri);
-	if (locationSettings != client.serverConfig->locations.end())
-	{
-		CGIroot = locationSettings->second.root;
-		CGIpath = locationSettings->second.cgiPath;
+	const Location* location = ServerConfigData::getLocation(*client.serverConfig, parsedUri);
+
+	CGIroot = location->root;
+	CGIpath = location->cgiPath;
 		//if (!CGIroot.empty() && parsedUri.find("/cgi-bin") == 0) 
 		//	parsedUri = parsedUri.substr(std::string("/cgi-bin").length());
-	}
 	std::string cgiUri = std::filesystem::current_path().string() + "/" + CGIroot + parsedUri;
 	
 	validateCGIScript(cgiUri);
