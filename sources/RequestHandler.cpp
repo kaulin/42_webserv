@@ -190,6 +190,9 @@ void RequestHandler::processRequest() {
 	Logger::log(Logger::OK, "Client " + std::to_string(_client.fd) + " request received: " + _request->method + " " + _request->uri);
 	_client.connectionState = PROCESSING;
 
+	if (_request->method != "GET" || _request->method != "POST" || _request->method != "DELETE" )
+		throw ServerException(STATUS_METHOD_UNSUPPORTED);
+
 	auto it = _request->headers.find("Connection");
 	if (it != _request->headers.end() && it->second == "close")
 		_client.keepAlive = false;
@@ -206,8 +209,6 @@ void RequestHandler::processRequest() {
 		processPost();
 	else if (_request->method == "DELETE")
 		processDelete();
-	else
-		throw ServerException(STATUS_METHOD_UNSUPPORTED);
 }
 
 bool RequestHandler::checkRedirect() {
