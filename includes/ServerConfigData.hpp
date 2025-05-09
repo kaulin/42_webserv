@@ -41,6 +41,7 @@ public:
 	size_t  getServerCount();
 
 	static const Location* getLocation(const Config& config, std::string path);
+	static const Location* getParentLocation(const Config& config, std::string path);
 	static const std::string& getRoot(const Config& config, std::string path);
 	static bool checkMethod(const Config& config, const std::string& method, std::string path);
 };

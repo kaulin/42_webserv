@@ -226,7 +226,7 @@ bool RequestHandler::checkRedirect() {
 }
 
 bool RequestHandler::checkCGI() const {
-	const Location* location = ServerConfigData::getLocation(*_client.serverConfig, _request->uriPath);
+	const Location* location = ServerConfigData::getParentLocation(*_client.serverConfig, _request->uriPath);
 	if (location == nullptr)
 		return false;
 	if (location->cgiPath.empty() || location->cgiExtension.empty())
