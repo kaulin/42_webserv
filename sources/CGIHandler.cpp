@@ -40,18 +40,20 @@ std::string CGIHandler::setCgiPath(Client& client)
 {
 	const HttpRequest& request = client.requestHandler->getRequest();
 
-	std::string parsedUri = request.uri;
+	std::string parsedUri = request.uri; // e.g. "/cgi-bin/order_coffee"
 	if (!request.uriQuery.empty() && parsedUri.find('?') != std::string::npos)
 		parsedUri = request.uri.substr(0, request.uri.find('?'));
 
 	// Get root of cgi-bin location + build executable path
 	std::string CGIroot;
-	auto CGILlocationSettings = client.serverConfig->locations.find("/cgi-bin");
-	if (CGILlocationSettings != client.serverConfig->locations.end())
+	std::string CGIpath;
+	auto locationSettings = client.serverConfig->locations.find(parsedUri);
+	if (locationSettings != client.serverConfig->locations.end())
 	{
-		CGIroot = CGILlocationSettings->second.root;
-		if (!CGIroot.empty() && parsedUri.find("/cgi-bin") == 0) 
-			parsedUri = parsedUri.substr(std::string("/cgi-bin").length());
+		CGIroot = locationSettings->second.root;
+		CGIpath = locationSettings->second.cgiPath;
+		//if (!CGIroot.empty() && parsedUri.find("/cgi-bin") == 0) 
+		//	parsedUri = parsedUri.substr(std::string("/cgi-bin").length());
 	}
 	std::string cgiUri = std::filesystem::current_path().string() + "/" + CGIroot + parsedUri;
 	
@@ -84,10 +86,21 @@ void	CGIHandler::killCGIProcess(Client& client)
 void	CGIHandler::cleanupCGI(Client& client)
 {
 	// CGI request is completed and the response is read by the client
+	if (_requests.find(client.fd) == _requests.end())
+		return;
+
 	if (client.cgiStatus == CGI_FORKED)
 		killCGIProcess(client);
-	if (_requests.find(client.fd) != _requests.end())
-		_requests.erase(client.fd);
+
+	if (_requests[client.fd]->inPipe[READ] != -1)
+		close(_requests[client.fd]->inPipe[READ]);
+	if (_requests[client.fd]->inPipe[WRITE] != -1)
+		close(_requests[client.fd]->inPipe[WRITE]);
+	if (_requests[client.fd]->outPipe[READ] != -1)
+		close(_requests[client.fd]->outPipe[READ]);
+	if (_requests[client.fd]->outPipe[WRITE] != -1)
+		close(_requests[client.fd]->outPipe[WRITE]);
+	_requests.erase(client.fd);
 }
 
 void	CGIHandler::checkCGIStatus(Client& client)
@@ -229,15 +242,20 @@ void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 	client.cgiStatus = CGI_FORKED;
 	cgiRequest.childPid = pid;
 	
-	int inPipe[2] = {_requests[client.fd]->inPipe[0], _requests[client.fd]->inPipe[1]};
-	int outPipe[2] = {_requests[client.fd]->outPipe[0], _requests[client.fd]->outPipe[1]};
+	int inPipe[2] = {_requests[client.fd]->inPipe[READ], _requests[client.fd]->inPipe[WRITE]};
+	int outPipe[2] = {_requests[client.fd]->outPipe[READ], _requests[client.fd]->outPipe[WRITE]};
 	
 	if (client.requestHandler->getMethod() == "POST")
+	{
 		close(inPipe[READ]);
+		_requests[client.fd]->inPipe[READ] = -1;
+	}
 	close(outPipe[WRITE]);
+	_requests[client.fd]->outPipe[WRITE] = -1;
 
 	client.resourceReadFd = dup(outPipe[READ]);
 	close(outPipe[READ]);
+	_requests[client.fd]->outPipe[READ] = -1;
 	if (client.resourceReadFd == -1)
 	{
 		Logger::log(Logger::ERROR, "Dup error:" + std::string(std::strerror(errno)));		
@@ -288,6 +306,11 @@ void	CGIHandler::setupCGI(Client& client)
 
 	cgiInst->CGIPath = setCgiPath(client);
 
+	cgiInst->inPipe[READ] = -1;
+	cgiInst->inPipe[WRITE] = -1;
+	cgiInst->outPipe[READ] = -1;
+	cgiInst->outPipe[WRITE] = -1;
+
 	cgiInst->argv.emplace_back(const_cast<char *>(cgiInst->CGIPath.c_str()));
 	cgiInst->argv.emplace_back(nullptr);
 
@@ -310,6 +333,7 @@ void	CGIHandler::setupCGI(Client& client)
 			throw ServerException(STATUS_INTERNAL_ERROR);
 		}
 		close(cgiInst->inPipe[WRITE]);
+		cgiInst->inPipe[WRITE] = -1;
 	}
 	if (pipe(cgiInst->outPipe) < 0)
 	{
