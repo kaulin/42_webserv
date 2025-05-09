@@ -103,8 +103,11 @@ void	CGIHandler::checkCGIStatus(Client& client)
 bool	CGIHandler::cgiTimeout(Client& client)
 {
 	const std::time_t now = std::time(nullptr);
-	if (now - _requests[client.fd]->CGIstart > CGI_TIMEOUT)
+	if (client.cgiStatus == CGI_FORKED && (now - _requests[client.fd]->CGIstart > CGI_TIMEOUT))
+	{
+		Logger::log(Logger::OK,  "Client " + std::to_string(client.fd) + " CGI timed out, killing process with id " + std::to_string(_requests[client.fd]->childPid));
 		return false;
+	}
 	return true;
 }
 
@@ -142,7 +145,6 @@ void	CGIHandler::checkProcess(Client& client)
 	{
 		if (!cgiTimeout(client))
 		{
-			Logger::log(Logger::OK,  "Client " + std::to_string(client.fd) + " CGI timed out, killing process with id " + std::to_string(_requests[client.fd]->childPid));
 			killCGIProcess(client);
 			client.cgiStatus = CGI_TIMED_OUT;
 		}
@@ -154,7 +156,6 @@ void	CGIHandler::checkProcess(Client& client)
 	}
 	if (!cgiTimeout(client) && client.cgiStatus != CGI_EXECVE_READY)
 	{
-		Logger::log(Logger::OK,  "Client " + std::to_string(client.fd) + " CGI timed out, killing process with id " + std::to_string(_requests[client.fd]->childPid));
 		killCGIProcess(client);
 		client.cgiStatus = CGI_TIMED_OUT;
 	}
@@ -236,12 +237,12 @@ void CGIHandler::handleParentProcess(Client& client, pid_t pid)
 	close(outPipe[WRITE]);
 
 	client.resourceReadFd = dup(outPipe[READ]);
+	close(outPipe[READ]);
 	if (client.resourceReadFd == -1)
 	{
 		Logger::log(Logger::ERROR, "Dup error:" + std::string(std::strerror(errno)));		
 		throw ServerException(STATUS_INTERNAL_ERROR);
 	}
-	close(outPipe[READ]);
 }
 
 void	CGIHandler::handleChildProcess(Client& client)
@@ -357,9 +358,9 @@ void	CGIHandler::handleCGI(Client& client)
 		cleanupCGI(client);
 		return;
 	}
-	if (_requests.size() >= CGI_MAX_REQUESTS)
+	if (_requests.size() >= CGI_MAX_REQUESTS && !readyForExecve(client)) // not for forked ones
 	{
-		Logger::log(Logger::ERROR, "Server is busy with too many CGI requests, try again in a moment");
+		Logger::log(Logger::ERROR, "Client " + std::to_string(client.fd) + "Server is busy with too many CGI requests, try again in a moment");
 		throw ServerException(STATUS_SERVICE_UNAVAILABLE);
 	}
 	if (request.method == "GET" || ((request.method == "POST") && !readyForExecve(client)))

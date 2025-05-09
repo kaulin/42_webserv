@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 
-import cgi
-import cgitb
 import os
 import html
 from urllib.parse import parse_qs, unquote
 import email.utils
 import sys
-
-cgitb.enable()
 
 orders_file = "var/temp/coffee_orders.txt"
 
