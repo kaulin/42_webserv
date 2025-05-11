@@ -232,7 +232,7 @@ bool RequestHandler::checkCGI() const {
 		return false;
 	if (location->cgiPath.empty() || location->cgiExtension.empty())
 		return false;
-	if (_request->uriPath.find_last_not_of(location->cgiExtension) == std::string::npos)
+	if (_request->uriPath.find(location->cgiExtension) == std::string::npos)
 		return false;
 	if (_request->uriPath.find_last_of(location->cgiExtension) + location->cgiExtension.length() == std::string::npos)
 		return false;
