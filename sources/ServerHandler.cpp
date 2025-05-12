@@ -336,6 +336,7 @@ void	ServerHandler::pollLoop()
 			continue;
 		}
 	}
+	_CGIHandler.signalShutdown();
 	for (pollfd p : _pollFds)
 		close(p.fd);
 	for (pollfd p : _newPollFds)
