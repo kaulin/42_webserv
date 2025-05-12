@@ -25,7 +25,7 @@ HttpServer::~HttpServer()
 {
 	if (_sockFd != -1)
 		close(_sockFd);
-	std::cout << "Virtual server instance " << _config.host << ":" << _config.port  << " deleted and socket closed\n";
+	std::cout << "Virtual server instance " << _config.host << ":" << _config.port  << " deleted\n";
 }
 
 
