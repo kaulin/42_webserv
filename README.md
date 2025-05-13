@@ -36,7 +36,7 @@ Some example configuration files and an example site demonstrating the program's
 
 ## Acknowledgements
 
-- Peer evaluators: [Nick Saveliev](https://github.com/FPyMEHTAPIU), Hoang Tran & Eromon Agbomeirele
+Peer evaluators: [Nick Saveliev](https://github.com/FPyMEHTAPIU), Hoang Tran & Eromon Agbomeirele
 
 ## Resources
 Gundavaram, S. (1996). CGI Programming on the World Wide Web.  
