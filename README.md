@@ -39,8 +39,8 @@ Some example configuration files and an example site demonstrating the program's
 - Peer evaluators: [Nick Saveliev](https://github.com/FPyMEHTAPIU), Hoang Tran & Eromon Agbomeirele
 
 ## Resources
-Gundavaram, S. (1996). CGI Programming on the World Wide Web. https://www.oreilly.com/openbook/cgi/
-Mozilla Corporation. HTTP. https://developer.mozilla.org/en-US/docs/Web/HTTP
-Fielding, R. & et al. (1999, June). Hypertext Transfer Protocol -- HTTP/1.1. https://www.rfc-editor.org/rfc/rfc2616.txt
-Thien, T. V. (2020, August 23). A simple HTTP server from scratch. https://trungams.github.io/2020-08-23-a-simple-http-server-from-scratch/
-Yu, J. (2023, May 1). How I Built a Simple HTTP Server from Scratch using C. https://dev.to/jeffreythecoder/how-i-built-a-simple-http-server-from-scratch-using-c-739
+- Gundavaram, S. (1996). CGI Programming on the World Wide Web. https://www.oreilly.com/openbook/cgi/
+- Mozilla Corporation. HTTP. https://developer.mozilla.org/en-US/docs/Web/HTTP
+- Fielding, R. & et al. (1999, June). Hypertext Transfer Protocol -- HTTP/1.1. https://www.rfc-editor.org/rfc/rfc2616.txt
+- Thien, T. V. (2020, August 23). A simple HTTP server from scratch. https://trungams.github.io/2020-08-23-a-simple-http-server-from-scratch/
+- Yu, J. (2023, May 1). How I Built a Simple HTTP Server from Scratch using C. https://dev.to/jeffreythecoder/how-i-built-a-simple-http-server-from-scratch-using-c-739
