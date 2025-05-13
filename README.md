@@ -39,11 +39,26 @@ Some example configuration files and an example site demonstrating the program's
 - Peer evaluators: [Nick Saveliev](https://github.com/FPyMEHTAPIU), Hoang Tran & Eromon Agbomeirele
 
 ## Resources
-- Gundavaram, S. (1996). CGI Programming on the World Wide Web. https://www.oreilly.com/openbook/cgi/
-- InetDaemon (2018, May 19). TCP 3-Way Handshake (SYN,SYN-ACK,ACK). https://www.inetdaemon.com/tutorials/internet/tcp/3-way_handshake.shtml
-- Linux Today (2019, May 9). Blocking and Non-Blocking I/0 Tutorial. https://www.linuxtoday.com/blog/blocking-and-non-blocking-i-0/
-- Matariya, R. (2020, March 2). Beginner’s Guide to NGINX Configuration Files. https://medium.com/adrixus/beginners-guide-to-nginx-configuration-files-527fcd6d5efd
-- Mozilla Corporation. HTTP. https://developer.mozilla.org/en-US/docs/Web/HTTP
-- Fielding, R. & et al. (1999, June). Hypertext Transfer Protocol -- HTTP/1.1. https://www.rfc-editor.org/rfc/rfc2616.txt
-- Thien, T. V. (2020, August 23). A simple HTTP server from scratch. https://trungams.github.io/2020-08-23-a-simple-http-server-from-scratch/
-- Yu, J. (2023, May 1). How I Built a Simple HTTP Server from Scratch using C. https://dev.to/jeffreythecoder/how-i-built-a-simple-http-server-from-scratch-using-c-739
+Gundavaram, S. (1996). CGI Programming on the World Wide Web.  
+https://www.oreilly.com/openbook/cgi/
+
+InetDaemon (2018, May 19). TCP 3-Way Handshake (SYN,SYN-ACK,ACK).  
+https://www.inetdaemon.com/tutorials/internet/tcp/3-way_handshake.shtml
+
+Linux Today (2019, May 9). Blocking and Non-Blocking I/0 Tutorial.  
+https://www.linuxtoday.com/blog/blocking-and-non-blocking-i-0/
+
+Matariya, R. (2020, March 2). Beginner’s Guide to NGINX Configuration Files.  
+https://medium.com/adrixus/beginners-guide-to-nginx-configuration-files-527fcd6d5efd
+
+Mozilla Corporation. HTTP.  
+https://developer.mozilla.org/en-US/docs/Web/HTTP
+
+Fielding, R. & et al. (1999, June). Hypertext Transfer Protocol -- HTTP/1.1.  
+https://www.rfc-editor.org/rfc/rfc2616.txt
+
+Thien, T. V. (2020, August 23). A simple HTTP server from scratch.  
+https://trungams.github.io/2020-08-23-a-simple-http-server-from-scratch/
+
+Yu, J. (2023, May 1). How I Built a Simple HTTP Server from Scratch using C.  
+https://dev.to/jeffreythecoder/how-i-built-a-simple-http-server-from-scratch-using-c-739
